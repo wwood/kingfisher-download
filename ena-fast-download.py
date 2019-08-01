@@ -18,12 +18,23 @@ if __name__ == '__main__':
         'Requires curl and ascp (i.e. aspera, see https://www.biostars.org/p/325010/#389254) to be in the $PATH.')
     parser.add_argument('run_identifier',help='Run number to download e.g. ERR1739691')
     parser.add_argument('--output_directory',help='Output files to this directory [default: \'.\']',default='.')
+    parser.add_argument('--ssh_key',help='\'linux\' or \'osx\' for default paths used in each OS respectively, \
+    otherwise a path to the openssh key to used for aspera (i.e. the -i flag of ascp) [default: \'linux\']',
+                        default='linux')
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
     # Use the example set out at this very helpful post:
     # https://www.biostars.org/p/325010
+
+    if args.ssh_key == 'linux':
+        ssh_key_file = '$HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh'
+    elif args.ssh_key == 'osx':
+        ssh_key_file = '$HOME/Applications/Aspera\ Connect.app/Contents/Resources/asperaweb_id_dsa.openssh'
+    else:
+        ssh_key_file = args.ssh_key
+    logging.info("Using aspera ssh key file: {}".format(ssh_key_file))
 
     run_id = args.run_identifier
     output_directory = args.output_directory
@@ -45,7 +56,8 @@ if __name__ == '__main__':
 
     aspera_commands = []
     for url in ftp_urls:
-        cmd = "ascp -QT -l 300m -P33001 -i $HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh era-fasp@fasp.sra.ebi.ac.uk:{} {}".format(
+        cmd = "ascp -QT -l 300m -P33001 -i {} era-fasp@fasp.sra.ebi.ac.uk:{} {}".format(
+            ssh_key_file,
             url.replace('ftp.sra.ebi.ac.uk',''), output_directory)
         logging.info("Running command: {}".format(cmd))
         subprocess.check_call(cmd,shell=True)
