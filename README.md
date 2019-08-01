@@ -8,6 +8,9 @@ rather than `.sra` format files which must be further converted to FASTQ.
 This tool was built based on the very helpful bio-stars thread
 https://www.biostars.org/p/325010/ written by @ATpoint.
 
+To find run identifiers to be used as input to this script, you might find the
+[SRA explorer](https://ewels.github.io/sra-explorer/) site helpful.
+
 ### Requirements
 
 * An aspera client (see https://www.biostars.org/p/325010/ or
