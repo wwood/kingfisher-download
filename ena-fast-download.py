@@ -52,7 +52,7 @@ if __name__ == '__main__':
         else:
             for url in line.split(';'):
                 if url.strip() != '': ftp_urls.append(url.strip())
-    logging.info("Found {} FTP URLs for download e.g. {}".format(len(ftp_urls), ftp_urls[1]))
+    logging.info("Found {} FTP URLs for download e.g. {}".format(len(ftp_urls), ftp_urls[0]))
 
     aspera_commands = []
     for url in ftp_urls:
