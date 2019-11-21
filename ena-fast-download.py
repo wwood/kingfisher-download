@@ -17,10 +17,12 @@ if __name__ == '__main__':
         description='Quickly download FASTQ files from the European Nucleotide Archive (ENA) using aspera.\n\n'
         'Requires curl and ascp (i.e. aspera, see https://www.biostars.org/p/325010/#389254) to be in the $PATH.')
     parser.add_argument('run_identifier',help='Run number to download e.g. ERR1739691')
-    parser.add_argument('--output_directory',help='Output files to this directory [default: \'.\']',default='.')
-    parser.add_argument('--ssh_key',help='\'linux\' or \'osx\' for default paths used in each OS respectively, \
+    parser.add_argument('--output-directory','--output_directory',help='Output files to this directory [default: \'.\']',default='.')
+    parser.add_argument('--ssh-key','--ssh_key',help='\'linux\' or \'osx\' for default paths used in each OS respectively, \
     otherwise a path to the openssh key to used for aspera (i.e. the -i flag of ascp) [default: \'linux\']',
                         default='linux')
+    parser.add_argument('--ascp-args','--ascp_args',help='extra arguments to pass to ascp e.g. \'-k 2\' to resume with a \
+        sparse file checksum [default: \'\']',default='')
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -56,7 +58,8 @@ if __name__ == '__main__':
 
     aspera_commands = []
     for url in ftp_urls:
-        cmd = "ascp -QT -l 300m -P33001 -i {} era-fasp@fasp.sra.ebi.ac.uk:{} {}".format(
+        cmd = "ascp -QT -l 300m -P33001 {} -i {} era-fasp@fasp.sra.ebi.ac.uk:{} {}".format(
+            args.ascp_args,
             ssh_key_file,
             url.replace('ftp.sra.ebi.ac.uk',''), output_directory)
         logging.info("Running command: {}".format(cmd))
