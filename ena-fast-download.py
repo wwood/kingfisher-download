@@ -11,6 +11,7 @@ __status__ = "Development"
 import argparse
 import logging
 import subprocess
+import sys
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -42,7 +43,7 @@ if __name__ == '__main__':
     output_directory = args.output_directory
 
     # Get the textual representation of the run. We specifically need the fastq_ftp bit
-    logging.info("Querying ENA for FTP paths ..")
+    logging.info("Querying ENA for FTP paths for {}..".format(run_id))
     text = subprocess.check_output("curl --silent 'https://www.ebi.ac.uk/ena/data/warehouse/filereport?accession={}&result=read_run&fields=fastq_ftp&download=txt'".format(
         run_id),shell=True)
 
@@ -54,7 +55,12 @@ if __name__ == '__main__':
         else:
             for url in line.split(';'):
                 if url.strip() != '': ftp_urls.append(url.strip())
-    logging.info("Found {} FTP URLs for download e.g. {}".format(len(ftp_urls), ftp_urls[0]))
+    if len(ftp_urls) == 0:
+        # One (current) example of this is DRR086621
+        logging.warn("No FTP download URLs found for run {}, cannot continue".format(run_id))
+        sys.exit(1)
+    else:
+        logging.info("Found {} FTP URLs for download e.g. {}".format(len(ftp_urls), ftp_urls[0]))
 
     aspera_commands = []
     for url in ftp_urls:
