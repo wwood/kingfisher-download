@@ -27,9 +27,17 @@ if __name__ == '__main__':
     parser.add_argument('--reverse-only','--reverse_only', action="store_true", help='Reverse reads only')
     parser.add_argument('--ascp-args','--ascp_args',help='extra arguments to pass to ascp e.g. \'-k 2\' to resume with a \
         sparse file checksum [default: \'\']',default='')
+    parser.add_argument('--debug', help='output debug information', action="store_true")
+    parser.add_argument('--quiet', help='only output errors', action="store_true")
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+    if args.debug:
+        loglevel = logging.DEBUG
+    elif args.quiet:
+        loglevel = logging.ERROR
+    else:
+        loglevel = logging.INFO
+    logging.basicConfig(level=loglevel, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
     # Use the example set out at this very helpful post:
     # https://www.biostars.org/p/325010
@@ -76,13 +84,13 @@ if __name__ == '__main__':
         if bool(args.forward_only):
             ftp_urls = list(filter(lambda filename: "_1.fastq" in filename , ftp_urls))
             if len(ftp_urls) != 1:
-                logging.warn("Unexpectedly found no read files that contain '_1.fastq' in their name")
+                logging.error("Unexpectedly found no read files that contain '_1.fastq' in their name")
                 sys.exit(1)
             logging.info("Downloading forward only: {}".format(ftp_urls))
         elif bool(args.reverse_only):
             ftp_urls = list(filter(lambda filename: "_2.fastq" in filename , ftp_urls))
             if len(ftp_urls) != 1:
-                logging.warn("Unexpectedly found no read files that contain '_2.fastq' in their name")
+                logging.error("Unexpectedly found no read files that contain '_2.fastq' in their name")
                 sys.exit(1)
             logging.info("Downloading reverse only: {}".format(ftp_urls))
 
