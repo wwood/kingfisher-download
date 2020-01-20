@@ -12,6 +12,7 @@ import argparse
 import logging
 import subprocess
 import sys
+import warnings
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -22,6 +23,8 @@ if __name__ == '__main__':
     parser.add_argument('--ssh-key','--ssh_key',help='\'linux\' or \'osx\' for default paths used in each OS respectively, \
     otherwise a path to the openssh key to used for aspera (i.e. the -i flag of ascp) [default: \'linux\']',
                         default='linux')
+    parser.add_argument('--forward-only','--forward_only', action="store_true", help='Forward reads only')
+    parser.add_argument('--reverse-only','--reverse_only', action="store_true", help='Reverse reads only')
     parser.add_argument('--ascp-args','--ascp_args',help='extra arguments to pass to ascp e.g. \'-k 2\' to resume with a \
         sparse file checksum [default: \'\']',default='')
     args = parser.parse_args()
@@ -30,6 +33,10 @@ if __name__ == '__main__':
 
     # Use the example set out at this very helpful post:
     # https://www.biostars.org/p/325010
+    if bool(args.forward_only):
+        assert bool(args.reverse_only) == False, "Cannot specify --forward-only and --reverse-only"
+    if bool(args.reverse_only):
+        assert bool(args.forward_only) == False, "Cannot specify --forward-only and --reverse-only"
 
     if args.ssh_key == 'linux':
         ssh_key_file = '$HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh'
@@ -60,7 +67,26 @@ if __name__ == '__main__':
         logging.warn("No FTP download URLs found for run {}, cannot continue".format(run_id))
         sys.exit(1)
     else:
-        logging.info("Found {} FTP URLs for download e.g. {}".format(len(ftp_urls), ftp_urls[0]))
+        logging.debug("Found {} FTP URLs for download: {}".format(len(ftp_urls), ", ".join(ftp_urls)))
+
+    if len(ftp_urls) == 1:
+        if bool(args.forward_only) or bool(args.reverse_only):
+            warnings.warn("Specified --forward_only or --reverse_only but only a single read set found. Downloading the single read set.")
+    else:
+        if bool(args.forward_only):
+            ftp_urls = list(filter(lambda filename: "_1.fastq" in filename , ftp_urls))
+            if len(ftp_urls) != 1:
+                logging.warn("Unexpectedly found no read files that contain '_1.fastq' in their name")
+                sys.exit(1)
+            logging.info("Downloading forward only: {}".format(ftp_urls))
+        elif bool(args.reverse_only):
+            ftp_urls = list(filter(lambda filename: "_2.fastq" in filename , ftp_urls))
+            if len(ftp_urls) != 1:
+                logging.warn("Unexpectedly found no read files that contain '_2.fastq' in their name")
+                sys.exit(1)
+            logging.info("Downloading reverse only: {}".format(ftp_urls))
+
+    logging.info("Downloading {} FTP read set(s): {}".format(len(ftp_urls), ", ".join(ftp_urls)))
 
     aspera_commands = []
     for url in ftp_urls:
