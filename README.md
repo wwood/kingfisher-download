@@ -26,11 +26,11 @@ on Linux, but may work on OSX too.
 
 Linux:
 ```
-./ena-fast-download.py -r ERR1739691
+./ena-fast-download.py ERR1739691
 ```
 OSX:
 ```
-./ena-fast-download.py -r ERR1739691 --ssh_key osx
+./ena-fast-download.py ERR1739691 --ssh_key osx
 ```
 
 That will download the forward and reverse FASTQ file for that run into the
