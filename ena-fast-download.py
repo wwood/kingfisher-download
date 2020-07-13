@@ -27,8 +27,8 @@ if __name__ == '__main__':
     parser.add_argument('--reverse-only','--reverse_only', action="store_true", help='Reverse reads only')
     parser.add_argument('--ascp-args','--ascp_args',help='extra arguments to pass to ascp e.g. \'-k 2\' to resume with a \
         sparse file checksum [default: \'\']',default='')
-    parser.add_argument('--debug', help='output debug information', action="store_true")
-    parser.add_argument('--quiet', help='only output errors', action="store_true")
+    parser.add_argument('--debug', help='output debug information', action="store_true", default=False)
+    parser.add_argument('--quiet', help='only output errors', action="store_true", default=False)
     args = parser.parse_args()
 
     if args.debug:
@@ -98,7 +98,11 @@ if __name__ == '__main__':
 
     aspera_commands = []
     for url in ftp_urls:
-        cmd = "ascp -QT -l 300m -P33001 {} -i {} era-fasp@fasp.sra.ebi.ac.uk:{} {}".format(
+        quiet_args = ''
+        if args.quiet:
+            quiet_args = ' -Q'
+        cmd = "ascp{} -T -l 300m -P33001 {} -i {} era-fasp@fasp.sra.ebi.ac.uk:{} {}".format(
+            quiet_args,
             args.ascp_args,
             ssh_key_file,
             url.replace('ftp.sra.ebi.ac.uk',''), output_directory)
