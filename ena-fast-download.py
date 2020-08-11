@@ -59,20 +59,25 @@ if __name__ == '__main__':
 
     # Get the textual representation of the run. We specifically need the fastq_ftp bit
     logging.info("Querying ENA for FTP paths for {}..".format(run_id))
-    text = subprocess.check_output("curl --silent 'https://www.ebi.ac.uk/ena/data/warehouse/filereport?accession={}&result=read_run&fields=fastq_ftp&download=txt'".format(
-        run_id),shell=True)
+    query_url = "https://www.ebi.ac.uk/ena/portal/api/filereport?accession={}&result=read_run&fields=fastq_ftp".format(run_id)
+    logging.debug("Querying '{}'".format(query_url))
+    text = subprocess.check_output("curl --silent '{}'".format(query_url),shell=True)
 
     ftp_urls = []
     header=True
+    logging.debug("Found text from ENA API: {}".format(text))
     for line in text.decode('utf8').split('\n'):
+        logging.debug("Parsing line: {}".format(line))
         if header:
             header=False
         else:
-            for url in line.split(';'):
+            if line == '': continue
+            fastq_ftp = line.split('\t')[1]
+            for url in fastq_ftp.split(';'):
                 if url.strip() != '': ftp_urls.append(url.strip())
     if len(ftp_urls) == 0:
         # One (current) example of this is DRR086621
-        logging.warn("No FTP download URLs found for run {}, cannot continue".format(run_id))
+        logging.error("No FTP download URLs found for run {}, cannot continue".format(run_id))
         sys.exit(1)
     else:
         logging.debug("Found {} FTP URLs for download: {}".format(len(ftp_urls), ", ".join(ftp_urls)))
