@@ -13,8 +13,7 @@ To find run identifiers to be used as input to this script, you might find the
 
 ### Requirements
 
-* An aspera client (see https://www.biostars.org/p/325010/ or
-  https://downloads.asperasoft.com/en/downloads/8?list)
+* An Aspera client (see https://www.ibm.com/aspera/connect/ or https://www.biostars.org/p/325010/)
 * curl, which is generally installed by default on Linux distributions (and
   OSX?)
 * Python 3
@@ -35,6 +34,24 @@ OSX:
 
 That will download the forward and reverse FASTQ file for that run into the
 current directory.
+
+### FAQ
+If you see this error `/bin/sh: 1: ascp: not found` as below:
+```
+$ ./ena-fast-download.py ERR3357550
+09/14/2020 09:33:42 AM INFO: Using aspera ssh key file: $HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh
+09/14/2020 09:33:42 AM INFO: Querying ENA for FTP paths for ERR3357550..
+09/14/2020 09:33:47 AM INFO: Downloading 2 FTP read set(s): ftp.sra.ebi.ac.uk/vol1/fastq/ERR335/000/ERR3357550/ERR3357550_1.fastq.gz, ftp.sra.ebi.ac.uk/vol1/fastq/ERR335/000/ERR3357550/ERR3357550_2.fastq.gz
+09/14/2020 09:33:47 AM INFO: Running command: ascp -T -l 300m -P33001  -i $HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh era-fasp@fasp.sra.ebi.ac.uk:/vol1/fastq/ERR335/000/ERR3357550/ERR3357550_1.fastq.gz .
+/bin/sh: 1: ascp: not found
+Traceback (most recent call last):
+  File "/home/ben/git/ena-fast-download-local/ena-fast-download.py", line 115, in <module>
+    subprocess.check_call(cmd,shell=True)
+  File "/home/ben/miniconda3/lib/python3.7/subprocess.py", line 363, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command 'ascp -T -l 300m -P33001  -i $HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh era-fasp@fasp.sra.ebi.ac.uk:/vol1/fastq/ERR335/000/ERR3357550/ERR3357550_1.fastq.gz .' returned non-zero exit status 127.
+```
+then you have not installed the Aspera client correctly. See the dependencies section of this document.
 
 
 ### License
