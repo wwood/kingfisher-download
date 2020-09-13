@@ -13,7 +13,7 @@ To find run identifiers to be used as input to this script, you might find the
 
 ### Requirements
 
-* An Aspera client (see https://www.ibm.com/aspera/connect/ or https://www.biostars.org/p/325010/)
+* An Aspera connect client (see https://www.ibm.com/aspera/connect/ or https://www.biostars.org/p/325010/)
 * curl, which is generally installed by default on Linux distributions (and
   OSX?)
 * Python 3
