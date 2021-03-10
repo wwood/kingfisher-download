@@ -36,7 +36,7 @@ class NcbiLocation:
     def s3_command_prefix(self, run_id):
         if self.service() == 's3-pay':
             return 'aws s3api get-object --bucket {} --key {} --request-payer requester'.format(
-                self.j['bucket'], self.j['key'], os.path.basename(self.j[key])
+                self.j['bucket'], self.j['key']
             )
         elif self.service() == 's3-odp':
             return 'aws s3 cp s3://sra-pub-run-odp/sra/{}/{}'.format(run_id, run_id)
@@ -59,7 +59,19 @@ def get_ncbi_aws_locations(run_id):
         raise Exception(
             "Unexpected json location string returned: {}", json_location_string)
     # TODO: Assumes there is only 1 result, which is all I've ever seen
-    return list([list([NcbiLocation(l) for l in f['locations']]) for f in j['result'][0]['files']])
+    return flatten_list(list([list([NcbiLocation(l) for l in f['locations']]) for f in j['result'][0]['files']]))
+
+def flatten_list(_2d_list):
+    flat_list = []
+    # Iterate through the outer list
+    for element in _2d_list:
+        if type(element) is list:
+            # If the element is of type list, iterate through the sublist
+            for item in element:
+                flat_list.append(item)
+        else:
+            flat_list.append(element)
+    return flat_list
 
 if __name__ == '__main__':
     parser= argparse.ArgumentParser(
@@ -115,7 +127,7 @@ if __name__ == '__main__':
             args.run_identifier, args.run_identifier))
 
     elif args.download_method == 'aws-http':
-        locations= get_ncbi_aws_locations(args.run_identifier)
+        locations = get_ncbi_aws_locations(args.run_identifier)
         odp_http_locations = list([l.link for l in locations if l.service == 'sra'])
         if len(odp_http_locations) > 0:
             logging.info("Found ODP link {}".format(odp_http_locations[0]))
@@ -129,17 +141,17 @@ if __name__ == '__main__':
         logging.info("Download finished")
 
     elif args.download_method == 'aws-cp':
-        locations= get_ncbi_aws_locations(args.run_identifier)
+        locations = get_ncbi_aws_locations(args.run_identifier)
         s3_locations = list([l for l in locations if l.service() in ('s3-pay', 's3-odp')])
 
         if len(s3_locations) > 0:
-            logging.info("Found s3 link {}".format(s3_locations[0]))
-            s3_location= s3_locations[0]
+            s3_location = s3_locations[0]
+            logging.info("Found s3 link {}".format(s3_location.j['link']))
         else:
             raise Exception("No S3 location could be found")
 
-        command= '{} {}.sra'.format(
-            s3_location.s3_command_prefix, args.run_identifier
+        command = '{} {}.sra'.format(
+            s3_location.s3_command_prefix(args.run_identifier), args.run_identifier
         )
         logging.info("Downloading from S3..")
         extern.run(command)
