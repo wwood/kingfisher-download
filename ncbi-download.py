@@ -59,7 +59,7 @@ def get_ncbi_aws_locations(run_id):
         raise Exception(
             "Unexpected json location string returned: {}", json_location_string)
     # TODO: Assumes there is only 1 result, which is all I've ever seen
-    return list([list([NcbiLocation(l) for l in f['locations']]) for f in j['result'][0]['files'])
+    return list([list([NcbiLocation(l) for l in f['locations']]) for f in j['result'][0]['files']])
 
 if __name__ == '__main__':
     parser= argparse.ArgumentParser(
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--download_method', '--download-method',
         help='how to download .sra file',
-        choices=['aws-odp', 'prefetch', 'aws-cp'], required=True)
+        choices=['aws-http', 'prefetch', 'aws-cp'], required=True)
     parser.add_argument(
         '--extraction_method', '--extraction-method',
         help='how to extract .sra file',
