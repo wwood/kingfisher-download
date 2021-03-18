@@ -95,11 +95,15 @@ if __name__ == '__main__':
         '--download_method', '--download-method',
         help='how to download .sra file',
         choices=['aws-http', 'prefetch', 'aws-cp'], required=True)
+    # parser.add_argument(
+    #     '--extraction_method', '--extraction-method',
+    #     help='how to extract .sra file',
+    #     choices=['fastq-dump', 'fasterq-dump'],
+    #     required=True)
     parser.add_argument(
-        '--extraction_method', '--extraction-method',
-        help='how to extract .sra file',
-        choices=['fastq-dump', 'fasterq-dump'],
-        required=True)
+        '--allow_paid', '--allow-paid',
+        help='allow aws to cp from retriever-pays s3 buckets',
+        action='store_true')
 
     parser.add_argument('--debug', help='output debug information',
                         action="store_true", default=False)
@@ -117,6 +121,11 @@ if __name__ == '__main__':
         level=loglevel, format='%(asctime)s %(levelname)s: %(message)s',
         datefmt='%m/%d/%Y %I:%M:%S %p')
 
+    if args.allow_paid:
+        allowable_sources = ('s3-pay', 's3-odp')
+    else:
+        allowable_sources = ('s3-odp')
+
     # Download phase
     if os.path.exists("{}.sra".format(args.run_identifier)):
         logging.info(
@@ -128,7 +137,7 @@ if __name__ == '__main__':
 
     elif args.download_method == 'aws-http':
         locations = get_ncbi_aws_locations(args.run_identifier)
-        odp_http_locations = list([l.link for l in locations if l.service == 'sra'])
+        odp_http_locations = list([l.link for l in locations if l.service == 'sra-odp'])
         if len(odp_http_locations) > 0:
             logging.info("Found ODP link {}".format(odp_http_locations[0]))
             odp_link= odp_http_locations[0]
@@ -139,10 +148,11 @@ if __name__ == '__main__':
             "Downloading .SRA file from AWS Open Data Program HTTP link ..")
         extern.run("curl -q -o {}.sra '{}'".format(args.run_identifier, odp_link))
         logging.info("Download finished")
+        os.remove('{}.sra'.format(args.run_identifier))
 
     elif args.download_method == 'aws-cp':
-        locations = get_ncbi_aws_locations(args.run_identifier)
-        s3_locations = list([l for l in locations if l.service() in ('s3-pay', 's3-odp')])
+        locations = get_ncbi_aws_locations(args.run_identifier) 
+        s3_locations = list([l for l in locations if l.service() in allowable_sources])
 
         if len(s3_locations) > 0:
             s3_location = s3_locations[0]
@@ -159,63 +169,62 @@ if __name__ == '__main__':
     else:
         raise Exception("Programming error")
 
-    if args.extraction_method == 'fastq-dump':
-        # Unfortunately the fasterq-dump method is incompatible with mkfifo and
-        # therefore on the fly conversion to fasta and pigz compression
-        extract_bash_script= '''
-            set -e
+    # if args.extraction_method == 'fastq-dump':
+    #     # Unfortunately the fasterq-dump method is incompatible with mkfifo and
+    #     # therefore on the fly conversion to fasta and pigz compression
+    #     extract_bash_script= '''
+    #         set -e
 
-            mkfifo SRR000001_1.fastq;
-            mkfifo SRR000001_2.fastq;
-            mkfifo SRR000001.fastq;
-            fastq-dump --split-3 ./SRR000001.sra & pid=$!
-            cat SRR000001_1.fastq fq2fa |pigz >SRR000001_1.fastq.gz &
-            cat SRR000001_2.fastq fq2fa |pigz >SRR000001_2.fastq.gz &
-            cat SRR000001.fastq fq2fa |pigz >SRR000001.fastq.gz &
-            wait $pid;
-            echo -n >SRR000001_1.fastq;
-            echo -n >SRR000001_2.fastq;
-            echo -n >SRR000001.fastq;
-            wait;
-            rm SRR000001_1.fastq SRR000001_2.fastq SRR000001.fastq;
-            '''.replace('SRR000001', args.run_identifier).replace(
-                'fq2fa', "|awk '{print \">\" substr($0,2);getline;print;getline;getline}'"
-            ).replace('fastq.gz', 'fasta.gz')
-        with tempfile.NamedTemporaryFile(prefix='ncbi-download', suffix='.bash') as tf:
+    #         mkfifo SRR000001_1.fastq;
+    #         mkfifo SRR000001_2.fastq;
+    #         mkfifo SRR000001.fastq;
+    #         fastq-dump --split-3 ./SRR000001.sra & pid=$!
+    #         cat SRR000001_1.fastq fq2fa |pigz >SRR000001_1.fastq.gz &
+    #         cat SRR000001_2.fastq fq2fa |pigz >SRR000001_2.fastq.gz &
+    #         cat SRR000001.fastq fq2fa |pigz >SRR000001.fastq.gz &
+    #         wait $pid;
+    #         echo -n >SRR000001_1.fastq;
+    #         echo -n >SRR000001_2.fastq;
+    #         echo -n >SRR000001.fastq;
+    #         wait;
+    #         rm SRR000001_1.fastq SRR000001_2.fastq SRR000001.fastq;
+    #         '''.replace('SRR000001', args.run_identifier).replace(
+    #             'fq2fa', "|awk '{print \">\" substr($0,2);getline;print;getline;getline}'"
+    #         ).replace('fastq.gz', 'fasta.gz')
+    #     with tempfile.NamedTemporaryFile(prefix='ncbi-download', suffix='.bash') as tf:
 
-            tf.write(extract_bash_script.encode())
-            tf.flush()
-            logging.debug(extern.run('cat {}'.format(tf.name)))
+    #         tf.write(extract_bash_script.encode())
+    #         tf.flush()
+    #         logging.debug(extern.run('cat {}'.format(tf.name)))
 
-            logging.info("Running extraction script ..")
-            stdout= extern.run('bash "{}"'.format(tf.name))
-            logging.debug("script stdout: {}".format(stdout))
+    #         logging.info("Running extraction script ..")
+    #         stdout= extern.run('bash "{}"'.format(tf.name))
+    #         logging.debug("script stdout: {}".format(stdout))
 
-    elif args.extraction_method == 'fasterq-dump':
+    if True: #args.extraction_method == 'fasterq-dump':
         extern.run("fasterq-dump ./{}.sra".format(args.run_identifier))
 
-        def convert_file(stub):
-            if os.path.exists("{}.fastq".format(stub)):
-                return "fq2fa {}.fastq |pigz >{}.fasta.gz".format(
-                    stub, stub
-                ).replace('fq2fa', "awk '{print \">\" substr($0,2);getline;print;getline;getline}'")
-            else:
-                return None
+        # def convert_file(stub):
+        #     if os.path.exists("{}.fastq".format(stub)):
+        #         return "fq2fa {}.fastq |pigz >{}.fasta.gz".format(
+        #             stub, stub
+        #         ).replace('fq2fa', "awk '{print \">\" substr($0,2);getline;print;getline;getline}'")
+        #     else:
+        #         return None
 
-        commands= []
-        f0= convert_file(args.run_identifier)
-        if f0 is not None: commands.append(f0)
-        print(commands)
-        f1= convert_file('{}_1'.format(args.run_identifier))
-        if f1 is not None: commands.append(f1)
-        print(commands)
-        f2= convert_file('{}_2'.format(args.run_identifier))
-        if f2 is not None: commands.append(f2)
-        print(commands)
+        # commands= []
+        # f0= convert_file(args.run_identifier)
+        # if f0 is not None: commands.append(f0)
+        # print(commands)
+        # f1= convert_file('{}_1'.format(args.run_identifier))
+        # if f1 is not None: commands.append(f1)
+        # print(commands)
+        # f2= convert_file('{}_2'.format(args.run_identifier))
+        # if f2 is not None: commands.append(f2)
 
-        logging.info(
-            "Running FASTQ->FASTA conversions on {} files".format(len(commands)))
-        extern.run_many(commands)
+        # logging.info(
+        #     "Running FASTQ->FASTA conversions on {} files".format(len(commands)))
+        # extern.run_many(commands)
     else:
         raise Exception("Programming error")
 
