@@ -81,8 +81,8 @@ if __name__ == '__main__':
     # Get the textual representation of the run. We specifically need the
     # fastq_ftp bit
     logging.info("Querying ENA for FTP paths for {}..".format(run_id))
-    query_url = "https://www.ebi.ac.uk/ena/portal/api/filereport?accession={}&\
-        result=read_run&fields=fastq_ftp".format(
+    query_url = "https://www.ebi.ac.uk/ena/portal/api/filereport?accession={}&"\
+        "result=read_run&fields=fastq_ftp".format(
         run_id)
     logging.debug("Querying '{}'".format(query_url))
     text = subprocess.check_output(
