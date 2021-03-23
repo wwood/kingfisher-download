@@ -18,7 +18,7 @@ import tempfile
 import json
 
 import extern
-
+from extern import ExternCalledProcessError
 
 class NcbiLocation:
     def __init__(self, j):
@@ -73,6 +73,9 @@ def flatten_list(_2d_list):
             flat_list.append(element)
     return flat_list
 
+class DownloadMethodFailed(Exception):
+    pass
+
 if __name__ == '__main__':
     parser= argparse.ArgumentParser(
         description='Download and extract reads from the NCBI SRA database. \
@@ -80,7 +83,7 @@ if __name__ == '__main__':
             https://github.com/ncbi/sra-tools - a full list of conda \
             requirements is: python extern pigz sra-tools')
     parser.add_argument(
-        'run_identifier',
+        '--run-identifier','--run_identifier','-r',
         help='Run number to download e.g. ERR1739691')
     # parser.add_argument('--output-directory','--output_directory',
     # help='Output files to this directory [default: \'.\']',default='.')
@@ -92,8 +95,9 @@ if __name__ == '__main__':
     # help='extra arguments to pass to ascp e.g. \'-k 2\' to resume with a \
     #     sparse file checksum [default: \'\']',default='')
     parser.add_argument(
-        '--download_method', '--download-method',
-        help='how to download .sra file',
+        '-m','--download_methods', '--download-methods',
+        nargs='+',
+        help='how to download .sra file. One or more of \'aws-http\', \'prefetch\', \'aws-cp\'',
         choices=['aws-http', 'prefetch', 'aws-cp'], required=True)
     # parser.add_argument(
     #     '--extraction_method', '--extraction-method',
@@ -131,43 +135,67 @@ if __name__ == '__main__':
         logging.info(
             "Skipping download of {} as the file already appears to exist")
 
-    elif args.download_method == 'prefetch':
-        extern.run("prefetch -o {}.sra {}".format(
-            args.run_identifier, args.run_identifier))
-
-    elif args.download_method == 'aws-http':
-        locations = get_ncbi_aws_locations(args.run_identifier)
-        odp_http_locations = list([l.link for l in locations if l.service == 'sra-odp'])
-        if len(odp_http_locations) > 0:
-            logging.info("Found ODP link {}".format(odp_http_locations[0]))
-            odp_link= odp_http_locations[0]
-        else:
-            raise Exception("No ODP URL could be found")
-
-        logging.info(
-            "Downloading .SRA file from AWS Open Data Program HTTP link ..")
-        extern.run("curl -q -o {}.sra '{}'".format(args.run_identifier, odp_link))
-        logging.info("Download finished")
-        os.remove('{}.sra'.format(args.run_identifier))
-
-    elif args.download_method == 'aws-cp':
-        locations = get_ncbi_aws_locations(args.run_identifier) 
-        s3_locations = list([l for l in locations if l.service() in allowable_sources])
-
-        if len(s3_locations) > 0:
-            s3_location = s3_locations[0]
-            logging.info("Found s3 link {}".format(s3_location.j['link']))
-        else:
-            raise Exception("No S3 location could be found")
-
-        command = '{} {}.sra'.format(
-            s3_location.s3_command_prefix(args.run_identifier), args.run_identifier
-        )
-        logging.info("Downloading from S3..")
-        extern.run(command)
-
     else:
-        raise Exception("Programming error")
+        worked = False
+        for method in args.download_methods:
+            logging.info("Attempting download method {} ..".format(method))
+            if method == 'prefetch':
+                try:
+                    extern.run("prefetch -o {}.sra {}".format(
+                        args.run_identifier, args.run_identifier))
+                    worked = True
+                except ExternCalledProcessError as e:
+                    logging.warning("Method {} failed: Error was: {}".format(method, e))
+                
+            elif method == 'aws-http':
+                locations = get_ncbi_aws_locations(args.run_identifier)
+                odp_http_locations = list([l.link for l in locations if l.service == 'sra-odp'])
+                if len(odp_http_locations) > 0:
+                    logging.info("Found ODP link {}".format(odp_http_locations[0]))
+                    odp_link = odp_http_locations[0]
+
+                    logging.info(
+                        "Downloading .SRA file from AWS Open Data Program HTTP link ..")
+                    try:
+                        extern.run("curl -q -o {}.sra '{}'".format(args.run_identifier, odp_link))
+                        logging.info("Download finished")
+                        worked = True
+                    except ExternCalledProcessError as e:
+                        logging.warning("Method {} failed: Error was: {}".format(method, e))
+                else:
+                    logging.warning("Method {} failed: No ODP URL could be found".format(method))
+
+            elif method == 'aws-cp':
+                locations = get_ncbi_aws_locations(args.run_identifier) 
+                s3_locations = list([l for l in locations if l.service() in allowable_sources])
+
+                if len(s3_locations) > 0:
+                    s3_location = s3_locations[0]
+                    logging.info("Found s3 link {}".format(s3_location.j['link']))
+
+                    command = '{} {}.sra'.format(
+                        s3_location.s3_command_prefix(args.run_identifier), args.run_identifier
+                    )
+                    logging.info("Downloading from S3..")
+                    try:
+                        extern.run(command)
+                        worked = True
+                    except ExternCalledProcessError as e:
+                        logging.warning("Method {} failed: Error was: {}".format(method, e))
+                else:
+                    logging.warning("Method {} failed: No S3 location could be found".format(method))
+
+            else:
+                raise Exception("Unknown method: {}".format(method))
+            
+            if worked:
+                logging.info("Method {} worked.".format(method))
+                break
+            else:
+                logging.warning("Method {} failed".format(method))
+
+        if worked is False:
+            raise Exception("No more specified download methods, cannot continue")
 
     # if args.extraction_method == 'fastq-dump':
     #     # Unfortunately the fasterq-dump method is incompatible with mkfifo and
@@ -203,6 +231,7 @@ if __name__ == '__main__':
 
     if True: #args.extraction_method == 'fasterq-dump':
         extern.run("fasterq-dump ./{}.sra".format(args.run_identifier))
+        os.remove('{}.sra'.format(args.run_identifier))
 
         # def convert_file(stub):
         #     if os.path.exists("{}.fastq".format(stub)):
