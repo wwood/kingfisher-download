@@ -20,7 +20,7 @@ import json
 import extern
 from extern import ExternCalledProcessError
 
-class NcbiLocation:
+class NcbiAwsLocation:
     def __init__(self, j):
         self.j = j
 
@@ -47,9 +47,16 @@ class NcbiLocation:
         return self.j['link']
 
 
-def get_ncbi_aws_locations(run_id):
-    json_location_string = 'https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?location=s3.us-east-1&acc={}&location-type=forced&accept-charges=aws'.format(
-        run_id
+class NcbiGcpLocation:
+    def __init__(self, j):
+        self.j = j
+
+    def gs_path(self):
+        return 'gs://{}/{}'.format(self.j['bucket'], self.j['key'])
+
+def get_ncbi_locations(run_id, location, accept_charges_str):
+    json_location_string = 'https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?location={}&acc={}&location-type=forced&accept-charges={}'.format(
+        location, run_id, accept_charges_str
     )
     json_response = extern.run('curl -q \'{}\''.format(json_location_string))
     logging.debug("Got location JSON: {}".format(json_response))
@@ -59,7 +66,13 @@ def get_ncbi_aws_locations(run_id):
         raise Exception(
             "Unexpected json location string returned: {}", json_location_string)
     # TODO: Assumes there is only 1 result, which is all I've ever seen
-    return flatten_list(list([list([NcbiLocation(l) for l in f['locations']]) for f in j['result'][0]['files']]))
+    return flatten_list(list([list([l for l in f['locations']]) for f in j['result'][0]['files']]))
+
+def get_ncbi_aws_locations(run_id):
+    return list([NcbiAwsLocation(l) for l in get_ncbi_locations(run_id, 's3.us-east-1', 'aws')])
+
+def get_ncbi_gcp_locations(run_id):
+    return list([NcbiGcpLocation(l) for l in get_ncbi_locations(run_id, 'gs.us', 'gcp')])
 
 def flatten_list(_2d_list):
     flat_list = []
@@ -97,8 +110,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '-m','--download_methods', '--download-methods',
         nargs='+',
-        help='how to download .sra file. One or more of \'aws-http\', \'prefetch\', \'aws-cp\'',
-        choices=['aws-http', 'prefetch', 'aws-cp'], required=True)
+        help='how to download .sra file. One or more of \'aws-http\', \'prefetch\', \'aws-cp\', \'gcp-cp\'',
+        choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp'], required=True)
     # parser.add_argument(
     #     '--extraction_method', '--extraction-method',
     #     help='how to extract .sra file',
@@ -126,14 +139,14 @@ if __name__ == '__main__':
         datefmt='%m/%d/%Y %I:%M:%S %p')
 
     if args.allow_paid:
-        allowable_sources = ('s3-pay', 's3-odp')
+        allowable_sources = ('s3-pay', 's3-odp', 'gcp-cp')
     else:
         allowable_sources = ('s3-odp')
 
     # Download phase
     if os.path.exists("{}.sra".format(args.run_identifier)):
         logging.info(
-            "Skipping download of {} as the file already appears to exist")
+            "Skipping download of {} as the file already appears to exist".format(args.run_identifier))
 
     else:
         worked = False
@@ -184,6 +197,22 @@ if __name__ == '__main__':
                         logging.warning("Method {} failed: Error was: {}".format(method, e))
                 else:
                     logging.warning("Method {} failed: No S3 location could be found".format(method))
+
+            elif method == 'gcp-cp':
+                locations = get_ncbi_gcp_locations(args.run_identifier)
+                if len(locations) > 0:
+                    loc = locations[0]
+                    command = 'gsutil cp {} {}.sra'.format(
+                        loc.gs_path(), args.run_identifier
+                    )
+                    logging.info("Downloading from GCP..")
+                    try:
+                        extern.run(command)
+                        worked = True
+                    except ExternCalledProcessError as e:
+                        logging.warning("Method {} failed: Error was: {}".format(method, e))
+                else:
+                    logging.warning("Method {} failed: No GCP location could be found".format(method))
 
             else:
                 raise Exception("Unknown method: {}".format(method))
