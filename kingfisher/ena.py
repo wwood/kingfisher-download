@@ -68,7 +68,7 @@ class AsperaEnaDownloader:
             logging.info("Running command: {}".format(cmd))
             try:
                 subprocess.check_call(cmd, shell=True)
-            except e:
+            except Exception as e:
                 logging.warn("Error downloading from ENA with ASCP: {}".format(e))
                 return False
             output_files.append(output_file)
