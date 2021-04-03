@@ -122,7 +122,7 @@ if __name__ == '__main__':
         '[default: value of `gcloud config get-value project` command]')
     parser.add_argument(
         '--allow_paid', '--allow-paid',
-        help='Allow AWS and GCP to cp from retriever-pays s3 buckets',
+        help='Allow AWS and GCP to cp from retriever-pays s3 and GCP buckets',
         action='store_true')
 
     parser.add_argument('--debug', help='output debug information',
