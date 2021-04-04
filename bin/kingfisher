@@ -133,12 +133,20 @@ if __name__ == '__main__':
             [default: not used]')
     parser.add_argument(
         '--allow_paid', '--allow-paid',
-        help='Allow AWS and GCP to cp from retriever-pays s3 and GCP buckets',
+        help='Allow downloading from retriever-pays s3 and GCP buckets',
+        action='store_true')
+    parser.add_argument(
+        '--allow_paid_from_gcp', '--allow-paid-from-gcp',
+        help='Allow downloading from retriever-pays GCP buckets',
+        action='store_true')
+    parser.add_argument(
+        '--allow_paid_from_aws', '--allow-paid-from-aws',
+        help='Allow downloading from retriever-pays AWS buckets',
         action='store_true')
 
     parser.add_argument('--debug', help='output debug information',
                         action="store_true", default=False)
-    parser.add_argument('--quiet', help='only output errors',
+    parser.add_argument('--qui/centreet', help='only output errors',
                         action="store_true", default=False)
     args= parser.parse_args()
 
@@ -153,9 +161,20 @@ if __name__ == '__main__':
         datefmt='%m/%d/%Y %I:%M:%S %p')
 
     if args.allow_paid:
-        allowable_sources = ('s3-odp', 's3-pay', 'gcp-cp')
+        allowable_sources = ['s3-odp', 's3-pay', 'gcp-cp']
     else:
-        allowable_sources = ('s3-odp')
+        allowable_sources = ['s3-odp']
+    if args.allow_paid_from_gcp:
+        if 'gcp-cp' not in args.download_methods:
+            logging.warning("Allowing download from requester-pays GCP buckets, "\
+                "but gcp-cp is not specified download method, so --allow-paid-from-gcp has no effect")
+        allowable_sources.append('gcp-cp')
+    if args.allow_paid_from_aws:
+        if 'aws-cp' not in args.download_methods:
+            logging.warning("Allowing download from requester-pays AWS buckets, "\
+                "but aws-cp is not specified download method, so --allow-paid-from-aws has no effect")
+        allowable_sources.append('s3-pay')
+    logging.debug("Allowing non-NCBI sources for download: {}".format(allowable_sources))
 
     if args.gcp_project and args.gcp_user_key_file:
         raise Exception("--gcp-project is incompatible with --gcp-user-key-file. The project specified in the key file will be used when gcp_project is not specified.")
@@ -284,7 +303,7 @@ if __name__ == '__main__':
                     else:
                         logging.warning("Method {} failed: No GCP location could be found".format(method))
                 else:
-                    logging.warn("Not using method gcp-cp as --allow-paid was not specified")
+                    logging.warning("Not using method gcp-cp as --allow-paid was not specified")
 
             elif method == 'ena-ascp':
                 result = AsperaEnaDownloader().download(args.run_identifier, '.')
