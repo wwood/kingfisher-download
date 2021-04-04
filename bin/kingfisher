@@ -10,11 +10,8 @@ __status__ = "Development"
 
 import argparse
 import logging
-import subprocess
 import os
 import sys
-import warnings
-import tempfile
 import json
 
 import extern
@@ -127,6 +124,14 @@ if __name__ == '__main__':
             https://cloud.google.com/iam/docs/creating-managing-service-account-keys \
             [default: not used]')
     parser.add_argument(
+        '--aws-user-key-id','--aws_user_key_id',
+        help='Downloading from AWS requester pays buckets requires a key ID and secret key \
+            [default: not used]')
+    parser.add_argument(
+        '--aws-user-key-secret','--aws_user_key_secret',
+        help='Downloading from AWS requester pays buckets requires a key ID and secret key \
+            [default: not used]')
+    parser.add_argument(
         '--allow_paid', '--allow-paid',
         help='Allow AWS and GCP to cp from retriever-pays s3 and GCP buckets',
         action='store_true')
@@ -148,9 +153,9 @@ if __name__ == '__main__':
         datefmt='%m/%d/%Y %I:%M:%S %p')
 
     if args.allow_paid:
-        allowable_sources = ('s3-pay', 's3-http', 'gcp-cp')
+        allowable_sources = ('s3-odp', 's3-pay', 'gcp-cp')
     else:
-        allowable_sources = ('s3-http')
+        allowable_sources = ('s3-odp')
 
     if args.gcp_project and args.gcp_user_key_file:
         raise Exception("--gcp-project is incompatible with --gcp-user-key-file. The project specified in the key file will be used when gcp_project is not specified.")
@@ -222,7 +227,7 @@ if __name__ == '__main__':
                     logging.warning("Method {} failed: No ODP URL could be found".format(method))
 
             elif method == 'aws-cp':
-                locations = get_ncbi_aws_locations(args.run_identifier) 
+                locations = get_ncbi_aws_locations(args.run_identifier)
                 s3_locations = list([l for l in locations if l.service() in allowable_sources])
 
                 if len(s3_locations) > 0:
@@ -232,6 +237,10 @@ if __name__ == '__main__':
                     command = '{} {}.sra'.format(
                         s3_location.s3_command_prefix(args.run_identifier), args.run_identifier
                     )
+                    if args.aws_user_key_id:
+                        os.environ['AWS_ACCESS_KEY_ID'] = args.aws_user_key_id
+                    if args.aws_user_key_id:
+                        os.environ['AWS_SECRET_ACCESS_KEY'] = args.aws_user_key_secret
                     logging.info("Downloading from S3..")
                     try:
                         extern.run(command)
