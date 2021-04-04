@@ -284,22 +284,29 @@ if __name__ == '__main__':
                                 gcp_project = j['project_id']
                             extern.run('gcloud auth activate-service-account --key-file={}'.format(args.gcp_user_key_file))
 
+                        failed = False
                         if gcp_project:
                             command = command + " -u {}".format(gcp_project)
                         else:
                             logging.info("Finding Google cloud project to charge")
                             project_id = extern.run('gcloud config get-value project').strip()
-                            logging.info("Charging to project \'{}\'".format(project_id))
-                            command = command + " -u {}".format(project_id)
-                        command += ' cp {} {}.sra'.format(
-                            loc.gs_path(), args.run_identifier
-                        )
-                        logging.info("Downloading from GCP..")
-                        try:
-                            extern.run(command)
-                            downloaded_files = ['{}.sra'.format(args.run_identifier)]
-                        except ExternCalledProcessError as e:
-                            logging.warning("Method {} failed: Error was: {}".format(method, e))
+                            if project_id == '':
+                                logging.warning("Method gcp-cp failed: Could not find a GCP project to charge, cannot continue. "\
+                                    "Expected a project from 'gcloud config get-value project' or specified with --gcp-user-key-file or --gcp-project")
+                                failed = True
+                            else:
+                                logging.info("Charging to project \'{}\'".format(project_id))
+                                command = command + " -u {}".format(project_id)
+                        if not failed:
+                            command += ' cp {} {}.sra'.format(
+                                loc.gs_path(), args.run_identifier
+                            )
+                            logging.info("Downloading from GCP..")
+                            try:
+                                extern.run(command)
+                                downloaded_files = ['{}.sra'.format(args.run_identifier)]
+                            except ExternCalledProcessError as e:
+                                logging.warning("Method {} failed: Error was: {}".format(method, e))
                     else:
                         logging.warning("Method {} failed: No GCP location could be found".format(method))
                 else:
