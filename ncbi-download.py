@@ -112,6 +112,11 @@ if __name__ == '__main__':
         nargs='+',
         help='how to download .sra file. One or more of \'aws-http\', \'prefetch\', \'aws-cp\', \'gcp-cp\'',
         choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp'], required=True)
+    parser.add_argument(
+        '--gcp_project','--gcp-project',
+        help='Downloading from Google Cloud buckets require a Google project to charge '
+        '(they are requester-pays) e.g. \'my-project\'. This can alternately be set '
+        'beforehand using \'gcloud config set project PROJECT_ID\'')
     # parser.add_argument(
     #     '--extraction_method', '--extraction-method',
     #     help='how to extract .sra file',
@@ -199,20 +204,31 @@ if __name__ == '__main__':
                     logging.warning("Method {} failed: No S3 location could be found".format(method))
 
             elif method == 'gcp-cp':
-                locations = get_ncbi_gcp_locations(args.run_identifier)
-                if len(locations) > 0:
-                    loc = locations[0]
-                    command = 'gsutil cp {} {}.sra'.format(
-                        loc.gs_path(), args.run_identifier
-                    )
-                    logging.info("Downloading from GCP..")
-                    try:
-                        extern.run(command)
-                        worked = True
-                    except ExternCalledProcessError as e:
-                        logging.warning("Method {} failed: Error was: {}".format(method, e))
+                if 'gcp-cp' in allowable_sources:
+                    locations = get_ncbi_gcp_locations(args.run_identifier)
+                    if len(locations) > 0:
+                        loc = locations[0]
+                        command = 'gsutil'
+                        if args.gcp_project:
+                            command = command + " -u {}".format(args.gcp_project)
+                        else:
+                            logging.info("Finding Google cloud project to charge")
+                            project_id = extern.run('gcloud config get-value project').strip()
+                            logging.info("Charging to project \'{}\'".format(project_id))
+                            command = command + " -u {}".format(project_id)
+                        command += ' cp {} {}.sra'.format(
+                            loc.gs_path(), args.run_identifier
+                        )
+                        logging.info("Downloading from GCP..")
+                        try:
+                            extern.run(command)
+                            worked = True
+                        except ExternCalledProcessError as e:
+                            logging.warning("Method {} failed: Error was: {}".format(method, e))
+                    else:
+                        logging.warning("Method {} failed: No GCP location could be found".format(method))
                 else:
-                    logging.warning("Method {} failed: No GCP location could be found".format(method))
+                    logging.warn("Not using method gcp-cp as --allow-paid was not specified")
 
             else:
                 raise Exception("Unknown method: {}".format(method))
