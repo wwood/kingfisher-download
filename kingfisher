@@ -116,7 +116,8 @@ if __name__ == '__main__':
         '--gcp_project','--gcp-project',
         help='Downloading from Google Cloud buckets require a Google project to charge '
         '(they are requester-pays) e.g. \'my-project\'. This can alternately be set '
-        'beforehand using \'gcloud config set project PROJECT_ID\'')
+        'beforehand using \'gcloud config set project PROJECT_ID\' '
+        '[default: value of `gcloud config get-value project` command]')
     # parser.add_argument(
     #     '--extraction_method', '--extraction-method',
     #     help='how to extract .sra file',
