@@ -93,11 +93,13 @@ if __name__ == '__main__':
     parser= argparse.ArgumentParser(
         description='Download and extract reads from the NCBI SRA database. \
             Requires the SRA toolkit to be installed, available at \
-            https://github.com/ncbi/sra-tools - a full list of conda \
-            requirements is: python extern pigz sra-tools')
+            https://github.com/ncbi/sra-tools - a list of conda \
+            requirements (excluding AWS\' CLIv2 and Google Cloud\'s gsutil/gcloud) \
+            is: python extern pigz sra-tools')
     parser.add_argument(
         '--run-identifier','--run_identifier','-r',
-        help='Run number to download e.g. ERR1739691')
+        help='Run number to download e.g. ERR1739691',
+        required=True)
     # parser.add_argument('--output-directory','--output_directory',
     # help='Output files to this directory [default: \'.\']',default='.')
     # parser.add_argument('--forward-only','--forward_only',
@@ -110,8 +112,14 @@ if __name__ == '__main__':
     parser.add_argument(
         '-m','--download_methods', '--download-methods',
         nargs='+',
-        help='how to download .sra file. One or more of \'aws-http\', \'prefetch\', \'aws-cp\', \'gcp-cp\'',
+        help='How to download .sra file. If multiple are specified, each is tried in turn until one works.',
         choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp'], required=True)
+    parser.add_argument(
+        '--output_format_possibilities', '--output-format-possibilities',
+        nargs='+',
+        help='Allowable output formats. If more than one is specified, downloaded data will processed as little as possible.',
+        choices=['sra', 'fastq', 'fastq.gz'],
+        default=['fastq','fastq.gz'])
     parser.add_argument(
         '--gcp_project','--gcp-project',
         help='Downloading from Google Cloud buckets require a Google project to charge '
@@ -125,7 +133,7 @@ if __name__ == '__main__':
     #     required=True)
     parser.add_argument(
         '--allow_paid', '--allow-paid',
-        help='allow aws to cp from retriever-pays s3 buckets',
+        help='Allow AWS and GCP to cp from retriever-pays s3 buckets',
         action='store_true')
 
     parser.add_argument('--debug', help='output debug information',
@@ -149,12 +157,41 @@ if __name__ == '__main__':
     else:
         allowable_sources = ('s3-odp')
 
-    # Download phase
-    if os.path.exists("{}.sra".format(args.run_identifier)):
-        logging.info(
-            "Skipping download of {} as the file already appears to exist".format(args.run_identifier))
 
-    else:
+    output_files = []
+
+    # Checking for already existing files
+    skip_download_and_extraction = False
+    for file_type in args.output_format_possibilities:
+        if file_type == 'sra':
+            path = "{}.{}".format(args.run_identifier, file_type)
+            if os.path.exists(path):
+                skip_download_and_extraction = True
+                output_files.append(path)
+                logging.info(
+                    "Skipping download of {} as an output file already appears to exist, as file {}".format(args.run_identifier, path))
+        elif file_type == 'fastq':
+            possibilities = ['{}.fastq'.format(args.run_identifier),'{}_1.fastq'.format(args.run_identifier),'{}_2.fastq'.format(args.run_identifier)]
+            for path in possibilities:
+                if os.path.exists(path):
+                    skip_download_and_extraction = True
+                    output_files.append(path)
+                    logging.info(
+                        "Skipping download of {} as an output file already appears to exist, as file {}".format(args.run_identifier, path))
+        elif file_type == 'fastq.gz':
+            possibilities = ['{}.fastq.gz'.format(args.run_identifier),'{}_1.fastq.gz'.format(args.run_identifier),'{}_2.fastq.gz'.format(args.run_identifier)]
+            for path in possibilities:
+                if os.path.exists(path):
+                    skip_download_and_extraction = True
+                    output_files.append(path)
+                    logging.info(
+                        "Skipping download of {} as an output file already appears to exist, as file {}".format(args.run_identifier, path))
+        else:
+            raise Exception("Programming error")
+
+
+    if not skip_download_and_extraction:
+        # Download phase
         worked = False
         for method in args.download_methods:
             logging.info("Attempting download method {} ..".format(method))
@@ -243,64 +280,27 @@ if __name__ == '__main__':
         if worked is False:
             raise Exception("No more specified download methods, cannot continue")
 
-    # if args.extraction_method == 'fastq-dump':
-    #     # Unfortunately the fasterq-dump method is incompatible with mkfifo and
-    #     # therefore on the fly conversion to fasta and pigz compression
-    #     extract_bash_script= '''
-    #         set -e
+    # Extraction/conversion phase
+    if not skip_download_and_extraction:
+        if 'sra' not in args.output_format_possibilities:
+            extern.run("fasterq-dump ./{}.sra".format(args.run_identifier))
+            os.remove('{}.sra'.format(args.run_identifier))
 
-    #         mkfifo SRR000001_1.fastq;
-    #         mkfifo SRR000001_2.fastq;
-    #         mkfifo SRR000001.fastq;
-    #         fastq-dump --split-3 ./SRR000001.sra & pid=$!
-    #         cat SRR000001_1.fastq fq2fa |pigz >SRR000001_1.fastq.gz &
-    #         cat SRR000001_2.fastq fq2fa |pigz >SRR000001_2.fastq.gz &
-    #         cat SRR000001.fastq fq2fa |pigz >SRR000001.fastq.gz &
-    #         wait $pid;
-    #         echo -n >SRR000001_1.fastq;
-    #         echo -n >SRR000001_2.fastq;
-    #         echo -n >SRR000001.fastq;
-    #         wait;
-    #         rm SRR000001_1.fastq SRR000001_2.fastq SRR000001.fastq;
-    #         '''.replace('SRR000001', args.run_identifier).replace(
-    #             'fq2fa', "|awk '{print \">\" substr($0,2);getline;print;getline;getline}'"
-    #         ).replace('fastq.gz', 'fasta.gz')
-    #     with tempfile.NamedTemporaryFile(prefix='ncbi-download', suffix='.bash') as tf:
+            if 'fastq' not in args.output_format_possibilities:
+                for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
+                    f = fq.replace('x',args.run_identifier)
+                    if os.path.exists(f):
+                        logging.debug("Compressing {} with pigz ..".format(f))
+                        extern.run("pigz {}".format(f))
+                        output_files.append("{}.gz".format(f))
+            else:
+                for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
+                    f = fq.replace('x',args.run_identifier)
+                    if os.path.exists(f):
+                        output_files.append(f)
+        else:
+            output_files.append("{}.sra".format(args.run_identifier))
 
-    #         tf.write(extract_bash_script.encode())
-    #         tf.flush()
-    #         logging.debug(extern.run('cat {}'.format(tf.name)))
-
-    #         logging.info("Running extraction script ..")
-    #         stdout= extern.run('bash "{}"'.format(tf.name))
-    #         logging.debug("script stdout: {}".format(stdout))
-
-    if True: #args.extraction_method == 'fasterq-dump':
-        extern.run("fasterq-dump ./{}.sra".format(args.run_identifier))
-        os.remove('{}.sra'.format(args.run_identifier))
-
-        # def convert_file(stub):
-        #     if os.path.exists("{}.fastq".format(stub)):
-        #         return "fq2fa {}.fastq |pigz >{}.fasta.gz".format(
-        #             stub, stub
-        #         ).replace('fq2fa', "awk '{print \">\" substr($0,2);getline;print;getline;getline}'")
-        #     else:
-        #         return None
-
-        # commands= []
-        # f0= convert_file(args.run_identifier)
-        # if f0 is not None: commands.append(f0)
-        # print(commands)
-        # f1= convert_file('{}_1'.format(args.run_identifier))
-        # if f1 is not None: commands.append(f1)
-        # print(commands)
-        # f2= convert_file('{}_2'.format(args.run_identifier))
-        # if f2 is not None: commands.append(f2)
-
-        # logging.info(
-        #     "Running FASTQ->FASTA conversions on {} files".format(len(commands)))
-        # extern.run_many(commands)
-    else:
-        raise Exception("Programming error")
+    logging.info("Output files: {}".format(', '.join(output_files)))
 
 logging.info("All done.")
