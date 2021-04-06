@@ -20,6 +20,9 @@ import json
 import extern
 from extern import ExternCalledProcessError
 
+sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
+from kingfisher.ena import AsperaEnaDownloader
+
 class NcbiAwsLocation:
     def __init__(self, j):
         self.j = j
@@ -91,29 +94,20 @@ class DownloadMethodFailed(Exception):
 
 if __name__ == '__main__':
     parser= argparse.ArgumentParser(
-        description='Download and extract reads from the NCBI SRA database. \
+        description='Download and extract FASTQ files from the NCBI SRA or ENA databases. \
             Requires the SRA toolkit to be installed, available at \
             https://github.com/ncbi/sra-tools - a list of conda \
-            requirements (excluding AWS\' CLIv2 and Google Cloud\'s gsutil/gcloud) \
+            requirements (excluding AWS\' CLIv2, Google Cloud\'s gsutil/gcloud and Aspera connect) \
             is: python extern pigz sra-tools')
     parser.add_argument(
         '--run-identifier','--run_identifier','-r',
         help='Run number to download e.g. ERR1739691',
         required=True)
-    # parser.add_argument('--output-directory','--output_directory',
-    # help='Output files to this directory [default: \'.\']',default='.')
-    # parser.add_argument('--forward-only','--forward_only',
-    # action="store_true", help='Forward reads only')
-    # parser.add_argument('--reverse-only','--reverse_only',
-    # action="store_true", help='Reverse reads only')
-    # parser.add_argument('--ascp-args','--ascp_args',
-    # help='extra arguments to pass to ascp e.g. \'-k 2\' to resume with a \
-    #     sparse file checksum [default: \'\']',default='')
     parser.add_argument(
         '-m','--download_methods', '--download-methods',
         nargs='+',
         help='How to download .sra file. If multiple are specified, each is tried in turn until one works.',
-        choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp'], required=True)
+        choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp', 'ena-ascp'], required=True)
     parser.add_argument(
         '--output_format_possibilities', '--output-format-possibilities',
         nargs='+',
@@ -126,11 +120,6 @@ if __name__ == '__main__':
         '(they are requester-pays) e.g. \'my-project\'. This can alternately be set '
         'beforehand using \'gcloud config set project PROJECT_ID\' '
         '[default: value of `gcloud config get-value project` command]')
-    # parser.add_argument(
-    #     '--extraction_method', '--extraction-method',
-    #     help='how to extract .sra file',
-    #     choices=['fastq-dump', 'fasterq-dump'],
-    #     required=True)
     parser.add_argument(
         '--allow_paid', '--allow-paid',
         help='Allow AWS and GCP to cp from retriever-pays s3 buckets',
@@ -189,7 +178,10 @@ if __name__ == '__main__':
         else:
             raise Exception("Programming error")
 
+    if 'ena-ascp' in args.download_methods and 'fastq.gz' not in args.output_format_possibilities:
+        raise Exception("The \'ena-ascp\' method must be used with fastq.gz as an output format possibility.")
 
+    downloaded_files = None
     if not skip_download_and_extraction:
         # Download phase
         worked = False
@@ -199,7 +191,7 @@ if __name__ == '__main__':
                 try:
                     extern.run("prefetch -o {}.sra {}".format(
                         args.run_identifier, args.run_identifier))
-                    worked = True
+                    downloaded_files = '{}.sra'.format(args.run_identifier)
                 except ExternCalledProcessError as e:
                     logging.warning("Method {} failed: Error was: {}".format(method, e))
                 
@@ -215,7 +207,7 @@ if __name__ == '__main__':
                     try:
                         extern.run("curl -q -o {}.sra '{}'".format(args.run_identifier, odp_link))
                         logging.info("Download finished")
-                        worked = True
+                        downloaded_files = '{}.sra'.format(args.run_identifier)
                     except ExternCalledProcessError as e:
                         logging.warning("Method {} failed: Error was: {}".format(method, e))
                 else:
@@ -235,7 +227,7 @@ if __name__ == '__main__':
                     logging.info("Downloading from S3..")
                     try:
                         extern.run(command)
-                        worked = True
+                        downloaded_files = '{}.sra'.format(args.run_identifier)
                     except ExternCalledProcessError as e:
                         logging.warning("Method {} failed: Error was: {}".format(method, e))
                 else:
@@ -260,7 +252,7 @@ if __name__ == '__main__':
                         logging.info("Downloading from GCP..")
                         try:
                             extern.run(command)
-                            worked = True
+                            downloaded_files = '{}.sra'.format(args.run_identifier)
                         except ExternCalledProcessError as e:
                             logging.warning("Method {} failed: Error was: {}".format(method, e))
                     else:
@@ -268,38 +260,48 @@ if __name__ == '__main__':
                 else:
                     logging.warn("Not using method gcp-cp as --allow-paid was not specified")
 
+            elif method == 'ena-ascp':
+                result = AsperaEnaDownloader().download(args.run_identifier, '.')
+                if result is not False:
+                    downloaded_files = result
+
             else:
                 raise Exception("Unknown method: {}".format(method))
             
-            if worked:
+            if downloaded_files is not None:
                 logging.info("Method {} worked.".format(method))
                 break
             else:
                 logging.warning("Method {} failed".format(method))
 
-        if worked is False:
+        if downloaded_files is None:
             raise Exception("No more specified download methods, cannot continue")
 
     # Extraction/conversion phase
     if not skip_download_and_extraction:
-        if 'sra' not in args.output_format_possibilities:
-            extern.run("fasterq-dump ./{}.sra".format(args.run_identifier))
-            os.remove('{}.sra'.format(args.run_identifier))
+        if downloaded_files == ['{}.sra'.format(args.run_identifier)]:
+            if 'sra' not in args.output_format_possibilities:
+                extern.run("fasterq-dump ./{}.sra".format(args.run_identifier))
+                os.remove('{}.sra'.format(args.run_identifier))
 
-            if 'fastq' not in args.output_format_possibilities:
-                for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
-                    f = fq.replace('x',args.run_identifier)
-                    if os.path.exists(f):
-                        logging.debug("Compressing {} with pigz ..".format(f))
-                        extern.run("pigz {}".format(f))
-                        output_files.append("{}.gz".format(f))
+                if 'fastq' not in args.output_format_possibilities:
+                    for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
+                        f = fq.replace('x',args.run_identifier)
+                        if os.path.exists(f):
+                            logging.debug("Compressing {} with pigz ..".format(f))
+                            extern.run("pigz {}".format(f))
+                            output_files.append("{}.gz".format(f))
+                else:
+                    for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
+                        f = fq.replace('x',args.run_identifier)
+                        if os.path.exists(f):
+                            output_files.append(f)
             else:
-                for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
-                    f = fq.replace('x',args.run_identifier)
-                    if os.path.exists(f):
-                        output_files.append(f)
+                output_files.append("{}.sra".format(args.run_identifier))
         else:
-            output_files.append("{}.sra".format(args.run_identifier))
+            if 'fastq.gz' not in args.output_format_possibilities:
+                raise Exception("Programming error")
+            output_files = downloaded_files
 
     logging.info("Output files: {}".format(', '.join(output_files)))
 
