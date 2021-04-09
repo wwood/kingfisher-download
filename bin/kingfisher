@@ -142,9 +142,9 @@ if __name__ == '__main__':
         datefmt='%m/%d/%Y %I:%M:%S %p')
 
     if args.allow_paid:
-        allowable_sources = ('s3-pay', 's3-odp', 'gcp-cp')
+        allowable_sources = ('s3-pay', 's3-http', 'gcp-cp')
     else:
-        allowable_sources = ('s3-odp')
+        allowable_sources = ('s3-http')
 
 
     output_files = []
@@ -191,13 +191,13 @@ if __name__ == '__main__':
                 try:
                     extern.run("prefetch -o {}.sra {}".format(
                         args.run_identifier, args.run_identifier))
-                    downloaded_files = '{}.sra'.format(args.run_identifier)
+                    downloaded_files = ['{}.sra'.format(args.run_identifier)]
                 except ExternCalledProcessError as e:
                     logging.warning("Method {} failed: Error was: {}".format(method, e))
                 
             elif method == 'aws-http':
                 locations = get_ncbi_aws_locations(args.run_identifier)
-                odp_http_locations = list([l.link for l in locations if l.service == 'sra-odp'])
+                odp_http_locations = list([l.link() for l in locations if l.service() == 's3-odp'])
                 if len(odp_http_locations) > 0:
                     logging.info("Found ODP link {}".format(odp_http_locations[0]))
                     odp_link = odp_http_locations[0]
@@ -207,7 +207,7 @@ if __name__ == '__main__':
                     try:
                         extern.run("curl -q -o {}.sra '{}'".format(args.run_identifier, odp_link))
                         logging.info("Download finished")
-                        downloaded_files = '{}.sra'.format(args.run_identifier)
+                        downloaded_files = ['{}.sra'.format(args.run_identifier)]
                     except ExternCalledProcessError as e:
                         logging.warning("Method {} failed: Error was: {}".format(method, e))
                 else:
@@ -227,7 +227,7 @@ if __name__ == '__main__':
                     logging.info("Downloading from S3..")
                     try:
                         extern.run(command)
-                        downloaded_files = '{}.sra'.format(args.run_identifier)
+                        downloaded_files = ['{}.sra'.format(args.run_identifier)]
                     except ExternCalledProcessError as e:
                         logging.warning("Method {} failed: Error was: {}".format(method, e))
                 else:
@@ -252,7 +252,7 @@ if __name__ == '__main__':
                         logging.info("Downloading from GCP..")
                         try:
                             extern.run(command)
-                            downloaded_files = '{}.sra'.format(args.run_identifier)
+                            downloaded_files = ['{}.sra'.format(args.run_identifier)]
                         except ExternCalledProcessError as e:
                             logging.warning("Method {} failed: Error was: {}".format(method, e))
                     else:
