@@ -45,7 +45,6 @@ class Tests(unittest.TestCase):
         
         with tempdir.in_tempdir():
             extern.run("{} {}".format(cmd_stub,'ena-ascp'))
-            import IPython; IPython.embed()
             self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4117481)
             self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4945891)
 
