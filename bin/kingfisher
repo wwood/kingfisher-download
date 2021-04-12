@@ -121,6 +121,12 @@ if __name__ == '__main__':
         'beforehand using \'gcloud config set project PROJECT_ID\' '
         '[default: value of `gcloud config get-value project` command]')
     parser.add_argument(
+        '--gcp-user-key-file','--gcp_user_key_file',
+        help='Downloading from Google Cloud buckets require a Google user to be setup. \
+            Use this option to specify a JSON-formatted service account key, as per \
+            https://cloud.google.com/iam/docs/creating-managing-service-account-keys \
+            [default: not used]')
+    parser.add_argument(
         '--allow_paid', '--allow-paid',
         help='Allow AWS and GCP to cp from retriever-pays s3 and GCP buckets',
         action='store_true')
@@ -146,6 +152,8 @@ if __name__ == '__main__':
     else:
         allowable_sources = ('s3-http')
 
+    if args.gcp_project and args.gcp_user_key_file:
+        raise Exception("--gcp-project is incompatible with --gcp-user-key-file. The project specified in the key file will be used when gcp_project is not specified.")
 
     output_files = []
 
@@ -239,8 +247,17 @@ if __name__ == '__main__':
                     if len(locations) > 0:
                         loc = locations[0]
                         command = 'gsutil'
-                        if args.gcp_project:
-                            command = command + " -u {}".format(args.gcp_project)
+                        gcp_project = args.gcp_project
+                        if args.gcp_user_key_file:
+                            with open(args.gcp_user_key_file) as f:
+                                j = json.load(f)
+                                if 'project_id' not in j:
+                                    raise Exception("Unexpectedly could not find project_id in GCP user key JSON file")
+                                gcp_project = j['project_id']
+                            extern.run('gcloud auth activate-service-account --key-file={}'.format(args.gcp_user_key_file))
+
+                        if gcp_project:
+                            command = command + " -u {}".format(gcp_project)
                         else:
                             logging.info("Finding Google cloud project to charge")
                             project_id = extern.run('gcloud config get-value project').strip()
