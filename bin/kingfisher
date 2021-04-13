@@ -146,7 +146,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--debug', help='output debug information',
                         action="store_true", default=False)
-    parser.add_argument('--qui/centreet', help='only output errors',
+    parser.add_argument('--quiet', help='only output errors',
                         action="store_true", default=False)
     args= parser.parse_args()
 
