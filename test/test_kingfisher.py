@@ -48,6 +48,13 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4117481)
             self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4945891)
 
+    # def test_noqual(self):
+    #     with tempdir.in_tempdir():
+    #         extern.run("{} -r ERR3209781 --allowable-output-formats ".format(kingfisher, ))
+    #         self.assertTrue(os.path.getsize('ERR3209781_1.fasta')==21411192)
+    #         self.assertTrue(os.path.getsize('ERR3209781_2.fasta')==21411192)
+
+    
 
 if __name__ == "__main__":
     unittest.main()
