@@ -1,4 +1,12 @@
+#!/bin/bash -e
 
-rm SRR12118866*
-bin/kingfisher -r SRR12118866 -m gcp-cp --debug --allow-paid-from-gcp --gcp-user-key-file gcp_service_key.json
+rm -rf temp_test_data && mkdir temp_test_data && cd temp_test_data
 
+echo "===== should work via gcp-cp"
+../bin/kingfisher -r SRR12118866 -m gcp-cp --allow-paid-from-gcp --gcp-user-key-file ../gcp_service_key.json # normal
+
+echo "===== should work via prefetch"
+../bin/kingfisher -r SRR545641 -m gcp-cp aws-http prefetch --allow-paid-from-gcp --gcp-user-key-file ../gcp_service_key.json # no locations available, but works through prefetch
+
+echo "===== should work via aws-http"
+../bin/kingfisher -r SRR1910678 -m gcp-cp aws-http prefetch --allow-paid-from-gcp --gcp-user-key-file ../gcp_service_key.json #  - rehydrationRequired on gcp

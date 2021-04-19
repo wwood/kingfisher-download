@@ -54,7 +54,10 @@ class GcpLocation:
         self.j = location_json
 
     def gs_path(self):
-        if 'key' in self.j and 'bucket' in self.j:
+        if 'rehydrationRequired' in self.j and self.j['rehydrationRequired'] == True:
+            raise DownloadMethodFailed("Rehydration required from GCP, so ignoring")
+        elif 'key' in self.j and 'bucket' in self.j:
+            # Possibly now outdated and this branch is never used?
             return 'gs://{}/{}'.format(self.j['bucket'], self.j['key'])
         elif 'link' in self.j:
             r = re.compile('https://storage.googleapis.com/(.*?)/(.*)')
@@ -79,6 +82,12 @@ class NcbiLocationJson:
     def object_locations(self, object_type, service, allow_paid):
         # First get a set of objects that are suitable
         passable_objects = []
+        if 'files' not in self.j['result'][0]:
+            error_msg = "No results returned from NCBI location API"
+            if 'msg' in self.j['result'][0]:
+                error_msg += ". msg was '{}'".format(self.j['result'][0]['msg'])
+            logging.warning(error_msg)
+            return []
         for obj in self.j['result'][0]['files']:
             if obj['type'] == 'sra':
                 if obj['name'].endswith('.noqual'):
@@ -150,7 +159,7 @@ if __name__ == '__main__':
         '--output_format_possibilities', '--output-format-possibilities',
         nargs='+',
         help='Allowable output formats. If more than one is specified, downloaded data will processed as little as possible.',
-        choices=['sra', 'fastq', 'fastq.gz','fasta'],
+        choices=['sra', 'fastq', 'fastq.gz'],
         default=['fastq','fastq.gz'])
     parser.add_argument(
         '--gcp_project','--gcp-project',
@@ -361,15 +370,21 @@ if __name__ == '__main__':
                                     logging.info("Charging to project \'{}\'".format(project_id))
                                     command = command + " -u {}".format(project_id)
                             if not failed:
-                                command += ' cp {} {}.sra'.format(
-                                    loc.gs_path(), args.run_identifier
-                                )
-                                logging.info("Downloading from GCP..")
                                 try:
-                                    extern.run(command)
-                                    downloaded_files = ['{}.sra'.format(args.run_identifier)]
-                                except ExternCalledProcessError as e:
-                                    logging.warning("Method {} failed: Error was: {}".format(method, e))
+                                    gs_path = loc.gs_path()
+                                    command += ' cp {} {}.sra'.format(
+                                        gs_path, args.run_identifier
+                                    )
+                                    logging.info("Downloading from GCP..")
+                                    try:
+                                        extern.run(command)
+                                        downloaded_files = ['{}.sra'.format(args.run_identifier)]
+                                    except ExternCalledProcessError as e:
+                                        logging.warning("Method {} failed: Error was: {}".format(method, e))
+                                except DownloadMethodFailed as e:
+                                    logging.warning("Method {} failed, error was {}".format(
+                                        method, e
+                                    ))
                     else:
                         logging.warning("Method {} failed: No GCP location could be found".format(method))
                 else:
