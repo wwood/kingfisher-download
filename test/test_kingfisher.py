@@ -74,15 +74,15 @@ class Tests(unittest.TestCase):
         with tempdir.in_tempdir():
             extern.run('{} -r SRR12118866 -m ena-ascp --output-format-possibilities fasta.gz fasta'.format(
                 kingfisher))
-            self.assertTrue(os.path.getsize('SRR12118866_1.fasta')==10705596)
-            self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10705596)
+            self.assertTrue(os.path.getsize('SRR12118866_1.fasta')==10391100)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10391100)
 
     def test_fasta_gz_via_ena_ascp(self):
         with tempdir.in_tempdir():
             extern.run('{} -r SRR12118866 -m ena-ascp --output-format-possibilities fasta.gz'.format(
                 kingfisher))
-            self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==757641)
-            self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==907591)
+            self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==746749)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==899862)
 
 
 
