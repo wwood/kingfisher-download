@@ -1,6 +1,5 @@
 import subprocess
 import logging
-import sys
 import os
 
 class AsperaEnaDownloader:
