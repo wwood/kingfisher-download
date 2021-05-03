@@ -159,7 +159,7 @@ if __name__ == '__main__':
         '--output_format_possibilities', '--output-format-possibilities',
         nargs='+',
         help='Allowable output formats. If more than one is specified, downloaded data will processed as little as possible.',
-        choices=['sra', 'fastq', 'fastq.gz'],
+        choices=['sra', 'fastq', 'fastq.gz','fasta','fasta.gz'],
         default=['fastq','fastq.gz'])
     parser.add_argument(
         '--gcp_project','--gcp-project',
@@ -245,37 +245,37 @@ if __name__ == '__main__':
 
     # Checking for already existing files
     skip_download_and_extraction = False
+    def maybe_skip(path, output_files):
+        skip_download_and_extraction = False
+        if os.path.exists(path):
+            skip_download_and_extraction = True
+            output_files.append(path)
+            logging.info(
+                "Skipping download of {} as an output file already appears to exist, as file {}".format(args.run_identifier, path))
+        return skip_download_and_extraction, output_files
+
     for file_type in args.output_format_possibilities:
         if file_type == 'sra':
             path = "{}.{}".format(args.run_identifier, file_type)
-            if os.path.exists(path):
-                skip_download_and_extraction = True
-                output_files.append(path)
-                logging.info(
-                    "Skipping download of {} as an output file already appears to exist, as file {}".format(args.run_identifier, path))
+            output_files = maybe_skip(path, output_files)
         elif file_type == 'fastq':
-            possibilities = ['{}.fastq'.format(args.run_identifier),'{}_1.fastq'.format(args.run_identifier),'{}_2.fastq'.format(args.run_identifier)]
+            possibilities = ['x.fastq','x_1.fastq','x_2.fastq']
             for path in possibilities:
-                if os.path.exists(path):
-                    skip_download_and_extraction = True
-                    output_files.append(path)
-                    logging.info(
-                        "Skipping download of {} as an output file already appears to exist, as file {}".format(args.run_identifier, path))
+                skip_download_and_extraction, output_files = maybe_skip(path.replace('x',args.run_identifier), output_files)
         elif file_type == 'fastq.gz':
-            possibilities = ['{}.fastq.gz'.format(args.run_identifier),'{}_1.fastq.gz'.format(args.run_identifier),'{}_2.fastq.gz'.format(args.run_identifier)]
+            possibilities = ['x.fastq.gz','x_1.fastq.gz','x_2.fastq.gz']
             for path in possibilities:
-                if os.path.exists(path):
-                    skip_download_and_extraction = True
-                    output_files.append(path)
-                    logging.info(
-                        "Skipping download of {} as an output file already appears to exist, as file {}".format(args.run_identifier, path))
+                skip_download_and_extraction, output_files = maybe_skip(path.replace('x',args.run_identifier), output_files)
         elif file_type == 'fasta':
-            logging.error("FASTA output not completely coded yet")
+            possibilities = ['x.fasta','x_1.fasta','x_2.fasta']
+            for path in possibilities:
+                skip_download_and_extraction, output_files = maybe_skip(path.replace('x',args.run_identifier), output_files)
+        elif file_type == 'fasta.gz':
+            possibilities = ['x.fasta.gz','x_1.fasta.gz','x_2.fasta.gz']
+            for path in possibilities:
+                skip_download_and_extraction, output_files = maybe_skip(path.replace('x',args.run_identifier), output_files)
         else:
             raise Exception("Programming error")
-
-    if 'ena-ascp' in args.download_methods and 'fastq.gz' not in args.output_format_possibilities:
-        raise Exception("The \'ena-ascp\' method must be used with fastq.gz as an output format possibility.")
 
     downloaded_files = None
     if not skip_download_and_extraction:
@@ -424,6 +424,7 @@ if __name__ == '__main__':
     if not skip_download_and_extraction:
         if downloaded_files == ['{}.sra'.format(args.run_identifier)]:
             if 'sra' not in args.output_format_possibilities:
+                logging.info("Extracting .sra file with fasterq-dump ..")
                 extern.run("fasterq-dump ./{}.sra".format(args.run_identifier))
                 os.remove('{}.sra'.format(args.run_identifier))
 
@@ -431,9 +432,29 @@ if __name__ == '__main__':
                     for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
                         f = fq.replace('x',args.run_identifier)
                         if os.path.exists(f):
-                            logging.debug("Compressing {} with pigz ..".format(f))
-                            extern.run("pigz {}".format(f))
-                            output_files.append("{}.gz".format(f))
+                            # Do the least work, currently we have FASTQ.
+                            if 'fasta' in args.output_format_possibilities:
+                                logging.info("Converting {} to FASTA ..".format(f))
+                                out_here = f.replace('.fastq','.fasta')
+                                extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} >{}".format(
+                                    f, out_here
+                                ))
+                                os.remove(f)
+                                output_files.append(out_here)
+                            elif 'fasta.gz' in args.output_format_possibilities:
+                                logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
+                                out_here = f.replace('.fastq','.fasta.gz')
+                                extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} |pigz >{}".format(
+                                    f, out_here
+                                ))
+                                os.remove(f)
+                                output_files.append(out_here)
+                            elif 'fastq.gz' in args.output_format_possibilities:
+                                logging.info("Compressing {} with pigz ..".format(f))
+                                extern.run("pigz {}".format(f))
+                                output_files.append("{}.gz".format(f))
+                            else:
+                                raise Exception("Programming error")
                 else:
                     for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
                         f = fq.replace('x',args.run_identifier)
@@ -443,8 +464,35 @@ if __name__ == '__main__':
                 output_files.append("{}.sra".format(args.run_identifier))
         else:
             if 'fastq.gz' not in args.output_format_possibilities:
-                raise Exception("Programming error")
-            output_files = downloaded_files
+                for fq in ['x_1.fastq.gz','x_2.fastq.gz','x.fastq.gz']:
+                    f = fq.replace('x',args.run_identifier)
+                    if os.path.exists(f):
+                        # Do the least work, currently we have FASTQ.gz
+                        if 'fasta' in args.output_format_possibilities:
+                            logging.info("Converting {} to FASTA ..".format(f))
+                            out_here = f.replace('.fastq.gz','.fasta')
+                            extern.run("pigz -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' >{}".format(
+                                f, out_here
+                            ))
+                            os.remove(f)
+                            output_files.append(out_here)
+                        elif 'fasta.gz' in args.output_format_possibilities:
+                            logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
+                            out_here = f.replace('.fastq.gz','.fasta.gz')
+                            extern.run("pigz -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' |pigz >{}".format(
+                                f, out_here
+                            ))
+                            os.remove(f)
+                            output_files.append(out_here)
+                        elif 'fastq' in args.output_format_possibilities:
+                            logging.info("Decompressing {} with pigz ..".format(f))
+                            extern.run("pigz -d {}".format(f))
+                            output_files.append(f.replace('.fastq.gz','.fastq'))
+                        else:
+                            raise Exception("Programming error")
+
+            else:
+                output_files = downloaded_files
 
     logging.info("Output files: {}".format(', '.join(output_files)))
 

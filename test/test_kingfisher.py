@@ -25,7 +25,6 @@ import unittest
 import os.path
 import tempdir
 import sys
-import io
 
 import extern
 
@@ -47,6 +46,45 @@ class Tests(unittest.TestCase):
             extern.run("{} {}".format(cmd_stub,'ena-ascp'))
             self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4117481)
             self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4945891)
+
+    def test_fasta_via_sra(self):
+        with tempdir.in_tempdir():
+            extern.run('{} -r SRR12118866 -m aws-http --output-format-possibilities fasta.gz fasta'.format(
+                kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fasta')==10705596)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10705596)
+
+    def test_fasta_gz_via_sra(self):
+        with tempdir.in_tempdir():
+            extern.run('{} -r SRR12118866 -m aws-http --output-format-possibilities fasta.gz'.format(
+                kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==757641)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==907591)
+
+
+
+    def test_fastq_via_ena_ascp(self):
+        with tempdir.in_tempdir():
+            extern.run('{} -r SRR12118866 -m ena-ascp --output-format-possibilities fastq'.format(
+                kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==21411192)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==21411192)
+
+    def test_fasta_via_ena_ascp(self):
+        with tempdir.in_tempdir():
+            extern.run('{} -r SRR12118866 -m ena-ascp --output-format-possibilities fasta.gz fasta'.format(
+                kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fasta')==10705596)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10705596)
+
+    def test_fasta_gz_via_ena_ascp(self):
+        with tempdir.in_tempdir():
+            extern.run('{} -r SRR12118866 -m ena-ascp --output-format-possibilities fasta.gz'.format(
+                kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==757641)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==907591)
+
+
 
     # def test_noqual(self):
     #     with tempdir.in_tempdir():
