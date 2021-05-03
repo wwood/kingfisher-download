@@ -193,6 +193,17 @@ if __name__ == '__main__':
         '--allow_paid_from_aws', '--allow-paid-from-aws',
         help='Allow downloading from retriever-pays AWS buckets',
         action='store_true')
+    parser.add_argument(
+        '--ssh-key', '--ssh_key',
+        help='\'linux\' or \'osx\' for default paths used in each OS respectively, \
+            otherwise a path to the openssh key to used for aspera (i.e. the \
+            -i flag of ascp) [default: \'linux\']',
+        default='linux')
+    parser.add_argument(
+        '--ascp-args', '--ascp_args',
+        help='extra arguments to pass to ascp e.g. \'-k 2\' to resume with a \
+        sparse file checksum [default: \'\']',
+        default='')
 
     parser.add_argument('--debug', help='output debug information',
                         action="store_true", default=False)
@@ -391,7 +402,9 @@ if __name__ == '__main__':
                     logging.warning("Not using method gcp-cp as --allow-paid was not specified")
 
             elif method == 'ena-ascp':
-                result = AsperaEnaDownloader().download(args.run_identifier, '.')
+                result = AsperaEnaDownloader().download(args.run_identifier, '.',
+                    ascp_args=args.ascp_args,
+                    ssh_key=args.ssh_key)
                 if result is not False:
                     downloaded_files = result
 
