@@ -3,6 +3,7 @@
 - [Kingfisher](#kingfisher)
   - [Installation](#installation)
   - [Usage](#usage)
+    - [Near parity with ena-fast-download](#near-parity-with-ena-fast-download)
   - [FAQ](#faq)
   - [License](#license)
 
@@ -16,6 +17,10 @@ It can attempt to download data from a series of methods, which it attempts in
 order until one works. Then the downloaded data is converted to an output FASTQ
 / FASTA / GZIP file format as required.
 
+This software was originally known as `ena-fast-download`. Kingfisher implements
+almost all of that tool's functionality, but also handles data sources other
+than ENA. See the 'Usage' section for the equivalent invocation.
+
 The `ena-ascp` method of this tool was built based on the very helpful bio-stars
 thread https://www.biostars.org/p/325010/ written by @ATpoint. To find run
 identifiers to be used as input to kingfisher, you might find the [SRA
@@ -26,7 +31,7 @@ explorer](https://ewels.github.io/sra-explorer/) site helpful.
 Kingfisher can be installed by installing its conda dependencies as follows
 
 ```
-conda create -e kingfisher pigz python extern curl sra-tools
+conda create -c conda-forge -c bioconda -e kingfisher pigz python extern curl sra-tools
 conda activate kingfisher
 git clone https://github.com/wwood/kingfisher-download
 cd kingfisher-download/bin
@@ -34,7 +39,7 @@ export PATH=$PWD:$PATH
 kingfisher -h
 ```
 
-Optionally, to use the `ena-ascp` method, an Aspera connect client is required.
+Optionally, to use the `ena-ascp` method, an Aspera connect client is also required.
 See https://www.ibm.com/aspera/connect/ or https://www.biostars.org/p/325010/
 
 ## Usage
@@ -42,11 +47,21 @@ See https://www.ibm.com/aspera/connect/ or https://www.biostars.org/p/325010/
 ```
 kingfisher -r ERR1739691 -m ena-ascp aws-http prefetch
 ```
-This will download `.fastq.gz` files from the ENA, or failing that, downloads an
-.sra file from the Amazon AWA Open Data Program and then converts to FASTQ, or
-failing that use NCBI prefetch to download and convert that to FASTQ.
+This will download `.fastq.gz` files of the run ERR1739691 from the ENA, or
+failing that, downloads an .sra file from the Amazon AWA Open Data Program and
+then converts to FASTQ, or failing that use NCBI prefetch to download and
+convert that to FASTQ.
 
 Output files are put into the current working directory.
+
+### Near parity with ena-fast-download
+
+Ena-fast-download was the original name for this tool. To imitate that tool's
+functionality:
+
+```
+kingfisher -r ERR1739691 -m ena-ascp
+```
 
 ## FAQ
 If you see this error `/bin/sh: 1: ascp: not found` as below:
