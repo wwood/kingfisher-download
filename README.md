@@ -60,6 +60,7 @@ Output files are put into the current working directory.
 |__method__ |__description__ |
 | --- | --- |
 |`ena-ascp`|Download `.fastq.gz` files from ENA using Aspera. This is the fastest method since no `fasterq-dump` is required.|
+|`ena-ftp`|Download `.fastq.gz` files from ENA using `curl`. This is relatively fast since no `fasterq-dump` is required.|
 |`prefetch`|Download .SRA file using NCBI's prefetch from sra-tools, which is then extracted with `fasterq-dump`.|
 |`aws-http`|Download .SRA file from AWS Open Data Program using `curl`, which is then extracted with `fasterq-dump`.|
 |`aws-cp`|Download .SRA file from AWS using `aws s3 cp`, which is then extracted with fasterq-dump. May require payment, probably not.|

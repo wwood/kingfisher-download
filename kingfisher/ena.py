@@ -2,17 +2,10 @@ import subprocess
 import logging
 import os
 
-class AsperaEnaDownloader:
-    def download(self, run_id, output_directory, quiet=False, ascp_args='', ssh_key='linux'):
-        if ssh_key == 'linux':
-            ssh_key_file = '$HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh'
-        elif ssh_key == 'osx':
-            ssh_key_file = '$HOME/Applications/Aspera Connect.app/Contents/\
-                Resources/asperaweb_id_dsa.openssh'
-        else:
-            ssh_key_file = ssh_key
-        logging.info("Using aspera ssh key file: {}".format(ssh_key_file))
+import extern
 
+class EnaDownloader:
+    def get_ftp_download_urls(self, run_id):
         # Get the textual representation of the run. We specifically need the
         # fastq_ftp bit
         logging.info("Querying ENA for FTP paths for {}..".format(run_id))
@@ -46,6 +39,21 @@ class AsperaEnaDownloader:
         else:
             logging.debug("Found {} FTP URLs for download: {}".format(
                 len(ftp_urls), ", ".join(ftp_urls)))
+        return ftp_urls
+
+    def download_with_aspera(self, run_id, output_directory, quiet=False, ascp_args='', ssh_key='linux'):
+        if ssh_key == 'linux':
+            ssh_key_file = '$HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh'
+        elif ssh_key == 'osx':
+            ssh_key_file = '$HOME/Applications/Aspera Connect.app/Contents/\
+                Resources/asperaweb_id_dsa.openssh'
+        else:
+            ssh_key_file = ssh_key
+        logging.info("Using aspera ssh key file: {}".format(ssh_key_file))
+
+        ftp_urls = self.get_ftp_download_urls(run_id)
+        if ftp_urls is False:
+            return False
 
         logging.info("Downloading {} FTP read set(s): {}".format(
             len(ftp_urls), ", ".join(ftp_urls)))
@@ -71,5 +79,18 @@ class AsperaEnaDownloader:
                 logging.warn("Error downloading from ENA with ASCP: {}".format(e))
                 return False
             output_files.append(output_file)
-        
         return output_files
+
+    def download_with_curl(self, run_id):
+        ftp_urls = self.get_ftp_download_urls(run_id)
+        if ftp_urls is False:
+            return False
+
+        downloaded = []
+        for e in ftp_urls:
+            logging.info("Downloading {} ..".format(e))
+            outname = os.path.basename(e)
+            extern.run("curl -q -L '{}' -o {}".format(e, outname))
+            downloaded.append(outname)
+        return downloaded
+

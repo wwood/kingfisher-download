@@ -19,7 +19,7 @@ import extern
 from extern import ExternCalledProcessError
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
-from kingfisher.ena import AsperaEnaDownloader
+from kingfisher.ena import EnaDownloader
 
 class AwsLocation:
     def __init__(self, object_json, location_json):
@@ -154,7 +154,7 @@ if __name__ == '__main__':
         '-m','--download_methods', '--download-methods',
         nargs='+',
         help='How to download .sra file. If multiple are specified, each is tried in turn until one works.',
-        choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp', 'ena-ascp'], required=True)
+        choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp', 'ena-ascp','ena-ftp'], required=True)
     parser.add_argument(
         '--output_format_possibilities', '--output-format-possibilities',
         nargs='+',
@@ -402,9 +402,14 @@ if __name__ == '__main__':
                     logging.warning("Not using method gcp-cp as --allow-paid was not specified")
 
             elif method == 'ena-ascp':
-                result = AsperaEnaDownloader().download(args.run_identifier, '.',
+                result = EnaDownloader().download(args.run_identifier, '.',
                     ascp_args=args.ascp_args,
                     ssh_key=args.ssh_key)
+                if result is not False:
+                    downloaded_files = result
+
+            elif method == 'ena-ftp':
+                result = EnaDownloader().download_with_curl(args.run_identifier)
                 if result is not False:
                     downloaded_files = result
 
