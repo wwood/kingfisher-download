@@ -3,17 +3,18 @@
 - [Kingfisher](#kingfisher)
   - [Installation](#installation)
   - [Usage](#usage)
+    - [Method details](#method-details)
     - [Near parity with ena-fast-download](#near-parity-with-ena-fast-download)
   - [FAQ](#faq)
   - [License](#license)
 
 # Kingfisher
 
-Kingfisher is a program for downloading FASTQ files from public data sources,
+Kingfisher is a program for downloading FASTA/Q files from public data sources,
 including the European Nucleotide Archive (ENA), NCBI SRA, Amazon AWS and Google
-Cloud. It's input is an "Run" accession e.g. DRR001970
+Cloud. It's input is an "Run" accession e.g. DRR001970.
 
-It can attempt to download data from a series of methods, which it attempts in
+It attempts to download data from a series of methods, which it attempts in
 order until one works. Then the downloaded data is converted to an output FASTQ
 / FASTA / GZIP file format as required.
 
@@ -53,6 +54,16 @@ then converts to FASTQ, or failing that use NCBI prefetch to download and
 convert that to FASTQ.
 
 Output files are put into the current working directory.
+
+### Method details
+
+|__method__ |__description__ |
+| --- | --- |
+|`ena-ascp`|Download `.fastq.gz` files from ENA using Aspera. This is the fastest method since no `fasterq-dump` is required.|
+|`prefetch`|Download .SRA file using NCBI's prefetch from sra-tools, which is then extracted with `fasterq-dump`.|
+|`aws-http`|Download .SRA file from AWS Open Data Program using `curl`, which is then extracted with `fasterq-dump`.|
+|`aws-cp`|Download .SRA file from AWS using `aws s3 cp`, which is then extracted with fasterq-dump. May require payment, probably not.|
+|`gcp-cp`|Download .SRA file from Google Cloud `gsutil`, which is then extracted with fasterq-dump. Requires payment.|
 
 ### Near parity with ena-fast-download
 
