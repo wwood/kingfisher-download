@@ -1,0 +1,499 @@
+#!/usr/bin/env python3
+
+__author__ = "Ben Woodcroft"
+__copyright__ = "Copyright 2021"
+__credits__ = ["Ben Woodcroft"]
+__license__ = "GPL3+"
+__maintainer__ = "Ben Woodcroft"
+__email__ = "b.woodcroft near qut.edu.au"
+__status__ = "Development"
+
+import argparse
+import logging
+import os
+import sys
+import json
+import re
+
+import extern
+from extern import ExternCalledProcessError
+
+sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
+from kingfisher.ena import AsperaEnaDownloader
+
+class AwsLocation:
+    def __init__(self, object_json, location_json):
+        self.object_json = object_json
+        self.j = location_json
+
+    def service(self):
+        if self.j['service'] == 's3':
+            if 'sra-pub-run-odp' in self.j['link']:
+                return 's3-odp'
+            else:
+                return 's3-pay'
+        else:
+            raise Exception("Programming error: {}".format(self.j))
+
+    def s3_command_prefix(self, run_id):
+        if self.service() == 's3-pay':
+            return 'aws s3api get-object --bucket {} --key {} --request-payer requester'.format(
+                self.j['bucket'], self.j['key']
+            )
+        elif self.service() == 's3-odp':
+            return 'aws s3 cp s3://sra-pub-run-odp/sra/{}/{}'.format(run_id, run_id)
+        else:
+            raise Exception("Unexpected json location found: {}", self.j)
+
+    def link(self):
+        return self.j['link']
+
+class GcpLocation:
+    def __init__(self, object_json, location_json):
+        self.object_json = object_json
+        self.j = location_json
+
+    def gs_path(self):
+        if 'rehydrationRequired' in self.j and self.j['rehydrationRequired'] == True:
+            raise DownloadMethodFailed("Rehydration required from GCP, so ignoring")
+        elif 'key' in self.j and 'bucket' in self.j:
+            # Possibly now outdated and this branch is never used?
+            return 'gs://{}/{}'.format(self.j['bucket'], self.j['key'])
+        elif 'link' in self.j:
+            r = re.compile('https://storage.googleapis.com/(.*?)/(.*)')
+            m = r.match(self.j['link'])
+            if m is None:
+                raise DownloadMethodFailed("Unexpected GCP link URL in {}".format(self.j))
+            else:
+                return 'gs://{}/{}'.format(m[1],m[2])
+        else:
+            raise DownloadMethodFailed("Unsure how to copy from GCP location {}".format(self.j))
+
+class NcbiLocationJson:
+    OBJECT_TYPE_SRA = 'sra-qual'
+    OBJECT_TYPE_SRA_NOQUAL = 'sra-noqual'
+
+    GCP_SERVICE = 'gs-service'
+    AWS_SERVICE = 's3-service'
+
+    def __init__(self, j):
+        self.j = j
+
+    def object_locations(self, object_type, service, allow_paid):
+        # First get a set of objects that are suitable
+        passable_objects = []
+        if 'files' not in self.j['result'][0]:
+            error_msg = "No results returned from NCBI location API"
+            if 'msg' in self.j['result'][0]:
+                error_msg += ". msg was '{}'".format(self.j['result'][0]['msg'])
+            logging.warning(error_msg)
+            return []
+        for obj in self.j['result'][0]['files']:
+            if obj['type'] == 'sra':
+                if obj['name'].endswith('.noqual'):
+                    if object_type == NcbiLocationJson.OBJECT_TYPE_SRA_NOQUAL:
+                        passable_objects.append(obj)
+                else:
+                    if object_type == NcbiLocationJson.OBJECT_TYPE_SRA:
+                        passable_objects.append(obj)
+        # Then get a set of locations of those objects that suit
+        passable_objects_and_locations = []
+        for obj in passable_objects:
+            for loc in obj['locations']:
+                logging.debug("Assessing location {}".format(loc))
+                if 'payRequired' in loc and loc['payRequired'] != False and allow_paid != True:
+                    # Payment is required but we aren't allow-paid
+                    logging.debug("Excluding location as we aren't paid: {}".format(loc))
+                    continue
+                elif service == NcbiLocationJson.GCP_SERVICE:
+                    if loc['service'] == 'gs':
+                        logging.debug("Accepting location")
+                        passable_objects_and_locations.append(GcpLocation(obj, loc))
+                    else:
+                        logging.debug("Location has the wrong service")
+                elif service == NcbiLocationJson.AWS_SERVICE:
+                    if loc['service'] == 's3':
+                        logging.debug("Accepting location")
+                        passable_objects_and_locations.append(AwsLocation(obj, loc))
+                    else:
+                        logging.debug("Location has the wrong service")
+                else:
+                    logging.debug("Discarding location as unsuitable: {}".format(loc))
+        return passable_objects_and_locations
+
+
+def get_ncbi_locations(run_id):
+    json_location_string = 'https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?&acc={}&accept-alternate-locations=yes'.format(
+        run_id)
+    json_response = extern.run('curl -q \'{}\''.format(json_location_string))
+    logging.debug("Got location JSON: {}".format(json_response))
+
+    j = json.loads(json_response)
+    if 'version' not in j or j['version'] != '2':
+        raise Exception(
+            "Unexpected json location string returned: {}", json_location_string)
+    # TODO: Assumes there is only 1 result, which is all I've ever seen
+    return NcbiLocationJson(j)
+
+
+class DownloadMethodFailed(Exception):
+    pass
+
+if __name__ == '__main__':
+    parser= argparse.ArgumentParser(
+        description='Download and extract FASTQ files from the NCBI SRA or ENA databases. \
+            Requires the SRA toolkit to be installed, available at \
+            https://github.com/ncbi/sra-tools - a list of conda \
+            requirements (excluding AWS\' CLIv2, Google Cloud\'s gsutil/gcloud and Aspera connect) \
+            is: python extern pigz sra-tools')
+    parser.add_argument(
+        '--run-identifier','--run_identifier','-r',
+        help='Run number to download e.g. ERR1739691',
+        required=True)
+    parser.add_argument(
+        '-m','--download_methods', '--download-methods',
+        nargs='+',
+        help='How to download .sra file. If multiple are specified, each is tried in turn until one works.',
+        choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp', 'ena-ascp'], required=True)
+    parser.add_argument(
+        '--output_format_possibilities', '--output-format-possibilities',
+        nargs='+',
+        help='Allowable output formats. If more than one is specified, downloaded data will processed as little as possible.',
+        choices=['sra', 'fastq', 'fastq.gz','fasta','fasta.gz'],
+        default=['fastq','fastq.gz'])
+    parser.add_argument(
+        '--gcp_project','--gcp-project',
+        help='Downloading from Google Cloud buckets require a Google project to charge '
+        '(they are requester-pays) e.g. \'my-project\'. This can alternately be set '
+        'beforehand using \'gcloud config set project PROJECT_ID\' '
+        '[default: value of `gcloud config get-value project` command]')
+    parser.add_argument(
+        '--gcp-user-key-file','--gcp_user_key_file',
+        help='Downloading from Google Cloud buckets require a Google user to be setup. \
+            Use this option to specify a JSON-formatted service account key, as per \
+            https://cloud.google.com/iam/docs/creating-managing-service-account-keys \
+            [default: not used]')
+    parser.add_argument(
+        '--aws-user-key-id','--aws_user_key_id',
+        help='Downloading from AWS requester pays buckets requires a key ID and secret key \
+            [default: not used]')
+    parser.add_argument(
+        '--aws-user-key-secret','--aws_user_key_secret',
+        help='Downloading from AWS requester pays buckets requires a key ID and secret key \
+            [default: not used]')
+    parser.add_argument(
+        '--allow_paid', '--allow-paid',
+        help='Allow downloading from retriever-pays s3 and GCP buckets',
+        action='store_true')
+    parser.add_argument(
+        '--allow_paid_from_gcp', '--allow-paid-from-gcp',
+        help='Allow downloading from retriever-pays GCP buckets',
+        action='store_true')
+    parser.add_argument(
+        '--allow_paid_from_aws', '--allow-paid-from-aws',
+        help='Allow downloading from retriever-pays AWS buckets',
+        action='store_true')
+    parser.add_argument(
+        '--ssh-key', '--ssh_key',
+        help='\'linux\' or \'osx\' for default paths used in each OS respectively, \
+            otherwise a path to the openssh key to used for aspera (i.e. the \
+            -i flag of ascp) [default: \'linux\']',
+        default='linux')
+    parser.add_argument(
+        '--ascp-args', '--ascp_args',
+        help='extra arguments to pass to ascp e.g. \'-k 2\' to resume with a \
+        sparse file checksum [default: \'\']',
+        default='')
+
+    parser.add_argument('--debug', help='output debug information',
+                        action="store_true", default=False)
+    parser.add_argument('--quiet', help='only output errors',
+                        action="store_true", default=False)
+    args= parser.parse_args()
+
+    if args.debug:
+        loglevel= logging.DEBUG
+    elif args.quiet:
+        loglevel= logging.ERROR
+    else:
+        loglevel= logging.INFO
+    logging.basicConfig(
+        level=loglevel, format='%(asctime)s %(levelname)s: %(message)s',
+        datefmt='%m/%d/%Y %I:%M:%S %p')
+
+    if args.allow_paid:
+        allowable_sources = ['s3', 'gcp']
+    else:
+        allowable_sources = []
+    if args.allow_paid_from_gcp:
+        if 'gcp-cp' not in args.download_methods:
+            logging.warning("Allowing download from requester-pays GCP buckets, "\
+                "but gcp-cp is not specified download method, so --allow-paid-from-gcp has no effect")
+        allowable_sources.append('gcp')
+    if args.allow_paid_from_aws:
+        if 'aws-cp' not in args.download_methods:
+            logging.warning("Allowing download from requester-pays AWS buckets, "\
+                "but aws-cp is not specified download method, so --allow-paid-from-aws has no effect")
+        allowable_sources.append('s3')
+    logging.debug("Allowing non-NCBI sources for download: {}".format(allowable_sources))
+
+    if args.gcp_project and args.gcp_user_key_file:
+        raise Exception("--gcp-project is incompatible with --gcp-user-key-file. The project specified in the key file will be used when gcp_project is not specified.")
+
+    output_files = []
+    ncbi_locations = None
+
+    # Checking for already existing files
+    skip_download_and_extraction = False
+    def maybe_skip(path, output_files):
+        skip_download_and_extraction = False
+        if os.path.exists(path):
+            skip_download_and_extraction = True
+            output_files.append(path)
+            logging.info(
+                "Skipping download of {} as an output file already appears to exist, as file {}".format(args.run_identifier, path))
+        return skip_download_and_extraction, output_files
+
+    for file_type in args.output_format_possibilities:
+        if file_type == 'sra':
+            path = "{}.{}".format(args.run_identifier, file_type)
+            output_files = maybe_skip(path, output_files)
+        elif file_type == 'fastq':
+            possibilities = ['x.fastq','x_1.fastq','x_2.fastq']
+            for path in possibilities:
+                skip_download_and_extraction, output_files = maybe_skip(path.replace('x',args.run_identifier), output_files)
+        elif file_type == 'fastq.gz':
+            possibilities = ['x.fastq.gz','x_1.fastq.gz','x_2.fastq.gz']
+            for path in possibilities:
+                skip_download_and_extraction, output_files = maybe_skip(path.replace('x',args.run_identifier), output_files)
+        elif file_type == 'fasta':
+            possibilities = ['x.fasta','x_1.fasta','x_2.fasta']
+            for path in possibilities:
+                skip_download_and_extraction, output_files = maybe_skip(path.replace('x',args.run_identifier), output_files)
+        elif file_type == 'fasta.gz':
+            possibilities = ['x.fasta.gz','x_1.fasta.gz','x_2.fasta.gz']
+            for path in possibilities:
+                skip_download_and_extraction, output_files = maybe_skip(path.replace('x',args.run_identifier), output_files)
+        else:
+            raise Exception("Programming error")
+
+    downloaded_files = None
+    if not skip_download_and_extraction:
+        # Download phase
+        worked = False
+        for method in args.download_methods:
+            logging.info("Attempting download method {} ..".format(method))
+            if method == 'prefetch':
+                try:
+                    extern.run("prefetch -o {}.sra {}".format(
+                        args.run_identifier, args.run_identifier))
+                    downloaded_files = ['{}.sra'.format(args.run_identifier)]
+                except ExternCalledProcessError as e:
+                    logging.warning("Method {} failed: Error was: {}".format(method, e))
+                
+            elif method == 'aws-http':
+                if ncbi_locations is None:
+                    ncbi_locations = get_ncbi_locations(args.run_identifier)
+                
+                odp_http_locations = ncbi_locations.object_locations(
+                    NcbiLocationJson.OBJECT_TYPE_SRA, NcbiLocationJson.AWS_SERVICE, False
+                )
+
+                if len(odp_http_locations) > 0:
+                    for odp_http_location in odp_http_locations:
+                        logging.debug("Found ODP link {}".format(odp_http_location))
+                        logging.info("Found ODP link {}".format(odp_http_location.link()))
+                        odp_link = odp_http_location.link()
+
+                        logging.info(
+                            "Downloading .SRA file from AWS Open Data Program HTTP link ..")
+                        try:
+                            extern.run("curl -q -o {}.sra '{}'".format(args.run_identifier, odp_link))
+                            logging.info("Download finished")
+                            downloaded_files = ['{}.sra'.format(args.run_identifier)]
+                        except ExternCalledProcessError as e:
+                            logging.warning("Method {} failed when downloading from {}: Error was: {}".format(method, odp_link, e))
+                else:
+                    logging.warning("Method {} failed: No ODP URL could be found".format(method))
+
+            elif method == 'aws-cp':
+                if ncbi_locations is None:
+                    ncbi_locations = get_ncbi_locations(args.run_identifier)
+
+                s3_locations = ncbi_locations.object_locations(
+                    NcbiLocationJson.OBJECT_TYPE_SRA,
+                    NcbiLocationJson.AWS_SERVICE,
+                    'aws' in allowable_sources
+                )
+
+                # TODO: Sort so unpaid are first
+
+                if len(s3_locations) > 0:
+                    for s3_location in s3_locations:
+                        logging.info("Found s3 link {}".format(s3_location.link()))
+
+                        command = '{} {}.sra'.format(
+                            s3_location.s3_command_prefix(args.run_identifier), args.run_identifier
+                        )
+                        if args.aws_user_key_id:
+                            os.environ['AWS_ACCESS_KEY_ID'] = args.aws_user_key_id
+                        if args.aws_user_key_id:
+                            os.environ['AWS_SECRET_ACCESS_KEY'] = args.aws_user_key_secret
+                        logging.info("Downloading from S3..")
+                        try:
+                            extern.run(command)
+                            downloaded_files = ['{}.sra'.format(args.run_identifier)]
+                        except ExternCalledProcessError as e:
+                            logging.warning("Method {} failed: Error was: {}".format(method, e))
+                else:
+                    logging.warning("Method {} failed: No S3 location could be found".format(method))
+
+            elif method == 'gcp-cp':
+                if 'gcp' in allowable_sources:
+                    if ncbi_locations is None:
+                        ncbi_locations = get_ncbi_locations(args.run_identifier)
+                    locations = ncbi_locations.object_locations(
+                        NcbiLocationJson.OBJECT_TYPE_SRA, NcbiLocationJson.GCP_SERVICE, True
+                    )
+                    if len(locations) > 0:
+                        for loc in locations:
+                            command = 'gsutil'
+                            gcp_project = args.gcp_project
+                            if args.gcp_user_key_file:
+                                with open(args.gcp_user_key_file) as f:
+                                    j = json.load(f)
+                                    if 'project_id' not in j:
+                                        raise Exception("Unexpectedly could not find project_id in GCP user key JSON file")
+                                    gcp_project = j['project_id']
+                                extern.run('gcloud auth activate-service-account --key-file={}'.format(args.gcp_user_key_file))
+
+                            failed = False
+                            if gcp_project:
+                                command = command + " -u {}".format(gcp_project)
+                            else:
+                                logging.info("Finding Google cloud project to charge")
+                                project_id = extern.run('gcloud config get-value project').strip()
+                                if project_id == '':
+                                    logging.warning("Method gcp-cp failed: Could not find a GCP project to charge, cannot continue. "\
+                                        "Expected a project from 'gcloud config get-value project' or specified with --gcp-user-key-file or --gcp-project")
+                                    failed = True
+                                else:
+                                    logging.info("Charging to project \'{}\'".format(project_id))
+                                    command = command + " -u {}".format(project_id)
+                            if not failed:
+                                try:
+                                    gs_path = loc.gs_path()
+                                    command += ' cp {} {}.sra'.format(
+                                        gs_path, args.run_identifier
+                                    )
+                                    logging.info("Downloading from GCP..")
+                                    try:
+                                        extern.run(command)
+                                        downloaded_files = ['{}.sra'.format(args.run_identifier)]
+                                    except ExternCalledProcessError as e:
+                                        logging.warning("Method {} failed: Error was: {}".format(method, e))
+                                except DownloadMethodFailed as e:
+                                    logging.warning("Method {} failed, error was {}".format(
+                                        method, e
+                                    ))
+                    else:
+                        logging.warning("Method {} failed: No GCP location could be found".format(method))
+                else:
+                    logging.warning("Not using method gcp-cp as --allow-paid was not specified")
+
+            elif method == 'ena-ascp':
+                result = AsperaEnaDownloader().download(args.run_identifier, '.',
+                    ascp_args=args.ascp_args,
+                    ssh_key=args.ssh_key)
+                if result is not False:
+                    downloaded_files = result
+
+            else:
+                raise Exception("Unknown method: {}".format(method))
+            
+            if downloaded_files is not None:
+                logging.info("Method {} worked.".format(method))
+                break
+            else:
+                logging.warning("Method {} failed".format(method))
+
+        if downloaded_files is None:
+            raise Exception("No more specified download methods, cannot continue")
+
+    # Extraction/conversion phase
+    if not skip_download_and_extraction:
+        if downloaded_files == ['{}.sra'.format(args.run_identifier)]:
+            if 'sra' not in args.output_format_possibilities:
+                logging.info("Extracting .sra file with fasterq-dump ..")
+                extern.run("fasterq-dump ./{}.sra".format(args.run_identifier))
+                os.remove('{}.sra'.format(args.run_identifier))
+
+                if 'fastq' not in args.output_format_possibilities:
+                    for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
+                        f = fq.replace('x',args.run_identifier)
+                        if os.path.exists(f):
+                            # Do the least work, currently we have FASTQ.
+                            if 'fasta' in args.output_format_possibilities:
+                                logging.info("Converting {} to FASTA ..".format(f))
+                                out_here = f.replace('.fastq','.fasta')
+                                extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} >{}".format(
+                                    f, out_here
+                                ))
+                                os.remove(f)
+                                output_files.append(out_here)
+                            elif 'fasta.gz' in args.output_format_possibilities:
+                                logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
+                                out_here = f.replace('.fastq','.fasta.gz')
+                                extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} |pigz >{}".format(
+                                    f, out_here
+                                ))
+                                os.remove(f)
+                                output_files.append(out_here)
+                            elif 'fastq.gz' in args.output_format_possibilities:
+                                logging.info("Compressing {} with pigz ..".format(f))
+                                extern.run("pigz {}".format(f))
+                                output_files.append("{}.gz".format(f))
+                            else:
+                                raise Exception("Programming error")
+                else:
+                    for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
+                        f = fq.replace('x',args.run_identifier)
+                        if os.path.exists(f):
+                            output_files.append(f)
+            else:
+                output_files.append("{}.sra".format(args.run_identifier))
+        else:
+            if 'fastq.gz' not in args.output_format_possibilities:
+                for fq in ['x_1.fastq.gz','x_2.fastq.gz','x.fastq.gz']:
+                    f = fq.replace('x',args.run_identifier)
+                    if os.path.exists(f):
+                        # Do the least work, currently we have FASTQ.gz
+                        if 'fasta' in args.output_format_possibilities:
+                            logging.info("Converting {} to FASTA ..".format(f))
+                            out_here = f.replace('.fastq.gz','.fasta')
+                            extern.run("pigz -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' >{}".format(
+                                f, out_here
+                            ))
+                            os.remove(f)
+                            output_files.append(out_here)
+                        elif 'fasta.gz' in args.output_format_possibilities:
+                            logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
+                            out_here = f.replace('.fastq.gz','.fasta.gz')
+                            extern.run("pigz -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' |pigz >{}".format(
+                                f, out_here
+                            ))
+                            os.remove(f)
+                            output_files.append(out_here)
+                        elif 'fastq' in args.output_format_possibilities:
+                            logging.info("Decompressing {} with pigz ..".format(f))
+                            extern.run("pigz -d {}".format(f))
+                            output_files.append(f.replace('.fastq.gz','.fastq'))
+                        else:
+                            raise Exception("Programming error")
+
+            else:
+                output_files = downloaded_files
+
+    logging.info("Output files: {}".format(', '.join(output_files)))
+
+logging.info("All done.")
