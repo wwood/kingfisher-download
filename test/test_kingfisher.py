@@ -61,14 +61,12 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==757641)
             self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==907591)
 
-
-
     def test_fastq_via_ena_ascp(self):
         with tempdir.in_tempdir():
             extern.run('{} -r SRR12118866 -m ena-ascp --output-format-possibilities fastq'.format(
                 kingfisher))
-            self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==21411192)
-            self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==21411192)
+            self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==19930812)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==19930812)
 
     def test_fasta_via_ena_ascp(self):
         with tempdir.in_tempdir():
@@ -90,6 +88,13 @@ class Tests(unittest.TestCase):
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==746749)
             self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==899862)
+
+    def test_sra_via_aws(self):
+        with tempdir.in_tempdir():
+            extern.run('{} -r SRR12118866 -m aws-http --output-format-possibilities sra'.format(
+                kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)
+
 
 
 
