@@ -95,6 +95,12 @@ class Tests(unittest.TestCase):
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)
 
+    def test_stdout_unsorted_fasta_via_sra(self):
+        self.assertEqual('7fc33e5ea211377de944b7bd603e213a  -\n',
+            extern.run('{} -r SRR12118866 -m aws-http --output-format-possibilities fasta --stdout --unsorted |md5sum'.format(
+                kingfisher
+            )))
+
 
 
 
