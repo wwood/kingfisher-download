@@ -41,7 +41,10 @@ if __name__ == '__main__':
     parser.add_argument(
         '--unsorted',
         action='store_true',
-        help='Currently requires "--output-format-possibilities fasta" and "--stdout". Output the sequences in a single file, where the reads are in arbitrary order. Even pairs of reads may be split up, but it is possible to tell which pair is which, and which is a forward and which is a reverse read from the name.')
+        help='Currently requires "--output-format-possibilities fasta" and "--stdout" and download from NCBI rather than ENA. \
+            Output the sequences in a single file, where the reads are in arbitrary order. \
+            Even pairs of reads may be split up, but it is possible to tell which pair \
+            is which, and which is a forward and which is a reverse read from the name.')
     parser.add_argument(
         '--stdout',
         action='store_true',

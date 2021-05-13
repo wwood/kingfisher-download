@@ -303,6 +303,8 @@ def download_and_extract(**kwargs):
             else:
                 output_files.append("{}.sra".format(run_identifier))
         else:
+            if unsorted or stdout:
+                raise Exception("--unsorted and --stdout currently must be via download of a .sra format file, rather than a download from ENA. I imagine this will be fixed in future.")
             if 'fastq.gz' not in output_format_possibilities:
                 for fq in ['x_1.fastq.gz','x_2.fastq.gz','x.fastq.gz']:
                     f = fq.replace('x',run_identifier)
