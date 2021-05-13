@@ -1,0 +1,2 @@
+class DownloadMethodFailed(Exception):
+    pass
