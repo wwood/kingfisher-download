@@ -169,7 +169,7 @@ if __name__ == '__main__':
         '[default: value of `gcloud config get-value project` command]')
     parser.add_argument(
         '--gcp-user-key-file','--gcp_user_key_file',
-        help='Downloading from Google Cloud buckets require a Google user to be setup. \
+        help='Downloading from Google Cloud buckets requires a Google user to be setup. \
             Use this option to specify a JSON-formatted service account key, as per \
             https://cloud.google.com/iam/docs/creating-managing-service-account-keys \
             [default: not used]')
