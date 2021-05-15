@@ -17,13 +17,12 @@ class EnaDownloader:
             "result=read_run&fields=fastq_ftp".format(
             run_id)
         logging.debug("Querying '{}'".format(query_url))
-        text = subprocess.check_output(
-            "curl --silent '{}'".format(query_url), shell=True)
+        text = extern.run("curl --silent '{}'".format(query_url))
 
         ftp_urls = []
         header = True
         logging.debug("Found text from ENA API: {}".format(text))
-        for line in text.decode('utf8').split('\n'):
+        for line in text.split('\n'):
             logging.debug("Parsing line: {}".format(line))
             if header:
                 header = False
@@ -77,7 +76,7 @@ class EnaDownloader:
                 output_directory)
             logging.info("Running command: {}".format(cmd))
             try:
-                subprocess.check_call(cmd, shell=True)
+                extern.run(cmd)
             except Exception as e:
                 logging.warn("Error downloading from ENA with ASCP: {}".format(e))
                 return False
