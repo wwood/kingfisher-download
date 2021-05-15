@@ -1,5 +1,7 @@
 <img src="images/kingfisher_logo.png" alt="Kingfisher logo" width="600"/>
 
+[![Travis](https://api.travis-ci.org/wwood/kingfisher-download.svg?branch=main)](https://travis-ci.org/wwood/kingfisher-download)
+
 - [Kingfisher](#kingfisher)
   - [Installation](#installation)
   - [Usage](#usage)
