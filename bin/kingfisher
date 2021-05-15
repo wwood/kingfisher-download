@@ -15,6 +15,7 @@ import logging
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 import kingfisher
+from kingfisher.ena import DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION, DEFAULT_OSX_ASPERA_SSH_KEY_LOCATION
 
 if __name__ == '__main__':
     parser= argparse.ArgumentParser(
@@ -83,9 +84,12 @@ if __name__ == '__main__':
         action='store_true')
     parser.add_argument(
         '--ascp-ssh-key', '--ascp_ssh_key',
-        help='\'linux\' or \'osx\' for default paths used in each OS respectively, \
+        help='\'linux\' or \'osx\' for default paths used in each OS ({} and {} respectively), \
             otherwise a path to the openssh key to used for aspera (i.e. the \
-            -i flag of ascp) [default: \'{}\']'.format(kingfisher.DEFAULT_ASPERA_SSH_KEY),
+            -i flag of ascp) [default: \'{}\']'.format(
+                DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION,
+                DEFAULT_OSX_ASPERA_SSH_KEY_LOCATION,
+                kingfisher.DEFAULT_ASPERA_SSH_KEY),
         default=kingfisher.DEFAULT_ASPERA_SSH_KEY)
     parser.add_argument(
         '--ascp-args', '--ascp_args',
