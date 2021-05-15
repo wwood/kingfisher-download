@@ -138,7 +138,7 @@ def download_and_extract(**kwargs):
 
             elif method == 'aws-cp':
                 if ncbi_locations is None:
-                    ncbi_locations = get_ncbi_locations(run_identifier)
+                    ncbi_locations = Location.get_ncbi_locations(run_identifier)
 
                 s3_locations = ncbi_locations.object_locations(
                     NcbiLocationJson.OBJECT_TYPE_SRA,
@@ -171,7 +171,7 @@ def download_and_extract(**kwargs):
             elif method == 'gcp-cp':
                 if 'gcp' in allowable_sources:
                     if ncbi_locations is None:
-                        ncbi_locations = get_ncbi_locations(run_identifier)
+                        ncbi_locations = Location.get_ncbi_locations(run_identifier)
                     locations = ncbi_locations.object_locations(
                         NcbiLocationJson.OBJECT_TYPE_SRA, NcbiLocationJson.GCP_SERVICE, True
                     )
