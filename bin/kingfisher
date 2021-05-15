@@ -17,22 +17,7 @@ sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sy
 import kingfisher
 from kingfisher.ena import DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION, DEFAULT_OSX_ASPERA_SSH_KEY_LOCATION
 
-if __name__ == '__main__':
-    parser= argparse.ArgumentParser(
-        description='Download and extract FASTQ files from the NCBI SRA or ENA databases. \
-            Requires the SRA toolkit to be installed, available at \
-            https://github.com/ncbi/sra-tools - a list of conda \
-            requirements (excluding AWS\' CLIv2, Google Cloud\'s gsutil/gcloud and Aspera connect) \
-            is: python extern pigz sra-tools')
-    parser.add_argument(
-        '--run-identifier','--run_identifier','-r',
-        help='Run number to download e.g. ERR1739691',
-        required=True)
-    parser.add_argument(
-        '-m','--download_methods', '--download-methods',
-        nargs='+',
-        help='How to download .sra file. If multiple are specified, each is tried in turn until one works.',
-        choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp', 'ena-ascp','ena-ftp'], required=True)
+def add_extraction_args(parser):
     parser.add_argument(
         '--output-format-possibilities', '--output_format_possibilities',
         nargs='+',
@@ -50,6 +35,25 @@ if __name__ == '__main__':
         '--stdout',
         action='store_true',
         help='Output sequences to STDOUT. Currently requires --unsorted')
+    return parser
+
+
+if __name__ == '__main__':
+    parser= argparse.ArgumentParser(
+        description='Download and extract FASTA and FASTQ files from the NCBI SRA or ENA databases')
+
+    parser.add_argument(
+        '--run-identifier','--run_identifier','-r',
+        help='Run number to download/extract e.g. ERR1739691',
+        required=True)
+    parser.add_argument(
+        '-m','--download_methods', '--download-methods',
+        nargs='+',
+        help='How to download .sra file. If multiple are specified, each is tried in turn until one works.',
+        choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp', 'ena-ascp','ena-ftp'], required=True)
+
+    parser = add_extraction_args(parser)
+
     parser.add_argument(
         '--gcp-project', '--gcp_project',
         help='Downloading from Google Cloud buckets require a Google project to charge '
