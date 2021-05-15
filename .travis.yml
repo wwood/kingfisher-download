@@ -29,7 +29,7 @@ install:
   - conda config --add channels conda-forge
 
   # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION nose tempdir pigz python extern curl sra-tools
+  - conda create -q -n test-environment -c rpetit3 aspera-connect nose tempdir pigz python extern curl sra-tools
   - conda activate test-environment
   # - python setup.py install
 
