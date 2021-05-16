@@ -23,7 +23,6 @@
 
 import unittest
 import os.path
-import tempdir
 import sys
 
 import extern
