@@ -35,7 +35,7 @@ class Tests(unittest.TestCase):
     maxDiff = None
     
     def test_unpaid_methods(self):
-        cmd_stub = '{} -r SRR12118866 -m'.format(kingfisher)
+        cmd_stub = '{} get -r SRR12118866 -m'.format(kingfisher)
         for method in ('aws-http','prefetch'):
             with tempdir.in_tempdir():
                 extern.run("{} {}".format(cmd_stub,method))
@@ -49,55 +49,55 @@ class Tests(unittest.TestCase):
 
     def test_fasta_via_sra(self):
         with tempdir.in_tempdir():
-            extern.run('{} -r SRR12118866 -m aws-http --output-format-possibilities fasta.gz fasta'.format(
+            extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities fasta.gz fasta'.format(
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866_1.fasta')==10705596)
             self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10705596)
 
     def test_fasta_gz_via_sra(self):
         with tempdir.in_tempdir():
-            extern.run('{} -r SRR12118866 -m aws-http --output-format-possibilities fasta.gz'.format(
+            extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities fasta.gz'.format(
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==757641)
             self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==907591)
 
     def test_fastq_via_ena_ascp(self):
         with tempdir.in_tempdir():
-            extern.run('{} -r SRR12118866 -m ena-ascp --output-format-possibilities fastq'.format(
+            extern.run('{} get -r SRR12118866 -m ena-ascp --output-format-possibilities fastq'.format(
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==19930812)
             self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==19930812)
 
     def test_fasta_via_ena_ascp(self):
         with tempdir.in_tempdir():
-            extern.run('{} -r SRR12118866 -m ena-ascp --output-format-possibilities fasta.gz fasta'.format(
+            extern.run('{} get -r SRR12118866 -m ena-ascp --output-format-possibilities fasta.gz fasta'.format(
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866_1.fasta')==10391100)
             self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10391100)
 
     def test_fasta_gz_via_ena_ascp(self):
         with tempdir.in_tempdir():
-            extern.run('{} -r SRR12118866 -m ena-ascp --output-format-possibilities fasta.gz'.format(
+            extern.run('{} get -r SRR12118866 -m ena-ascp --output-format-possibilities fasta.gz'.format(
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==746749)
             self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==899862)
 
     def test_fasta_gz_via_ena_ftp(self):
         with tempdir.in_tempdir():
-            extern.run('{} -r SRR12118866 -m ena-ftp --output-format-possibilities fasta.gz'.format(
+            extern.run('{} get -r SRR12118866 -m ena-ftp --output-format-possibilities fasta.gz'.format(
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==746749)
             self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==899862)
 
     def test_sra_via_aws(self):
         with tempdir.in_tempdir():
-            extern.run('{} -r SRR12118866 -m aws-http --output-format-possibilities sra'.format(
+            extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities sra'.format(
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)
 
     def test_stdout_unsorted_fasta_via_sra(self):
         self.assertEqual('7fc33e5ea211377de944b7bd603e213a  -\n',
-            extern.run('{} -r SRR12118866 -m aws-http --output-format-possibilities fasta --stdout --unsorted |md5sum'.format(
+            extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities fasta --stdout --unsorted |md5sum'.format(
                 kingfisher
             )))
 

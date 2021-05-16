@@ -48,7 +48,7 @@ See https://www.ibm.com/aspera/connect/ or https://www.biostars.org/p/325010/
 ## Usage
 
 ```
-kingfisher -r ERR1739691 -m ena-ascp aws-http prefetch
+kingfisher get -r ERR1739691 -m ena-ascp aws-http prefetch
 ```
 This will download `.fastq.gz` files of the run ERR1739691 from the ENA, or
 failing that, downloads an .sra file from the Amazon AWA Open Data Program and
@@ -74,13 +74,13 @@ Ena-fast-download was the original name for this tool. To imitate that tool's
 functionality:
 
 ```
-kingfisher -r ERR1739691 -m ena-ascp
+kingfisher get -r ERR1739691 -m ena-ascp
 ```
 
 ## FAQ
 If you see this error `/bin/sh: 1: ascp: not found` as below:
 ```
-$ kingfisher -r ERR3357550 -m ena-ascpkingfisher -r ERR3357550 -m ena-ascp
+$ kingfisher get -r ERR3357550 -m ena-ascpkingfisher -r ERR3357550 -m ena-ascp
 05/04/2021 05:13:45 AM INFO: Attempting download method ena-ascp ..
 05/04/2021 05:13:45 AM INFO: Using aspera ssh key file: $HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh
 05/04/2021 05:13:45 AM INFO: Querying ENA for FTP paths for ERR3357550..

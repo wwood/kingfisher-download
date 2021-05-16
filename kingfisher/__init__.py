@@ -1,3 +1,5 @@
+from .version import __version__
+
 import logging
 import json
 import os
@@ -74,28 +76,29 @@ def download_and_extract(**kwargs):
                 "Skipping download of {} as an output file already appears to exist, as file {}".format(run_identifier, path))
         return skip_download_and_extraction, output_files
 
-    for file_type in output_format_possibilities:
-        if file_type == 'sra':
-            path = "{}.{}".format(run_identifier, file_type)
-            skip_download_and_extraction, output_files = maybe_skip(path, output_files)
-        elif file_type == 'fastq':
-            possibilities = ['x.fastq','x_1.fastq','x_2.fastq']
-            for path in possibilities:
-                skip_download_and_extraction, output_files = maybe_skip(path.replace('x',run_identifier), output_files)
-        elif file_type == 'fastq.gz':
-            possibilities = ['x.fastq.gz','x_1.fastq.gz','x_2.fastq.gz']
-            for path in possibilities:
-                skip_download_and_extraction, output_files = maybe_skip(path.replace('x',run_identifier), output_files)
-        elif file_type == 'fasta':
-            possibilities = ['x.fasta','x_1.fasta','x_2.fasta']
-            for path in possibilities:
-                skip_download_and_extraction, output_files = maybe_skip(path.replace('x',run_identifier), output_files)
-        elif file_type == 'fasta.gz':
-            possibilities = ['x.fasta.gz','x_1.fasta.gz','x_2.fasta.gz']
-            for path in possibilities:
-                skip_download_and_extraction, output_files = maybe_skip(path.replace('x',run_identifier), output_files)
-        else:
-            raise Exception("Programming error")
+    if not stdout:
+        for file_type in output_format_possibilities:
+            if file_type == 'sra':
+                path = "{}.{}".format(run_identifier, file_type)
+                skip_download_and_extraction, output_files = maybe_skip(path, output_files)
+            elif file_type == 'fastq':
+                possibilities = ['x.fastq','x_1.fastq','x_2.fastq']
+                for path in possibilities:
+                    skip_download_and_extraction, output_files = maybe_skip(path.replace('x',run_identifier), output_files)
+            elif file_type == 'fastq.gz':
+                possibilities = ['x.fastq.gz','x_1.fastq.gz','x_2.fastq.gz']
+                for path in possibilities:
+                    skip_download_and_extraction, output_files = maybe_skip(path.replace('x',run_identifier), output_files)
+            elif file_type == 'fasta':
+                possibilities = ['x.fasta','x_1.fasta','x_2.fasta']
+                for path in possibilities:
+                    skip_download_and_extraction, output_files = maybe_skip(path.replace('x',run_identifier), output_files)
+            elif file_type == 'fasta.gz':
+                possibilities = ['x.fasta.gz','x_1.fasta.gz','x_2.fasta.gz']
+                for path in possibilities:
+                    skip_download_and_extraction, output_files = maybe_skip(path.replace('x',run_identifier), output_files)
+            else:
+                raise Exception("Programming error")
 
     downloaded_files = None
     if not skip_download_and_extraction:
