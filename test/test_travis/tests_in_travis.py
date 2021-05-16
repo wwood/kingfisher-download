@@ -116,7 +116,7 @@ class Tests(unittest.TestCase):
     def test_download_fastq_no_force(self):
         with in_tempdir():
             extern.run('touch SRR12118866.fastq SRR12118866_1.fastq SRR12118866_2.fastq'.format(kingfisher))
-            r = subprocess.run(['bash','-c','{} get -r SRR12118866 --output-format-possibilities fastq'.format(
+            r = subprocess.run(['bash','-c','{} get -m prefetch -r SRR12118866 --output-format-possibilities fastq'.format(
                 kingfisher
                 )],
                 stderr=subprocess.PIPE,
@@ -126,7 +126,7 @@ class Tests(unittest.TestCase):
     def download_force(self):
         with in_tempdir():
             extern.run('touch SRR12118866.fastq SRR12118866_1.fastq SRR12118866_2.fastq'.format(kingfisher))
-            r = subprocess.run(['bash','-c','{} get -r SRR12118866 --output-format-possibilities fastq --force'.format(
+            r = subprocess.run(['bash','-c','{} get -m prefetch -r SRR12118866 --output-format-possibilities fastq --force'.format(
                 kingfisher
                 )],
                 stderr=subprocess.PIPE,

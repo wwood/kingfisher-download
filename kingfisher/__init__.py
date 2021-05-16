@@ -375,23 +375,28 @@ def _check_for_existing_files(run_identifier, output_format_possibilities, force
     for file_type in output_format_possibilities:
         if file_type == 'sra':
             path = "{}.{}".format(run_identifier, file_type)
-            skip_download_and_extraction, output_files = maybe_skip_or_force(path, output_files, force)
+            skip, output_files = maybe_skip_or_force(path, output_files, force)
+            if skip: skip_download_and_extraction = True
         elif file_type == 'fastq':
             possibilities = ['x.fastq','x_1.fastq','x_2.fastq']
             for path in possibilities:
-                skip_download_and_extraction, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
+                skip, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
+                if skip: skip_download_and_extraction = True
         elif file_type == 'fastq.gz':
             possibilities = ['x.fastq.gz','x_1.fastq.gz','x_2.fastq.gz']
             for path in possibilities:
-                skip_download_and_extraction, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
+                skip, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
+                if skip: skip_download_and_extraction = True
         elif file_type == 'fasta':
             possibilities = ['x.fasta','x_1.fasta','x_2.fasta']
             for path in possibilities:
-                skip_download_and_extraction, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
+                skip, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
+                if skip: skip_download_and_extraction = True
         elif file_type == 'fasta.gz':
             possibilities = ['x.fasta.gz','x_1.fasta.gz','x_2.fasta.gz']
             for path in possibilities:
-                skip_download_and_extraction, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
+                skip, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
+                if skip: skip_download_and_extraction = True
         else:
             raise Exception("Programming error")
 
