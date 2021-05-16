@@ -40,4 +40,4 @@ install:
 script:
   # We cannot use ascp within travis because of port opening issues, and we
   # don't want paid tests. So only run some tests.
-  - nosetests -w tests/travis/ -v
+  - nosetests -w test/travis/ -v
