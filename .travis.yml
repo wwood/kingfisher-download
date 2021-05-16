@@ -4,9 +4,9 @@ python:
   # - "2.7"
   # - "3.5"
   - "3.6"
-  # - "3.7"
-  # - "3.8"
-  # - "3.9"
+  - "3.7"
+  - "3.8"
+  - "3.9"
 install:
   - sudo apt-get update
   # We do this conditionally because it saves us some downloading if the
@@ -29,12 +29,9 @@ install:
   - conda config --add channels conda-forge
 
   # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -p /tmp/test-environment -c rpetit3 aspera-connect nose tempdir pigz python extern curl sra-tools
+  - conda create -q -p /tmp/test-environment nose pigz python extern curl sra-tools
   - conda activate /tmp/test-environment
   
-  # Copy ssh key into the default place so aspera works
-  - mkdir -p $HOME/.aspera/connect/etc/
-  - cp -v /tmp/test-environment/opt/aspera/connect/etc/asperaweb_id_dsa.openssh $HOME/.aspera/connect/etc/
   # - python setup.py install
 
 script:

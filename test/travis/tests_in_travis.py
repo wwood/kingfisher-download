@@ -31,40 +31,35 @@ import extern
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','..')]+sys.path
 kingfisher = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','..','bin','kingfisher')
 
+from in_tempdir import in_tempdir
+
 class Tests(unittest.TestCase):
     maxDiff = None
     
     def test_unpaid_methods(self):
         cmd_stub = '{} get -r SRR12118866 -m'.format(kingfisher)
         for method in ('aws-http','prefetch'):
-            with tempdir.in_tempdir():
+            with in_tempdir():
                 extern.run("{} {}".format(cmd_stub,method))
                 self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==21411192)
                 self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==21411192)
 
     def test_fasta_via_sra(self):
-        with tempdir.in_tempdir():
+        with in_tempdir():
             extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities fasta.gz fasta'.format(
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866_1.fasta')==10705596)
             self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10705596)
 
     def test_fasta_gz_via_sra(self):
-        with tempdir.in_tempdir():
+        with in_tempdir():
             extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities fasta.gz'.format(
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==757641)
             self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==907591)
 
-    def test_fasta_gz_via_ena_ftp(self):
-        with tempdir.in_tempdir():
-            extern.run('{} get -r SRR12118866 -m ena-ftp --output-format-possibilities fasta.gz'.format(
-                kingfisher))
-            self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==746749)
-            self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==899862)
-
     def test_sra_via_aws(self):
-        with tempdir.in_tempdir():
+        with in_tempdir():
             extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities sra'.format(
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)
@@ -76,7 +71,7 @@ class Tests(unittest.TestCase):
             )))
 
     # def test_noqual(self):
-    #     with tempdir.in_tempdir():
+    #     with in_tempdir():
     #         extern.run("{} -r ERR3209781 --allowable-output-formats ".format(kingfisher, ))
     #         self.assertTrue(os.path.getsize('ERR3209781_1.fasta')==21411192)
     #         self.assertTrue(os.path.getsize('ERR3209781_2.fasta')==21411192)
