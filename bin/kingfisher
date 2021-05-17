@@ -55,16 +55,21 @@ def add_extraction_args(parser):
         choices=['sra', 'fastq', 'fastq.gz','fasta','fasta.gz'],
         default=kingfisher.DEFAULT_OUTPUT_FORMAT_POSSIBILITIES)
     parser.add_argument(
+        '--force',
+        action='store_true',
+        help='Re-download / extract files even if they already exist [default: Do not].')
+    parser.add_argument(
         '--unsorted',
         action='store_true',
         help='Currently requires "--output-format-possibilities fasta" and "--stdout" and download from NCBI rather than ENA. \
             Output the sequences in a single file, where the reads are in arbitrary order. \
             Even pairs of reads may be split up, but it is possible to tell which pair \
-            is which, and which is a forward and which is a reverse read from the name.')
+            is which, and which is a forward and which is a reverse read from the name \
+            [default: Do not].')
     parser.add_argument(
         '--stdout',
         action='store_true',
-        help='Output sequences to STDOUT. Currently requires --unsorted')
+        help='Output sequences to STDOUT. Currently requires --unsorted [default: Do not].')
     return parser
 
 
@@ -202,6 +207,7 @@ if __name__ == '__main__':
             run_identifier = args.run_identifier,
             download_methods = args.download_methods,
             output_format_possibilities = args.output_format_possibilities,
+            force = args.force,
             unsorted = args.unsorted,
             stdout = args.stdout,
             gcp_project = args.gcp_project,
@@ -218,6 +224,7 @@ if __name__ == '__main__':
         output_files = kingfisher.extract(
             sra_file = args.sra,
             output_format_possibilities = args.output_format_possibilities,
+            force = args.force,
             unsorted = args.unsorted,
             stdout = args.stdout,
         )

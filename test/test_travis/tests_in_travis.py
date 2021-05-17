@@ -24,6 +24,7 @@
 import unittest
 import os.path
 import sys
+import subprocess
 
 import extern
 
@@ -85,6 +86,54 @@ class Tests(unittest.TestCase):
             ))
             self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==21411192)
             self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==21411192)
+
+    def test_extract_fastq_no_force(self):
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities sra'.format(kingfisher))
+            # extern.run('touch SRR12118866.sra')
+            extern.run('touch SRR12118866.fastq SRR12118866_1.fastq SRR12118866_2.fastq'.format(kingfisher))
+            r = subprocess.run(['bash','-c','{} extract --sra SRR12118866.sra --output-format-possibilities fastq'.format(
+                kingfisher
+                )],
+                stderr=subprocess.PIPE,
+                check=True)
+            self.assertTrue('SRR12118866 as an output file already appears to exist' in r.stderr.decode())
+
+    def test_extract_fastq_force(self):
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities sra'.format(kingfisher))
+            # extern.run('touch SRR12118866.sra')
+            extern.run('touch SRR12118866.fastq SRR12118866_1.fastq SRR12118866_2.fastq'.format(kingfisher))
+            r = subprocess.run(['bash','-c','{} extract --sra SRR12118866.sra --output-format-possibilities fastq --force'.format(
+                kingfisher
+                )],
+                stderr=subprocess.PIPE,
+                check=True)
+            self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==21411192)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==21411192)
+            self.assertFalse('SRR12118866 as an output file already appears to exist' in r.stderr.decode())
+
+    def test_download_fastq_no_force(self):
+        with in_tempdir():
+            extern.run('touch SRR12118866.fastq SRR12118866_1.fastq SRR12118866_2.fastq'.format(kingfisher))
+            r = subprocess.run(['bash','-c','{} get -r SRR12118866 --output-format-possibilities fastq'.format(
+                kingfisher
+                )],
+                stderr=subprocess.PIPE,
+                check=True)
+            self.assertTrue('SRR12118866 as an output file already appears to exist' in r.stderr.decode())
+
+    def download_force(self):
+        with in_tempdir():
+            extern.run('touch SRR12118866.fastq SRR12118866_1.fastq SRR12118866_2.fastq'.format(kingfisher))
+            r = subprocess.run(['bash','-c','{} get -r SRR12118866 --output-format-possibilities fastq --force'.format(
+                kingfisher
+                )],
+                stderr=subprocess.PIPE,
+                check=True)
+            self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==21411192)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==21411192)
+            self.assertFalse('SRR12118866 as an output file already appears to exist' in r.stderr.decode())
 
 
 
