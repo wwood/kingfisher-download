@@ -252,57 +252,14 @@ def download_and_extract(**kwargs):
     if not skip_download_and_extraction:
         if downloaded_files == ['{}.sra'.format(run_identifier)]:
             if 'sra' not in output_format_possibilities:
-                if unsorted and stdout and 'fasta' in output_format_possibilities:
-                    logging.info("Extracting unsorted .sra file to STDOUT in FASTA format ..")
-                    cmd = "vdb-dump -f fasta ./{}".format(downloaded_files[0])
-                    logging.debug("Running command {}".format(cmd))
-                    try:
-                        subprocess.check_call(cmd, shell=True, stderr=subprocess.PIPE)
-                    except subprocess.CalledProcessError as e:
-                        #TODO: vdb-dump doesn't fail with non-zero status when
-                        #something is amiss. Fix by using NCBI API instead of
-                        #vdb-dump.
-                        raise Exception("Extraction of .sra to fasta format failed. Command run was '{}'. STDERR was '{}'".format(
-                            cmd, e.stderr
-                        ))
-                    os.remove('{}.sra'.format(run_identifier))
-                else:
-                    logging.info("Extracting .sra file with fasterq-dump ..")
-                    extern.run("fasterq-dump ./{}.sra".format(run_identifier))
-                    os.remove('{}.sra'.format(run_identifier))
-
-                    if 'fastq' not in output_format_possibilities:
-                        for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
-                            f = fq.replace('x',run_identifier)
-                            if os.path.exists(f):
-                                # Do the least work, currently we have FASTQ.
-                                if 'fasta' in output_format_possibilities:
-                                    logging.info("Converting {} to FASTA ..".format(f))
-                                    out_here = f.replace('.fastq','.fasta')
-                                    extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} >{}".format(
-                                        f, out_here
-                                    ))
-                                    os.remove(f)
-                                    output_files.append(out_here)
-                                elif 'fasta.gz' in output_format_possibilities:
-                                    logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
-                                    out_here = f.replace('.fastq','.fasta.gz')
-                                    extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} |pigz >{}".format(
-                                        f, out_here
-                                    ))
-                                    os.remove(f)
-                                    output_files.append(out_here)
-                                elif 'fastq.gz' in output_format_possibilities:
-                                    logging.info("Compressing {} with pigz ..".format(f))
-                                    extern.run("pigz {}".format(f))
-                                    output_files.append("{}.gz".format(f))
-                                else:
-                                    raise Exception("Programming error")
-                    else:
-                        for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
-                            f = fq.replace('x',run_identifier)
-                            if os.path.exists(f):
-                                output_files.append(f)
+                sra_file = downloaded_files[0]
+                output_files = extract(
+                    sra_file = sra_file,
+                    output_format_possibilities = output_format_possibilities,
+                    unsorted = unsorted,
+                    stdout = stdout
+                )
+                os.remove(sra_file)
             else:
                 output_files.append("{}.sra".format(run_identifier))
         else:
@@ -342,3 +299,75 @@ def download_and_extract(**kwargs):
     logging.info("Output files: {}".format(', '.join(output_files)))
 
     
+def extract(**kwargs):
+    sra_file = kwargs.pop('sra_file')
+    output_format_possibilities = kwargs.pop('output_format_possibilities',
+        DEFAULT_OUTPUT_FORMAT_POSSIBILITIES)
+    unsorted = kwargs.pop('unsorted', False)
+    stdout = kwargs.pop('stdout', False)
+
+    if len(kwargs) > 0:
+        raise Exception("Unexpected arguments detected: %s" % kwargs)
+
+    if stdout or unsorted:
+        if not (stdout and unsorted and output_format_possibilities == ['fasta']):
+            raise Exception("Currently --stdout and --unsorted must be specified together and with --output-format-possibilities fasta")
+
+    output_files = []
+    
+    if unsorted and stdout and 'fasta' in output_format_possibilities:
+        logging.info("Extracting unsorted .sra file to STDOUT in FASTA format ..")
+        cmd = "vdb-dump -f fasta {}".format(os.path.abspath(sra_file))
+        logging.debug("Running command {}".format(cmd))
+        try:
+            subprocess.check_call(cmd, shell=True, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            #TODO: vdb-dump doesn't fail with non-zero status when
+            #something is amiss. Fix by using NCBI API instead of
+            #vdb-dump.
+            raise Exception("Extraction of .sra to fasta format failed. Command run was '{}'. STDERR was '{}'".format(
+                cmd, e.stderr
+            ))
+    else:
+        logging.info("Extracting .sra file with fasterq-dump ..")
+        extern.run("fasterq-dump {}".format(os.path.abspath(sra_file)))
+
+        run_identifier = os.path.basename(sra_file)
+        if sra_file.endswith(".sra"):
+            run_identifier = run_identifier[:-4]
+        logging.debug("Using run identifier {}".format(run_identifier))
+
+        if 'fastq' not in output_format_possibilities:
+            for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
+                f = fq.replace('x',run_identifier)
+                if os.path.exists(f):
+                    # Do the least work, currently we have FASTQ.
+                    if 'fasta' in output_format_possibilities:
+                        logging.info("Converting {} to FASTA ..".format(f))
+                        out_here = f.replace('.fastq','.fasta')
+                        extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} >{}".format(
+                            f, out_here
+                        ))
+                        os.remove(f)
+                        output_files.append(out_here)
+                    elif 'fasta.gz' in output_format_possibilities:
+                        logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
+                        out_here = f.replace('.fastq','.fasta.gz')
+                        extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} |pigz >{}".format(
+                            f, out_here
+                        ))
+                        os.remove(f)
+                        output_files.append(out_here)
+                    elif 'fastq.gz' in output_format_possibilities:
+                        logging.info("Compressing {} with pigz ..".format(f))
+                        extern.run("pigz {}".format(f))
+                        output_files.append("{}.gz".format(f))
+                    else:
+                        raise Exception("Programming error")
+        else:
+            for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
+                f = fq.replace('x',run_identifier)
+                if os.path.exists(f):
+                    output_files.append(f)
+
+    return output_files

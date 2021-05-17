@@ -154,11 +154,23 @@ if __name__ == '__main__':
         sparse file checksum [default: \'\']',
         default='')
 
+    extract_description = 'extract .sra format files'
+    extract_parser = new_subparser(subparsers, 'extract', extract_description)
+
+    extract_parser.add_argument(
+        '--sra',
+        help='Extract this SRA file [required]',
+        required=True)
+
+    extract_parser = add_extraction_args(extract_parser)
+
+
     if (len(sys.argv) == 1 or sys.argv[1] == '-h' or sys.argv[1] == '--help'):
         print('')
         print('                ...::: Kingfisher v' + kingfisher.__version__ + ' :::...''')
         print('')
-        print('    get   -> %s' % get_description)
+        print('   get      -> %s' % get_description)
+        print('   extract  -> %s' % extract_description)
 
         print('\n  Use kingfisher <command> -h for command-specific help.\n'\
             '  Some commands also have an extended --full-help flag.\n')
@@ -185,7 +197,7 @@ if __name__ == '__main__':
         level=loglevel, format='%(asctime)s %(levelname)s: %(message)s',
         datefmt='%m/%d/%Y %I:%M:%S %p')
 
-    if args.subparser_name=='get':
+    if args.subparser_name == 'get':
         kingfisher.download_and_extract(
             run_identifier = args.run_identifier,
             download_methods = args.download_methods,
@@ -202,6 +214,14 @@ if __name__ == '__main__':
             ascp_ssh_key = args.ascp_ssh_key,
             ascp_args = args.ascp_args
         )
+    elif args.subparser_name == 'extract':
+        output_files = kingfisher.extract(
+            sra_file = args.sra,
+            output_format_possibilities = args.output_format_possibilities,
+            unsorted = args.unsorted,
+            stdout = args.stdout,
+        )
+        logging.info("Output files: {}".format(', '.join(output_files)))
     else:
         raise Exception("Programming error")
 

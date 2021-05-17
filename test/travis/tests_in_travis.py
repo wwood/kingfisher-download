@@ -27,6 +27,7 @@ import sys
 
 import extern
 
+sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')]+sys.path
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','..')]+sys.path
 kingfisher = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','..','bin','kingfisher')
 
@@ -68,6 +69,24 @@ class Tests(unittest.TestCase):
             extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities fasta --stdout --unsorted |md5sum'.format(
                 kingfisher
             )))
+
+    def test_extract_stdout_fasta(self):
+        extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities sra'.format(kingfisher))
+        self.assertEqual('7fc33e5ea211377de944b7bd603e213a  -\n',
+            extern.run('{} extract --sra SRR12118866.sra --output-format-possibilities fasta --stdout --unsorted |md5sum'.format(
+                kingfisher
+            )))
+
+    def test_extract_fastq(self):
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities sra'.format(kingfisher))
+            extern.run('{} extract --sra SRR12118866.sra --output-format-possibilities fastq'.format(
+                kingfisher
+            ))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==21411192)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==21411192)
+
+
 
     # def test_noqual(self):
     #     with in_tempdir():
