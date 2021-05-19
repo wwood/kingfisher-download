@@ -55,18 +55,22 @@ def add_extraction_args(parser):
         choices=['sra', 'fastq', 'fastq.gz','fasta','fasta.gz'],
         default=kingfisher.DEFAULT_OUTPUT_FORMAT_POSSIBILITIES)
     parser.add_argument(
+        '--force',
+        action='store_true',
+        help='Re-download / extract files even if they already exist [default: Do not].')
+    parser.add_argument(
         '--unsorted',
         action='store_true',
         help='Currently requires "--output-format-possibilities fasta" and "--stdout" and download from NCBI rather than ENA. \
             Output the sequences in a single file, where the reads are in arbitrary order. \
             Even pairs of reads may be split up, but it is possible to tell which pair \
-            is which, and which is a forward and which is a reverse read from the name.')
+            is which, and which is a forward and which is a reverse read from the name \
+            [default: Do not].')
     parser.add_argument(
         '--stdout',
         action='store_true',
-        help='Output sequences to STDOUT. Currently requires --unsorted')
+        help='Output sequences to STDOUT. Currently requires --unsorted [default: Do not].')
     return parser
-
 
 def main():
     parent_parser = argparse.ArgumentParser(add_help=False)
@@ -153,11 +157,23 @@ def main():
         sparse file checksum [default: \'\']',
         default='')
 
+    extract_description = 'extract .sra format files'
+    extract_parser = new_subparser(subparsers, 'extract', extract_description)
+
+    extract_parser.add_argument(
+        '--sra',
+        help='Extract this SRA file [required]',
+        required=True)
+
+    extract_parser = add_extraction_args(extract_parser)
+
+
     if (len(sys.argv) == 1 or sys.argv[1] == '-h' or sys.argv[1] == '--help'):
         print('')
         print('                ...::: Kingfisher v' + kingfisher.__version__ + ' :::...''')
         print('')
-        print('    get   -> %s' % get_description)
+        print('   get      -> %s' % get_description)
+        print('   extract  -> %s' % extract_description)
 
         print('\n  Use kingfisher <command> -h for command-specific help.\n'\
             '  Some commands also have an extended --full-help flag.\n')
@@ -184,11 +200,12 @@ def main():
         level=loglevel, format='%(asctime)s %(levelname)s: %(message)s',
         datefmt='%m/%d/%Y %I:%M:%S %p')
 
-    if args.subparser_name=='get':
+    if args.subparser_name == 'get':
         kingfisher.download_and_extract(
             run_identifier = args.run_identifier,
             download_methods = args.download_methods,
             output_format_possibilities = args.output_format_possibilities,
+            force = args.force,
             unsorted = args.unsorted,
             stdout = args.stdout,
             gcp_project = args.gcp_project,
@@ -201,10 +218,20 @@ def main():
             ascp_ssh_key = args.ascp_ssh_key,
             ascp_args = args.ascp_args
         )
+    elif args.subparser_name == 'extract':
+        output_files = kingfisher.extract(
+            sra_file = args.sra,
+            output_format_possibilities = args.output_format_possibilities,
+            force = args.force,
+            unsorted = args.unsorted,
+            stdout = args.stdout,
+        )
+        logging.info("Output files: {}".format(', '.join(output_files)))
     else:
         raise Exception("Programming error")
 
     logging.info("Kingfisher done.")
+
 
 
 if __name__ == '__main__':
