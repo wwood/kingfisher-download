@@ -72,9 +72,7 @@ def add_extraction_args(parser):
         help='Output sequences to STDOUT. Currently requires --unsorted [default: Do not].')
     return parser
 
-
-
-if __name__ == '__main__':
+def main():
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument('--debug', help='output debug information', action="store_true")
     parent_parser.add_argument('--version', help='output version information and quit',  action='version', version=kingfisher.__version__)
@@ -233,3 +231,8 @@ if __name__ == '__main__':
         raise Exception("Programming error")
 
     logging.info("Kingfisher done.")
+
+
+
+if __name__ == '__main__':
+    main()
