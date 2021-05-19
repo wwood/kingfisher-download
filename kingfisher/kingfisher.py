@@ -175,6 +175,7 @@ def main():
         print('   get      -> %s' % get_description)
         print('   extract  -> %s' % extract_description)
 
+
         print('\n  Use kingfisher <command> -h for command-specific help.\n'\
             '  Some commands also have an extended --full-help flag.\n')
         sys.exit(0)
@@ -218,6 +219,7 @@ def main():
             ascp_ssh_key = args.ascp_ssh_key,
             ascp_args = args.ascp_args
         )
+
     elif args.subparser_name == 'extract':
         output_files = kingfisher.extract(
             sra_file = args.sra,
@@ -231,8 +233,6 @@ def main():
         raise Exception("Programming error")
 
     logging.info("Kingfisher done.")
-
-
 
 if __name__ == '__main__':
     main()
