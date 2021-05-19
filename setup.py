@@ -24,7 +24,7 @@ setup(
     name='kingfisher',
     version=get_version("kingfisher/version.py"),
     url='https://github.com/wwood/kingfisher-download',
-    license='BSD-3',
+    license='GPL-3.0',
     author='Ben Woodcroft',
     author_email='',
     description='',
@@ -38,7 +38,6 @@ setup(
     include_package_data=True,
     install_requires= [
     ],
-    # install via conda: click, pandas, pyyaml, snakemake
     entry_points={
           'console_scripts': [
               'kingfisher = kingfisher.kingfisher:main'
