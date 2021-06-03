@@ -42,13 +42,6 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4117481)
             self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4945891)
 
-    def test_fasta_gz_via_ena_ftp(self):
-        with in_tempdir():
-            extern.run('{} get -r SRR12118866 -m ena-ftp --output-format-possibilities fasta.gz'.format(
-                kingfisher))
-            self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==746749)
-            self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==899862)
-
     def test_fastq_via_ena_ascp(self):
         with in_tempdir():
             extern.run('{} get -r SRR12118866 -m ena-ascp --output-format-possibilities fastq'.format(
@@ -69,6 +62,23 @@ class Tests(unittest.TestCase):
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==746749)
             self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==899862)
+
+    def test_aria2_aws_fasta(self):
+        '''cannot test this in travis because conda aria2 is broken'''
+        with in_tempdir():
+            extern.run('{} get --download-threads 4 -r SRR12118866 -m aws-http --output-format-possibilities fasta.gz'.format(
+                kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==757641)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==907591)
+
+    def test_aria2_ena_fastq_gz(self):
+        '''cannot test this in travis because conda aria2 is broken'''
+        with in_tempdir():
+            extern.run('{} get --download-threads 4 -r SRR12118866 -m ena-ftp -f fastq.gz'.format(
+                kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4117481)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4945891)
+        
 
 if __name__ == "__main__":
     unittest.main()

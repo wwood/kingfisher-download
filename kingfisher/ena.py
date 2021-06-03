@@ -83,7 +83,7 @@ class EnaDownloader:
             output_files.append(output_file)
         return output_files
 
-    def download_with_curl(self, run_id):
+    def download_with_curl(self, run_id, num_threads):
         ftp_urls = self.get_ftp_download_urls(run_id)
         if ftp_urls is False:
             return False
@@ -92,7 +92,16 @@ class EnaDownloader:
         for e in ftp_urls:
             logging.info("Downloading {} ..".format(e))
             outname = os.path.basename(e)
-            extern.run("curl -q -L '{}' -o {}".format(e, outname))
+            if num_threads > 1:
+                cmd = "aria2c -x{} -o {} 'ftp://{}'".format(
+                    num_threads, outname, e)
+            else:
+                cmd = "curl -L '{}' -o {}".format(e, outname)
+            try:
+                subprocess.check_call(cmd, shell=True)
+            except subprocess.CalledProcessError as e:
+                logging.warning("Method ena-ftp failed, error was {}".format(e))
+                return False
             downloaded.append(outname)
         return downloaded
 

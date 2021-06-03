@@ -14,7 +14,8 @@ from .exception import DownloadMethodFailed
 
 DEFAULT_ASPERA_SSH_KEY = 'linux'
 DEFAULT_OUTPUT_FORMAT_POSSIBILITIES = ['fastq','fastq.gz']
-
+DEFAULT_DOWNLOAD_THREADS = 1 # until aria2c is properly packaged in conda-forge (needs movement from bioconda)
+DEFAULT_THREADS = 8
 
 def download_and_extract(**kwargs):
     '''download an public sequence dataset and extract if necessary. kwargs
@@ -36,6 +37,8 @@ def download_and_extract(**kwargs):
     allow_paid_from_aws = kwargs.pop('allow_paid_from_aws', None)
     ascp_ssh_key = kwargs.pop('ascp_ssh_key', DEFAULT_ASPERA_SSH_KEY)
     ascp_args = kwargs.pop('ascp_args', '')
+    download_threads = kwargs.pop('download_threads', DEFAULT_DOWNLOAD_THREADS)
+    extraction_threads = kwargs.pop('extraction_threads', DEFAULT_THREADS)
 
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
@@ -102,13 +105,21 @@ def download_and_extract(**kwargs):
                         logging.info("Found ODP link {}".format(odp_http_location.link()))
                         odp_link = odp_http_location.link()
 
-                        logging.info(
-                            "Downloading .SRA file from AWS Open Data Program HTTP link ..")
                         try:
-                            extern.run("curl -q -o {}.sra '{}'".format(run_identifier, odp_link))
+                            if download_threads > 1:
+                                logging.info(
+                                    "Downloading .SRA file from AWS Open Data Program HTTP link using aria2c ..")
+                                cmd = "aria2c -x{} -o {}.sra '{}'".format(
+                                    download_threads, run_identifier, odp_link)
+                                subprocess.check_call(cmd, shell=True)
+                            else:
+                                logging.info(
+                                    "Downloading .SRA file from AWS Open Data Program HTTP link using curl ..")
+                                cmd = "curl -o {}.sra '{}'".format(run_identifier, odp_link)
+                                subprocess.check_call(cmd, shell=True)
                             logging.info("Download finished")
                             downloaded_files = ['{}.sra'.format(run_identifier)]
-                        except ExternCalledProcessError as e:
+                        except CalledProcessError as e:
                             logging.warning("Method {} failed when downloading from {}: Error was: {}".format(method, odp_link, e))
                 else:
                     logging.warning("Method {} failed: No ODP URL could be found".format(method))
@@ -206,7 +217,7 @@ def download_and_extract(**kwargs):
                     downloaded_files = result
 
             elif method == 'ena-ftp':
-                result = EnaDownloader().download_with_curl(run_identifier)
+                result = EnaDownloader().download_with_curl(run_identifier, download_threads)
                 if result is not False:
                     downloaded_files = result
 
@@ -231,7 +242,8 @@ def download_and_extract(**kwargs):
                     sra_file = sra_file,
                     output_format_possibilities = output_format_possibilities,
                     unsorted = unsorted,
-                    stdout = stdout
+                    stdout = stdout,
+                    threads = extraction_threads,
                 )
                 os.remove(sra_file)
             else:
@@ -247,22 +259,22 @@ def download_and_extract(**kwargs):
                         if 'fasta' in output_format_possibilities:
                             logging.info("Converting {} to FASTA ..".format(f))
                             out_here = f.replace('.fastq.gz','.fasta')
-                            extern.run("pigz -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' >{}".format(
-                                f, out_here
+                            extern.run("pigz -p {} -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' >{}".format(
+                                extraction_threads, f, out_here
                             ))
                             os.remove(f)
                             output_files.append(out_here)
                         elif 'fasta.gz' in output_format_possibilities:
                             logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
                             out_here = f.replace('.fastq.gz','.fasta.gz')
-                            extern.run("pigz -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' |pigz >{}".format(
-                                f, out_here
+                            extern.run("pigz -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' |pigz -p {} >{}".format(
+                                f, extraction_threads, out_here
                             ))
                             os.remove(f)
                             output_files.append(out_here)
                         elif 'fastq' in output_format_possibilities:
                             logging.info("Decompressing {} with pigz ..".format(f))
-                            extern.run("pigz -d {}".format(f))
+                            extern.run("pigz -p {} -d {}".format(extraction_threads, f))
                             output_files.append(f.replace('.fastq.gz','.fastq'))
                         else:
                             raise Exception("Programming error")
@@ -280,6 +292,7 @@ def extract(**kwargs):
     force = kwargs.pop('force', False)
     unsorted = kwargs.pop('unsorted', False)
     stdout = kwargs.pop('stdout', False)
+    threads = kwargs.pop('threads',DEFAULT_THREADS)
 
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
@@ -317,7 +330,7 @@ def extract(**kwargs):
     else:
         if not skip_download_and_extraction:
             logging.info("Extracting .sra file with fasterq-dump ..")
-            extern.run("fasterq-dump {}".format(os.path.abspath(sra_file)))
+            extern.run("fasterq-dump --threads {} {}".format(threads, os.path.abspath(sra_file)))
 
             if 'fastq' not in output_format_possibilities:
                 for fq in ['x_1.fastq','x_2.fastq','x.fastq']:

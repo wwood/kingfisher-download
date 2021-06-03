@@ -49,7 +49,7 @@ class MyParser(argparse.ArgumentParser):
 
 def add_extraction_args(parser):
     parser.add_argument(
-        '--output-format-possibilities', '--output_format_possibilities',
+        '--output-format-possibilities', '--output_format_possibilities', '-f',
         nargs='+',
         help='Allowable output formats. If more than one is specified, downloaded data will processed as little as possible.',
         choices=['sra', 'fastq', 'fastq.gz','fasta','fasta.gz'],
@@ -107,6 +107,21 @@ def main():
         nargs='+',
         help='How to download .sra file. If multiple are specified, each is tried in turn until one works.',
         choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp', 'ena-ascp','ena-ftp'], required=True)
+    get_parser.add_argument(
+        '--download-threads',
+        type=int,
+        help='Number of connection threads to use when downloading data. When >1 aria2 is used rather than curl [default: {}]'.format(
+            kingfisher.DEFAULT_DOWNLOAD_THREADS),
+        default=kingfisher.DEFAULT_DOWNLOAD_THREADS,
+    )
+    get_parser.add_argument(
+        '-t','--extraction-threads',
+        type=int,
+        help='Number of connection threads to use when extracting .sra files [default: {}]'.format(
+            kingfisher.DEFAULT_THREADS
+        ),
+        default=kingfisher.DEFAULT_THREADS,
+    )
 
     get_parser = add_extraction_args(get_parser)
 
@@ -164,6 +179,11 @@ def main():
         '--sra',
         help='Extract this SRA file [required]',
         required=True)
+    extract_parser.add_argument(
+        '-t','--threads',
+        type=int,
+        help='Number of threads to use for extraction',
+        default=kingfisher.DEFAULT_THREADS)
 
     extract_parser = add_extraction_args(extract_parser)
 
@@ -216,7 +236,9 @@ def main():
             allow_paid_from_gcp = args.allow_paid_from_gcp,
             allow_paid_from_aws = args.allow_paid_from_aws,
             ascp_ssh_key = args.ascp_ssh_key,
-            ascp_args = args.ascp_args
+            ascp_args = args.ascp_args,
+            download_threads = args.download_threads,
+            extraction_threads = args.extraction_threads,
         )
     elif args.subparser_name == 'extract':
         output_files = kingfisher.extract(
@@ -225,6 +247,7 @@ def main():
             force = args.force,
             unsorted = args.unsorted,
             stdout = args.stdout,
+            threads = args.threads,
         )
         logging.info("Output files: {}".format(', '.join(output_files)))
     else:
