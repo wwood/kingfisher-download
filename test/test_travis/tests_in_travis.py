@@ -135,13 +135,6 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==21411192)
             self.assertFalse('SRR12118866 as an output file already appears to exist' in r.stderr.decode())
 
-    def test_fasta_gz_via_ena_ftp(self):
-        with in_tempdir():
-            extern.run('{} get -r SRR12118866 -m ena-ftp --output-format-possibilities fasta.gz'.format(
-                kingfisher))
-            self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==746749)
-            self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==899862)
-
     # def test_noqual(self):
     #     with in_tempdir():
     #         extern.run("{} -r ERR3209781 --allowable-output-formats ".format(kingfisher, ))
