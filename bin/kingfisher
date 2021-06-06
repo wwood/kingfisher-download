@@ -11,13 +11,18 @@ __status__ = "Development"
 import os
 import sys
 import logging
+import re
 
-from bird_tool_utils import BirdArgparser, Example
+from bird_tool_utils import *
 from bird_tool_utils.people import *
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 import kingfisher
 from kingfisher.ena import DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION, DEFAULT_OSX_ASPERA_SSH_KEY_LOCATION
+
+def fix(help_string):
+    multispace_re = re.compile('  *')
+    return(multispace_re.sub(' ', help_string))
 
 def add_extraction_args(parser):
     parser.add_argument(
@@ -35,22 +40,24 @@ def add_extraction_args(parser):
     parser.add_argument(
         '--unsorted',
         action='store_true',
-        help='Output the sequences in a single file, where the reads are in arbitrary order. \
+        help=fix('Output the sequences in a single file, where the reads are in arbitrary order. \
             Even pairs of reads may be split up, but it is possible to tell which pair \
             is which, and which is a forward and which is a reverse read from the name \
             [default: Do not].\n\n \
-            Currently requires "--output-format-possibilities fasta" and "--stdout" and download from NCBI rather than ENA.')
+            Currently requires "--output-format-possibilities fasta" and "--stdout" and download from NCBI rather than ENA.'))
     parser.add_argument(
         '--stdout',
         action='store_true',
         help='Output sequences to STDOUT. Currently requires --unsorted [default: Do not].')
     return parser
 
+
 def main():
     bird_argparser = BirdArgparser(
         program='Kingfisher',
         authors=[BEN_NAME_AND_CENTRE_AND_EMAIL],
         version=kingfisher.__version__,
+        raw_format=True,
         examples={'get': [
             Example(
                 ('Download .fastq.gz files of the run ERR1739691 from the ENA, or failing that, download an .sra file from the Amazon AWA Open Data Program and then convert'
@@ -77,10 +84,20 @@ def main():
         '-r','--run-identifier','--run_identifier',
         help='Run number to download/extract e.g. ERR1739691 [required]',
         required=True)
+    
     get_parser_common_options.add_argument(
         '-m','--download_methods', '--download-methods',
         nargs='+',
-        help='How to download .sra file. If multiple are specified, each is tried in turn until one works [required].',
+        help='How to download .sra file. If multiple are specified, each is tried in turn until one works [required].\n\n' + 
+        table_roff([
+            ["Method",'Description'],
+            ['ena-ascp','Download .fastq.gz files from ENA using Aspera, which can then be further converted. This is the fastest method since no fasterq-dump is required.'],
+            ['ena-ftp','Download .fastq.gz files from ENA using curl, which can then be further converted. This is relatively fast since no fasterq-dump is required.'],
+            ['prefetch','Download .SRA file using NCBI prefetch from sra-tools, which is then extracted with fasterq-dump.'],
+            ['aws-http','Download .SRA file from AWS Open Data Program using curl, which is then extracted with fasterq-dump.'],
+            ['aws-cp','Download .SRA file from AWS using aws s3 cp, which is then extracted with fasterq-dump. May require payment, probably not.'],
+            ['gcp-cp','Download .SRA file from Google Cloud gsutil, which is then extracted with fasterq-dump. Requires payment.']
+            ]),
         choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp', 'ena-ascp','ena-ftp'], required=True)
 
     get_parser_download_args = get_parser.add_argument_group(title='further download options')
@@ -93,17 +110,17 @@ def main():
     )
     get_parser_download_args.add_argument(
         '--ascp-ssh-key', '--ascp_ssh_key',
-        help='\"linux\" or \"osx\" for default paths used in each OS ({} and {} respectively), \
+        help=fix('\"linux\" or \"osx\" for default paths used in each OS ({} and {} respectively), \
             otherwise a path to the openssh key to used for aspera (i.e. the \
             -i flag of ascp) [default: \'{}\']'.format(
                 DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION,
                 DEFAULT_OSX_ASPERA_SSH_KEY_LOCATION,
-                kingfisher.DEFAULT_ASPERA_SSH_KEY),
+                kingfisher.DEFAULT_ASPERA_SSH_KEY)),
         default=kingfisher.DEFAULT_ASPERA_SSH_KEY)
     get_parser_download_args.add_argument(
         '--ascp-args', '--ascp_args',
-        help='extra arguments to pass to ascp e.g. \'-k 2\' to resume with a \
-        sparse file checksum [default: \'\']',
+        help=fix('extra arguments to pass to ascp e.g. \'-k 2\' to resume with a \
+        sparse file checksum [default: \'\']'),
         default='')
     get_parser_download_args.add_argument(
         '--allow-paid', '--allow_paid',
@@ -119,24 +136,24 @@ def main():
             [default: not used]')
     get_parser_download_args.add_argument(
         '--aws-user-key-secret', '--aws_user_key_secret',
-        help='Downloading from AWS requester pays buckets requires a key ID and secret key \
-            [default: not used]')
+        help=fix('Downloading from AWS requester pays buckets requires a key ID and secret key \
+            [default: not used]'))
     get_parser_download_args.add_argument(
         '--allow-paid-from-gcp', '--allow_paid_from_gcp',
         help='Allow downloading from retriever-pays GCP buckets [default: Do not]',
         action='store_true')
     get_parser_download_args.add_argument(
         '--gcp-project', '--gcp_project',
-        help='Downloading from Google Cloud buckets require a Google project to charge '
+        help=fix('Downloading from Google Cloud buckets require a Google project to charge '
         '(they are requester-pays) e.g. \'my-project\'. This can alternately be set '
         'beforehand using \'gcloud config set project PROJECT_ID\' '
-        '[default: value of `gcloud config get-value project` command]')
+        '[default: value of `gcloud config get-value project` command]'))
     get_parser_download_args.add_argument(
         '--gcp-user-key-file', '--gcp_user_key_file',
-        help='Downloading from Google Cloud buckets requires a Google user to be setup. \
+        help=fix('Downloading from Google Cloud buckets requires a Google user to be setup. \
             Use this option to specify a JSON-formatted service account key, as per \
             https://cloud.google.com/iam/docs/creating-managing-service-account-keys \
-            [default: not used]')
+            [default: not used]'))
 
     get_parser_extraction_args = get_parser.add_argument_group(title='further extraction options')
     get_parser_extraction_args.add_argument(
