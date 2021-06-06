@@ -8,54 +8,24 @@ __maintainer__ = "Ben Woodcroft"
 __email__ = "b.woodcroft near qut.edu.au"
 __status__ = "Development"
 
-import argparse
 import os
 import sys
 import logging
-import tempfile
-import subprocess
 
-from build_manpages.manpage import Manpage
+from bird_tool_utils import BirdArgparser, Example
+from bird_tool_utils.people import *
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 import kingfisher
 from kingfisher.ena import DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION, DEFAULT_OSX_ASPERA_SSH_KEY_LOCATION
 
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-
-class MyParser(argparse.ArgumentParser):
-    FULL_HELP_FLAG = 'full-help'
-    FULL_HELP_ROFF_FLAG = 'full-help-roff'
-
-    def format_help(self):
-        prog = self.prog
-        detail_str = 'See %s --%s for further options and further detail.\n' % (
-            prog,
-            self.FULL_HELP_FLAG)
-        splits = prog.split()
-        if len(splits) == 2:
-            subcommand = splits[1]
-        else:
-            subcommand = None
-        if subcommand == 'pipe':
-            pass
-            #TODO: Add short help with colour, see singlem for examples.
-
-        else:
-            return argparse.ArgumentParser.format_help(self)
-
-
 def add_extraction_args(parser):
     parser.add_argument(
-        '--output-format-possibilities', '--output_format_possibilities', '-f',
+        '-f', '--output-format-possibilities', '--output_format_possibilities',
         nargs='+',
-        help='Allowable output formats. If more than one is specified, downloaded data will processed as little as possible.',
+        help='Allowable output formats. If more than one is specified, downloaded data will processed as little as possible [default: "{}"]'.format(
+            ' '.join(kingfisher.DEFAULT_OUTPUT_FORMAT_POSSIBILITIES)
+        ),
         choices=['sra', 'fastq', 'fastq.gz','fasta','fasta.gz'],
         default=kingfisher.DEFAULT_OUTPUT_FORMAT_POSSIBILITIES)
     parser.add_argument(
@@ -65,11 +35,11 @@ def add_extraction_args(parser):
     parser.add_argument(
         '--unsorted',
         action='store_true',
-        help='Currently requires "--output-format-possibilities fasta" and "--stdout" and download from NCBI rather than ENA. \
-            Output the sequences in a single file, where the reads are in arbitrary order. \
+        help='Output the sequences in a single file, where the reads are in arbitrary order. \
             Even pairs of reads may be split up, but it is possible to tell which pair \
             is which, and which is a forward and which is a reverse read from the name \
-            [default: Do not].')
+            [default: Do not].\n\n \
+            Currently requires "--output-format-possibilities fasta" and "--stdout" and download from NCBI rather than ENA.')
     parser.add_argument(
         '--stdout',
         action='store_true',
@@ -77,42 +47,40 @@ def add_extraction_args(parser):
     return parser
 
 def main():
-    parent_parser = argparse.ArgumentParser(add_help=False)
-    parent_parser.add_argument('--full-help','--full_help', help='print longer help message', action="store_true")
-    parent_parser.add_argument('--debug', help='output debug information', action="store_true")
-    parent_parser.add_argument('--version', help='output version information and quit',  action='version', version=kingfisher.__version__)
-    parent_parser.add_argument('--quiet', help='only output errors', action="store_true")
-    parent_parser.add_argument('--full-help-roff','--full_help_roff', help='print longer help message in ROFF format', action="store_true")
+    bird_argparser = BirdArgparser(
+        program='Kingfisher',
+        authors=[BEN_NAME_AND_CENTRE_AND_EMAIL],
+        version=kingfisher.__version__,
+        examples={'get': [
+            Example(
+                ('Download .fastq.gz files of the run ERR1739691 from the ENA, or failing that, download an .sra file from the Amazon AWA Open Data Program and then convert'
+                ' to FASTQ (not FASTQ.GZ), or failing that use NCBI prefetch to download and convert that to FASTQ. Output files are put into the current working directory.'),
+                'kingfisher get -r ERR1739691 -m ena-ascp aws-http prefetch'),
+            Example(
+                'Download a .sra from GCP using a service account key with "gcp cp". Payment is required.',
+                'kingfisher get -r ERR1739691 -m gcp-cp -f sra --gcp-user-key-file sa-private-key.json --allow-paid'),
+            Example(
+                'Download a .sra from the free AWS open data program using 8 threads for download and extraction, coverting to FASTA. Requires aria2 to be installed.',
+                'kingfisher get -r ERR1739691 -m aws-http -f fasta --download-threads 8')],
+            'extract': [
+                Example(
+                    'Extract an SRA file to FASTQ.GZ format using 16 threads (default is 8)',
+                    'kingfisher extract --sra ERR1739691.sra -t 16 -f fastq.gz'
+                    )]
+                })
 
-    parser = argparse.ArgumentParser(parents=[parent_parser])
-    subparsers = parser.add_subparsers(title="Sub-commands", dest='subparser_name')#, parser_class=MyParser)
-    subparser_name_to_parser = {}
-
-    def new_subparser(subparsers, parser_name, parser_description):
-        subpar = subparsers.add_parser(parser_name,
-                                       description=parser_description,
-                                       help=parser_description,
-                                       epilog=__author__,
-                                       parents=[parent_parser])
-        # subpar.add_argument(
-        #     '--%s' % MyParser.FULL_HELP_FLAG,
-        #     '--%s' % MyParser.FULL_HELP_FLAG.replace('-','_'),
-        #     action='store_true', default=False, help='display all help options')
-        subparser_name_to_parser[parser_name] = subpar
-        return subpar
-
-    get_description = 'Download and extract public sequence files from SRA or ENA'
-    get_parser = new_subparser(subparsers, 'get', get_description)
+    get_description = 'Download and extract sequence data from SRA or ENA'
+    get_parser = bird_argparser.new_subparser('get', get_description)
 
     get_parser_common_options = get_parser.add_argument_group(title='common options')
     get_parser_common_options.add_argument(
         '-r','--run-identifier','--run_identifier',
-        help='Run number to download/extract e.g. ERR1739691',
+        help='Run number to download/extract e.g. ERR1739691 [required]',
         required=True)
     get_parser_common_options.add_argument(
         '-m','--download_methods', '--download-methods',
         nargs='+',
-        help='How to download .sra file. If multiple are specified, each is tried in turn until one works.',
+        help='How to download .sra file. If multiple are specified, each is tried in turn until one works [required].',
         choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp', 'ena-ascp','ena-ftp'], required=True)
 
     get_parser_download_args = get_parser.add_argument_group(title='further download options')
@@ -123,7 +91,40 @@ def main():
             kingfisher.DEFAULT_DOWNLOAD_THREADS),
         default=kingfisher.DEFAULT_DOWNLOAD_THREADS,
     )
-
+    get_parser_download_args.add_argument(
+        '--ascp-ssh-key', '--ascp_ssh_key',
+        help='\"linux\" or \"osx\" for default paths used in each OS ({} and {} respectively), \
+            otherwise a path to the openssh key to used for aspera (i.e. the \
+            -i flag of ascp) [default: \'{}\']'.format(
+                DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION,
+                DEFAULT_OSX_ASPERA_SSH_KEY_LOCATION,
+                kingfisher.DEFAULT_ASPERA_SSH_KEY),
+        default=kingfisher.DEFAULT_ASPERA_SSH_KEY)
+    get_parser_download_args.add_argument(
+        '--ascp-args', '--ascp_args',
+        help='extra arguments to pass to ascp e.g. \'-k 2\' to resume with a \
+        sparse file checksum [default: \'\']',
+        default='')
+    get_parser_download_args.add_argument(
+        '--allow-paid', '--allow_paid',
+        help='Allow downloading from retriever-pays s3 and GCP buckets [default: Do not]',
+        action='store_true')
+    get_parser_download_args.add_argument(
+        '--allow-paid-from-aws', '--allow_paid_from_aws',
+        help='Allow downloading from retriever-pays AWS buckets [default: Do not]',
+        action='store_true')
+    get_parser_download_args.add_argument(
+        '--aws-user-key-id', '--aws_user_key_id',
+        help='Downloading from AWS requester pays buckets requires a key ID and secret key \
+            [default: not used]')
+    get_parser_download_args.add_argument(
+        '--aws-user-key-secret', '--aws_user_key_secret',
+        help='Downloading from AWS requester pays buckets requires a key ID and secret key \
+            [default: not used]')
+    get_parser_download_args.add_argument(
+        '--allow-paid-from-gcp', '--allow_paid_from_gcp',
+        help='Allow downloading from retriever-pays GCP buckets [default: Do not]',
+        action='store_true')
     get_parser_download_args.add_argument(
         '--gcp-project', '--gcp_project',
         help='Downloading from Google Cloud buckets require a Google project to charge '
@@ -136,46 +137,12 @@ def main():
             Use this option to specify a JSON-formatted service account key, as per \
             https://cloud.google.com/iam/docs/creating-managing-service-account-keys \
             [default: not used]')
-    get_parser_download_args.add_argument(
-        '--aws-user-key-id', '--aws_user_key_id',
-        help='Downloading from AWS requester pays buckets requires a key ID and secret key \
-            [default: not used]')
-    get_parser_download_args.add_argument(
-        '--aws-user-key-secret', '--aws_user_key_secret',
-        help='Downloading from AWS requester pays buckets requires a key ID and secret key \
-            [default: not used]')
-    get_parser_download_args.add_argument(
-        '--allow-paid', '--allow_paid',
-        help='Allow downloading from retriever-pays s3 and GCP buckets',
-        action='store_true')
-    get_parser_download_args.add_argument(
-        '--allow-paid-from-gcp', '--allow_paid_from_gcp',
-        help='Allow downloading from retriever-pays GCP buckets',
-        action='store_true')
-    get_parser_download_args.add_argument(
-        '--allow-paid-from-aws', '--allow_paid_from_aws',
-        help='Allow downloading from retriever-pays AWS buckets',
-        action='store_true')
-    get_parser_download_args.add_argument(
-        '--ascp-ssh-key', '--ascp_ssh_key',
-        help='\'linux\' or \'osx\' for default paths used in each OS ({} and {} respectively), \
-            otherwise a path to the openssh key to used for aspera (i.e. the \
-            -i flag of ascp) [default: \'{}\']'.format(
-                DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION,
-                DEFAULT_OSX_ASPERA_SSH_KEY_LOCATION,
-                kingfisher.DEFAULT_ASPERA_SSH_KEY),
-        default=kingfisher.DEFAULT_ASPERA_SSH_KEY)
-    get_parser_download_args.add_argument(
-        '--ascp-args', '--ascp_args',
-        help='extra arguments to pass to ascp e.g. \'-k 2\' to resume with a \
-        sparse file checksum [default: \'\']',
-        default='')
 
     get_parser_extraction_args = get_parser.add_argument_group(title='further extraction options')
     get_parser_extraction_args.add_argument(
-        '-t','--extraction-threads',
+        '-t', '--extraction-threads',
         type=int,
-        help='Number of connection threads to use when extracting .sra files [default: {}]'.format(
+        help='Number of threads to use when extracting .sra files [default: {}]'.format(
             kingfisher.DEFAULT_THREADS
         ),
         default=kingfisher.DEFAULT_THREADS,
@@ -183,7 +150,7 @@ def main():
     add_extraction_args(get_parser_extraction_args)
 
     extract_description = 'extract .sra format files'
-    extract_parser = new_subparser(subparsers, 'extract', extract_description)
+    extract_parser = bird_argparser.new_subparser('extract', extract_description)
     extract_parser_extraction_group = extract_parser.add_argument_group(title='extraction options')
 
     extract_parser_extraction_group.add_argument(
@@ -191,55 +158,14 @@ def main():
         help='Extract this SRA file [required]',
         required=True)
     extract_parser_extraction_group.add_argument(
-        '-t','--threads',
+        '-t', '--threads',
         type=int,
-        help='Number of threads to use for extraction',
+        help='Number of threads to use for extraction [default: {}]'.format(
+            kingfisher.DEFAULT_THREADS),
         default=kingfisher.DEFAULT_THREADS)
     add_extraction_args(extract_parser_extraction_group)
 
-    if (len(sys.argv) == 1 or sys.argv[1] == '-h' or sys.argv[1] == '--help'):
-        print('')
-        print('                ...::: Kingfisher v' + kingfisher.__version__ + ' :::...''')
-        print('')
-        print('   get      -> %s' % get_description)
-        print('   extract  -> %s' % extract_description)
-
-        print('\n  Use kingfisher <command> -h for command-specific help.\n'\
-            '  Some commands also have an extended --full-help flag.\n')
-        sys.exit(0)
-    else:
-        # Determine whether --full_help was specified before argument parsing.
-        if ('--%s' % MyParser.FULL_HELP_FLAG in sys.argv or \
-            '--%s' % MyParser.FULL_HELP_FLAG.replace('-','_') in sys.argv) and \
-            sys.argv[1] in subparser_name_to_parser:
-            subcommand = sys.argv[1]
-            subparser = subparser_name_to_parser[subcommand]
-            with tempfile.NamedTemporaryFile(prefix='{}-manpage-'.format(subcommand)) as f:
-                f.write(str(Manpage(subparser)).encode())
-                f.flush()
-                subprocess.run('man {}'.format(f.name), shell=True)
-            print(argparse.ArgumentParser.format_help(subparser))
-            sys.exit(0)
-        elif ('--%s' % MyParser.FULL_HELP_ROFF_FLAG in sys.argv or \
-            '--%s' % MyParser.FULL_HELP_ROFF_FLAG.replace('-','_') in sys.argv) and \
-            sys.argv[1] in subparser_name_to_parser:
-            
-            subcommand = sys.argv[1]
-            subparser = subparser_name_to_parser[subcommand]
-            print(str(Manpage(subparser)))
-            sys.exit(0)
-        else:
-            args = parser.parse_args()
-
-    if args.debug:
-        loglevel= logging.DEBUG
-    elif args.quiet:
-        loglevel= logging.ERROR
-    else:
-        loglevel= logging.INFO
-    logging.basicConfig(
-        level=loglevel, format='%(asctime)s %(levelname)s: %(message)s',
-        datefmt='%m/%d/%Y %I:%M:%S %p')
+    args = bird_argparser.parse_the_args()
 
     if args.subparser_name == 'get':
         kingfisher.download_and_extract(
