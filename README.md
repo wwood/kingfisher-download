@@ -12,13 +12,9 @@
 
 # Kingfisher
 
-Kingfisher is a program for downloading FASTA/Q files from public data sources,
-including the European Nucleotide Archive (ENA), NCBI SRA, Amazon AWS and Google
-Cloud. It's input is an "Run" accession e.g. DRR001970.
+Kingfisher is a fast and flexible program for procurement of sequence files from public data sources, including the European Nucleotide Archive (ENA), NCBI SRA, Amazon AWS and Google Cloud. It's input is an "Run" accession e.g. DRR001970.
 
-It attempts to download data from a series of methods, which it attempts in
-order until one works. Then the downloaded data is converted to an output FASTQ
-/ FASTA / GZIP file format as required.
+It attempts to download data from a series of methods, which it attempts in order until one works. Then the downloaded data is converted to an output SRA / FASTQ / FASTA / GZIP file format as required. Both download and extraction phases are usually quicker than using the NCBI's SRA toolkit.
 
 This software was originally known as `ena-fast-download`. Kingfisher implements
 almost all of that tool's functionality, but also handles data sources other
