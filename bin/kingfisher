@@ -109,6 +109,11 @@ def main():
         default=kingfisher.DEFAULT_DOWNLOAD_THREADS,
     )
     get_parser_download_args.add_argument(
+        '--hide-download-progress', '--hide_download_progress',
+        action='store_true',
+        help='Do not show progressbar during download [default: unset i.e. show progress]',
+    )
+    get_parser_download_args.add_argument(
         '--ascp-ssh-key', '--ascp_ssh_key',
         help=fix('\"linux\" or \"osx\" for default paths used in each OS ({} and {} respectively), \
             otherwise a path to the openssh key to used for aspera (i.e. the \
@@ -209,6 +214,7 @@ def main():
             ascp_args = args.ascp_args,
             download_threads = args.download_threads,
             extraction_threads = args.extraction_threads,
+            hide_download_progress = args.hide_download_progress,
         )
     elif args.subparser_name == 'extract':
         output_files = kingfisher.extract(

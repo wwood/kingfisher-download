@@ -40,6 +40,7 @@ def download_and_extract(**kwargs):
     ascp_args = kwargs.pop('ascp_args', '')
     download_threads = kwargs.pop('download_threads', DEFAULT_DOWNLOAD_THREADS)
     extraction_threads = kwargs.pop('extraction_threads', DEFAULT_THREADS)
+    hide_download_progress = kwargs.pop('hide_download_progress', False)
 
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
@@ -98,17 +99,19 @@ def download_and_extract(**kwargs):
                         if download_threads > 1:
                             logging.info(
                                 "Downloading .SRA file from AWS Open Data Program HTTP link using aria2c ..")
-                            cmd = "aria2c -x{} -o {}.sra '{}'".format(
-                                download_threads, run_identifier, odp_link)
+                            verbosity_flag = '--quiet' if hide_download_progress else ''
+                            cmd = "aria2c {} -x{} -o {}.sra '{}'".format(
+                                verbosity_flag, download_threads, run_identifier, odp_link)
                             subprocess.check_call(cmd, shell=True)
                         else:
                             logging.info(
                                 "Downloading .SRA file from AWS Open Data Program HTTP link using curl ..")
-                            cmd = "curl -o {}.sra '{}'".format(run_identifier, odp_link)
+                            verbosity_flag = '--silent --show-error' if hide_download_progress else ''
+                            cmd = "curl {} -o {}.sra '{}'".format(verbosity_flag, run_identifier, odp_link)
                             subprocess.check_call(cmd, shell=True)
                         logging.info("Download finished")
                         return ['{}.sra'.format(run_identifier)]
-                    except CalledProcessError as e:
+                    except subprocess.CalledProcessError as e:
                         logging.warning("Method {} failed when downloading from {}: Error was: {}".format(method, odp_link, e))
                         return None
 
