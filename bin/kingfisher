@@ -139,6 +139,11 @@ def main():
         help=fix('Downloading from AWS requester pays buckets requires a key ID and secret key \
             [default: not used]'))
     get_parser_download_args.add_argument(
+        '--guess-aws-location', '--guess_aws_location',
+        action='store_true',
+        help=fix('Instead of using the NCBI location API, guess the address of the file in AWS \
+            [default: not used]'))
+    get_parser_download_args.add_argument(
         '--allow-paid-from-gcp', '--allow_paid_from_gcp',
         help='Allow downloading from retriever-pays GCP buckets [default: Do not]',
         action='store_true')
@@ -196,6 +201,7 @@ def main():
             gcp_user_key_file = args.gcp_user_key_file,
             aws_user_key_id = args.aws_user_key_id,
             aws_user_key_secret = args.aws_user_key_secret,
+            guess_aws_location = args.guess_aws_location,
             allow_paid = args.allow_paid,
             allow_paid_from_gcp = args.allow_paid_from_gcp,
             allow_paid_from_aws = args.allow_paid_from_aws,

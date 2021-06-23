@@ -65,6 +65,12 @@ class Tests(unittest.TestCase):
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)
 
+    def test_aws_guess_location(self):
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities sra --guess_aws_location'.format(
+                kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)
+
     def test_stdout_unsorted_fasta_via_sra(self):
         self.assertEqual('e53aeb5b0ae367d24bea4023ce940eea  -\n',
             extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities fasta --stdout --unsorted |md5sum'.format(

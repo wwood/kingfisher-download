@@ -35,6 +35,7 @@ def download_and_extract(**kwargs):
     allow_paid = kwargs.pop('allow_paid', None)
     allow_paid_from_gcp = kwargs.pop('allow_paid_from_gcp', None)
     allow_paid_from_aws = kwargs.pop('allow_paid_from_aws', None)
+    guess_aws_location = kwargs.pop('guess_aws_location', False)
     ascp_ssh_key = kwargs.pop('ascp_ssh_key', DEFAULT_ASPERA_SSH_KEY)
     ascp_args = kwargs.pop('ascp_args', '')
     download_threads = kwargs.pop('download_threads', DEFAULT_DOWNLOAD_THREADS)
@@ -92,37 +93,45 @@ def download_and_extract(**kwargs):
                     logging.warning("Method {} failed: Error was: {}".format(method, e))
                 
             elif method == 'aws-http':
-                if ncbi_locations is None:
-                    ncbi_locations = Location.get_ncbi_locations(run_identifier)
-                
-                odp_http_locations = ncbi_locations.object_locations(
-                    NcbiLocationJson.OBJECT_TYPE_SRA, NcbiLocationJson.AWS_SERVICE, False
-                )
+                def download_from_aws(odp_link, run_identifier, download_threads, method):
+                    try:
+                        if download_threads > 1:
+                            logging.info(
+                                "Downloading .SRA file from AWS Open Data Program HTTP link using aria2c ..")
+                            cmd = "aria2c -x{} -o {}.sra '{}'".format(
+                                download_threads, run_identifier, odp_link)
+                            subprocess.check_call(cmd, shell=True)
+                        else:
+                            logging.info(
+                                "Downloading .SRA file from AWS Open Data Program HTTP link using curl ..")
+                            cmd = "curl -o {}.sra '{}'".format(run_identifier, odp_link)
+                            subprocess.check_call(cmd, shell=True)
+                        logging.info("Download finished")
+                        return ['{}.sra'.format(run_identifier)]
+                    except CalledProcessError as e:
+                        logging.warning("Method {} failed when downloading from {}: Error was: {}".format(method, odp_link, e))
+                        return None
 
-                if len(odp_http_locations) > 0:
-                    for odp_http_location in odp_http_locations:
-                        logging.debug("Found ODP link {}".format(odp_http_location))
-                        logging.info("Found ODP link {}".format(odp_http_location.link()))
-                        odp_link = odp_http_location.link()
-
-                        try:
-                            if download_threads > 1:
-                                logging.info(
-                                    "Downloading .SRA file from AWS Open Data Program HTTP link using aria2c ..")
-                                cmd = "aria2c -x{} -o {}.sra '{}'".format(
-                                    download_threads, run_identifier, odp_link)
-                                subprocess.check_call(cmd, shell=True)
-                            else:
-                                logging.info(
-                                    "Downloading .SRA file from AWS Open Data Program HTTP link using curl ..")
-                                cmd = "curl -o {}.sra '{}'".format(run_identifier, odp_link)
-                                subprocess.check_call(cmd, shell=True)
-                            logging.info("Download finished")
-                            downloaded_files = ['{}.sra'.format(run_identifier)]
-                        except CalledProcessError as e:
-                            logging.warning("Method {} failed when downloading from {}: Error was: {}".format(method, odp_link, e))
+                if guess_aws_location:
+                    # e.g. https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR12118866/SRR12118866
+                    guessed_location = 'https://sra-pub-run-odp.s3.amazonaws.com/sra/{}/{}'.format(run_identifier, run_identifier)
+                    logging.info("Guessing AWS-ODP link to be: {}".format(guessed_location))
+                    downloaded_files = download_from_aws(guessed_location, run_identifier, download_threads, method)
                 else:
-                    logging.warning("Method {} failed: No ODP URL could be found".format(method))
+                    if ncbi_locations is None:
+                        ncbi_locations = Location.get_ncbi_locations(run_identifier)
+                    odp_http_locations = ncbi_locations.object_locations(
+                        NcbiLocationJson.OBJECT_TYPE_SRA, NcbiLocationJson.AWS_SERVICE, False
+                    )
+
+                    if len(odp_http_locations) > 0:
+                        for odp_http_location in odp_http_locations:
+                            logging.debug("Found ODP link {}".format(odp_http_location))
+                            logging.info("Found ODP link {}".format(odp_http_location.link()))
+                            odp_link = odp_http_location.link()
+                            downloaded_files = download_from_aws(odp_link, run_identifier, download_threads, method)
+                    else:
+                        logging.warning("Method {} failed: No ODP URL could be found".format(method))
 
             elif method == 'aws-cp':
                 if ncbi_locations is None:
