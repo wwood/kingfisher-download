@@ -316,14 +316,11 @@ def extract(**kwargs):
     
     if unsorted and stdout and 'fasta' in output_format_possibilities:
         logging.info("Extracting unsorted .sra file to STDOUT in FASTA format ..")
-        cmd = "vdb-dump -f fasta {}".format(os.path.abspath(sra_file))
+        cmd = "sracat {}".format(os.path.abspath(sra_file))
         logging.debug("Running command {}".format(cmd))
         try:
             subprocess.check_call(cmd, shell=True, stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
-            #TODO: vdb-dump doesn't fail with non-zero status when
-            #something is amiss. Fix by using NCBI API instead of
-            #vdb-dump.
             raise Exception("Extraction of .sra to fasta format failed. Command run was '{}'. STDERR was '{}'".format(
                 cmd, e.stderr
             ))

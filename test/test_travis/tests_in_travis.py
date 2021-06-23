@@ -66,14 +66,14 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)
 
     def test_stdout_unsorted_fasta_via_sra(self):
-        self.assertEqual('7fc33e5ea211377de944b7bd603e213a  -\n',
+        self.assertEqual('e53aeb5b0ae367d24bea4023ce940eea  -\n',
             extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities fasta --stdout --unsorted |md5sum'.format(
                 kingfisher
             )))
 
     def test_extract_stdout_fasta(self):
         extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities sra'.format(kingfisher))
-        self.assertEqual('7fc33e5ea211377de944b7bd603e213a  -\n',
+        self.assertEqual('e53aeb5b0ae367d24bea4023ce940eea  -\n',
             extern.run('{} extract --sra SRR12118866.sra --output-format-possibilities fasta --stdout --unsorted |md5sum'.format(
                 kingfisher
             )))
