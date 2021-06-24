@@ -44,7 +44,7 @@ def add_extraction_args(parser):
             Even pairs of reads may be split up, but it is possible to tell which pair \
             is which, and which is a forward and which is a reverse read from the name \
             [default: Do not].\n\n \
-            Currently requires "--output-format-possibilities fasta" and "--stdout" and download from NCBI rather than ENA.'))
+            Currently requires "--stdout" and download from NCBI rather than ENA.'))
     parser.add_argument(
         '--stdout',
         action='store_true',

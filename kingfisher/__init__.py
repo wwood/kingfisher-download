@@ -65,8 +65,8 @@ def download_and_extract(**kwargs):
         raise Exception("--gcp-project is incompatible with --gcp-user-key-file. The project specified in the key file will be used when gcp_project is not specified.")
 
     if stdout or unsorted:
-        if not (stdout and unsorted and output_format_possibilities == ['fasta']):
-            raise Exception("Currently --stdout and --unsorted must be specified together and with --output-format-possibilities fasta")
+        if not (stdout and unsorted):
+            raise Exception("Currently --stdout and --unsorted must be specified together")
 
     output_files = []
     ncbi_locations = None
@@ -310,8 +310,8 @@ def extract(**kwargs):
         raise Exception("Unexpected arguments detected: %s" % kwargs)
 
     if stdout or unsorted:
-        if not (stdout and unsorted and output_format_possibilities == ['fasta']):
-            raise Exception("Currently --stdout and --unsorted must be specified together and with --output-format-possibilities fasta")
+        if not (stdout and unsorted):
+            raise Exception("Currently --stdout and --unsorted must be specified together")
 
     run_identifier = os.path.basename(sra_file)
     if sra_file.endswith(".sra"):
@@ -326,9 +326,22 @@ def extract(**kwargs):
             run_identifier, output_format_possibilities, force
         )
     
-    if unsorted and stdout and 'fasta' in output_format_possibilities:
-        logging.info("Extracting unsorted .sra file to STDOUT in FASTA format ..")
-        cmd = "sracat {}".format(os.path.abspath(sra_file))
+    if unsorted and stdout:
+        format = output_format_possibilities[0]
+        if format == 'fasta':
+            logging.info("Extracting unsorted .sra file to STDOUT in FASTA format ..")
+            cmd = "sracat {}".format(os.path.abspath(sra_file))
+        elif format == 'fasta.gz':
+            logging.info("Extracting unsorted .sra file to STDOUT in FASTA.GZ format ..")
+            cmd = "sracat {} |pigz -p {} -c".format(os.path.abspath(sra_file), threads)
+        elif format == 'fastq':
+            logging.info("Extracting unsorted .sra file to STDOUT in FASTQ format ..")
+            cmd = "sracat --qual {}".format(os.path.abspath(sra_file))
+        elif format == 'fastq.gz':
+            logging.info("Extracting unsorted .sra file to STDOUT in FASTQ.GZ format ..")
+            cmd = "sracat --qual {} |pigz -p {} -c".format(os.path.abspath(sra_file), threads)
+        else:
+            raise Exception("Cannot extract with --stdout --unsorted format {}".format(format))
         logging.debug("Running command {}".format(cmd))
         try:
             subprocess.check_call(cmd, shell=True, stderr=subprocess.PIPE)
