@@ -109,8 +109,20 @@ def download_and_extract(**kwargs):
                             verbosity_flag = '--silent --show-error' if hide_download_progress else ''
                             cmd = "curl {} -o {}.sra '{}'".format(verbosity_flag, run_identifier, odp_link)
                             subprocess.check_call(cmd, shell=True)
-                        logging.info("Download finished")
-                        return ['{}.sra'.format(run_identifier)]
+                        logging.info("Download finished, validating ..")
+                        # A download with curl of a bad AWS address does not
+                        # result in a non-zero exitstatus. Instead an XML
+                        # document is returned. If it is XML, then download has
+                        # failed.
+                        with open('{}.sra'.format(run_identifier),'rb') as f:
+                            aws_failed = (f.read(8) != b'NCBI.sra')
+
+                        if aws_failed:
+                            logging.info("The file downloaded from AWS appears not to be a .sra file, deleting it, this download method failed")
+                            os.remove('{}.sra'.format(run_identifier))
+                            return None
+                        else:
+                            return ['{}.sra'.format(run_identifier)]
                     except subprocess.CalledProcessError as e:
                         logging.warning("Method {} failed when downloading from {}: Error was: {}".format(method, odp_link, e))
                         return None

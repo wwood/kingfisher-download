@@ -141,6 +141,21 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==21411192)
             self.assertFalse('SRR12118866 as an output file already appears to exist' in r.stderr.decode())
 
+    def test_aws_failure_curl(self):
+        with in_tempdir():
+            with self.assertRaises(extern.ExternCalledProcessError):
+                extern.run('{} get -r DRR014182_not --force -f sra -m aws-http --guess-aws-location'.format(kingfisher))
+            self.assertFalse(os.path.exists('DRR014182.sra'))
+
+    def test_aws_failure_aria2(self):
+        with in_tempdir():
+            with self.assertRaises(extern.ExternCalledProcessError):
+                # As of writing DRR014182 actually doesn't exist at AWS.
+                extern.run('{} get -r DRR014182 --force -f sra -m aws-http --guess-aws-location --download-threads 5'.format(kingfisher))
+            self.assertFalse(os.path.exists('DRR014182.sra'))
+
+
+
     # def test_noqual(self):
     #     with in_tempdir():
     #         extern.run("{} -r ERR3209781 --allowable-output-formats ".format(kingfisher, ))
