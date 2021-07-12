@@ -205,7 +205,7 @@ def main():
         '-f','--output-format','--output_format',
         help='Output format',
         default='human',
-        choices=['human']
+        choices=['human','csv','tsv']
     )
 
     args = bird_argparser.parse_the_args()

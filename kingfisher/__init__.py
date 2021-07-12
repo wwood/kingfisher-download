@@ -4,6 +4,7 @@ import logging
 import json
 import os
 import subprocess
+import sys
 
 import extern
 from extern import ExternCalledProcessError
@@ -414,24 +415,30 @@ def annotate(**kwargs):
 
 
 def _output_formatted_metadata(metadata, output_format):
+    default_columns = ['Run','SRAStudy','Gbp','LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']
     if output_format == 'human':
-        columns_to_print = ['Run','BioProject','bases','LibraryStrategy','Model','SampleName']
         to_print = []
-        for rows in metadata:
-            dicts = []
-            for row in rows['Run']:
-                dicts.append({'Run': row})
-            for i, row in enumerate(rows['SRAStudy']):
-                dicts[i]['SRAStudy'] = row
-            for i, row in enumerate(rows['bases']):
-                dicts[i]['Gbp'] = "%.3f" % (row/1e9)
-            for column in ['LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']:
-                for i, row in enumerate(rows[column]):
-                    dicts[i][column] = row
-
-            [to_print.append(d) for d in dicts]
+        for value in metadata['Run']:
+            to_print.append({'Run': value})
+        for i, value in enumerate(metadata['SRAStudy']):
+            to_print[i]['SRAStudy'] = value
+        for i, value in enumerate(metadata['bases']):
+            to_print[i]['Gbp'] = "%.3f" % (value/1e9)
+        for column in ['LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']:
+            for i, value in enumerate(metadata[column]):
+                to_print[i][column] = value
         to_print = sorted(to_print, key=lambda x: x['Run'])
         _printTable(to_print)
+    elif output_format == 'csv':
+        metadata_sorted = metadata.sort_values('Run')
+        metadata_sorted['Gbp'] = ["%.3f" % (bases/1e9) for bases in metadata_sorted['bases']]
+        metadata_sorted = metadata_sorted[default_columns]
+        metadata_sorted.to_csv(sys.stdout)
+    elif output_format == 'tsv':
+        metadata_sorted = metadata.sort_values('Run')
+        metadata_sorted['Gbp'] = ["%.3f" % (bases/1e9) for bases in metadata_sorted['bases']]
+        metadata_sorted = metadata_sorted[default_columns]
+        metadata_sorted.to_csv(sys.stdout,sep='\t')
     else:
         raise Exception("Unexpected output format: {}".format(output_format))
 

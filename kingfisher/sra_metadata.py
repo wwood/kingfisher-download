@@ -48,7 +48,6 @@ class SraMetadata:
             df = pd.read_csv(StringIO(res.text.strip()))
             blocks.append(df)
 
-        return blocks
+        return pd.concat(blocks)
 
 
-SraMetadata().efetch_sra_from_accessions(['SRR12113431'])
