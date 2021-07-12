@@ -192,6 +192,22 @@ def main():
         default=kingfisher.DEFAULT_THREADS)
     add_extraction_args(extract_parser_extraction_group)
 
+    annotate_description = 'annotate runs by their metadata'
+    annotate_parser = bird_argparser.new_subparser('annotate', annotate_description)
+
+    annotate_parser.add_argument(
+        '-r','--run-identifiers','--run_identifiers',
+        help='Run number to download/extract e.g. ERR1739691 [required]',
+        required=True,
+        nargs='+',
+    )
+    annotate_parser.add_argument(
+        '-f','--output-format','--output_format',
+        help='Output format',
+        default='human',
+        choices=['human']
+    )
+
     args = bird_argparser.parse_the_args()
 
     if args.subparser_name == 'get':
@@ -226,6 +242,11 @@ def main():
             threads = args.threads,
         )
         logging.info("Output files: {}".format(', '.join(output_files)))
+    elif args.subparser_name == 'annotate':
+        kingfisher.annotate(
+            run_identifiers = args.run_identifiers,
+            output_format = args.output_format,
+        )
     else:
         raise Exception("Programming error")
 

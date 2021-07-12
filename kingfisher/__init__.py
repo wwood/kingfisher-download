@@ -11,6 +11,7 @@ from extern import ExternCalledProcessError
 from .ena import EnaDownloader
 from .location import Location, NcbiLocationJson
 from .exception import DownloadMethodFailed
+from .sra_metadata import SraMetadata
 
 DEFAULT_ASPERA_SSH_KEY = 'linux'
 DEFAULT_OUTPUT_FORMAT_POSSIBILITIES = ['fastq','fastq.gz']
@@ -401,6 +402,47 @@ def extract(**kwargs):
 
     return output_files
 
+def annotate(**kwargs):
+    run_identifiers = kwargs.pop('run_identifiers')
+    output_format = kwargs.pop('output_format')
+
+    if len(kwargs) > 0:
+        raise Exception("Unexpected arguments detected: %s" % kwargs)
+
+    metadata = SraMetadata().efetch_sra_from_accessions(run_identifiers)
+    _output_formatted_metadata(metadata, output_format)
+
+
+def _output_formatted_metadata(metadata, output_format):
+    if output_format == 'human':
+        columns_to_print = ['Run','BioProject','bases','LibraryStrategy','Model','SampleName']
+        to_print = []
+        for rows in metadata:
+            dicts = []
+            for row in rows['Run']:
+                dicts.append({'Run': row})
+            for i, row in enumerate(rows['SRAStudy']):
+                dicts[i]['SRAStudy'] = row
+            for i, row in enumerate(rows['bases']):
+                dicts[i]['Gbp'] = "%.3f" % (row/1e9)
+            for column in ['LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']:
+                for i, row in enumerate(rows[column]):
+                    dicts[i][column] = row
+
+            [to_print.append(d) for d in dicts]
+        to_print = sorted(to_print, key=lambda x: x['Run'])
+        _printTable(to_print)
+    else:
+        raise Exception("Unexpected output format: {}".format(output_format))
+
+def _printTable(myDict, colList=None):
+   if not colList: colList = list(myDict[0].keys() if myDict else [])
+   myList = [colList] # 1st row = header
+   for item in myDict: myList.append([str(item[col] if item[col] is not None else '') for col in colList])
+   colSize = [max(map(len,col)) for col in zip(*myList)]
+   formatStr = ' | '.join(["{{:<{}}}".format(i) for i in colSize])
+   myList.insert(1, ['-' * i for i in colSize]) # Seperating line
+   for item in myList: print(formatStr.format(*item))
 
 def _check_for_existing_files(run_identifier, output_format_possibilities, force):
     skip_download_and_extraction = False
