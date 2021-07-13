@@ -24,6 +24,9 @@ def download_and_extract(**kwargs):
     here are largely the same as the arguments to the kingfisher executable.
     '''
     run_identifier = kwargs.pop('run_identifier')
+    download_and_extract_one_run(run_identifier, **kwargs)
+
+def download_and_extract_one_run(run_identifier, **kwargs):
     download_methods = kwargs.pop('download_methods')
     output_format_possibilities = kwargs.pop('output_format_possibilities',
         DEFAULT_OUTPUT_FORMAT_POSSIBILITIES)
@@ -43,6 +46,8 @@ def download_and_extract(**kwargs):
     download_threads = kwargs.pop('download_threads', DEFAULT_DOWNLOAD_THREADS)
     extraction_threads = kwargs.pop('extraction_threads', DEFAULT_THREADS)
     hide_download_progress = kwargs.pop('hide_download_progress', False)
+
+    
 
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
