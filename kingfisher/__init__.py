@@ -406,16 +406,29 @@ def extract(**kwargs):
 def annotate(**kwargs):
     run_identifiers = kwargs.pop('run_identifiers')
     output_format = kwargs.pop('output_format')
+    all_columns = kwargs.pop('all_columns')
 
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
 
     metadata = SraMetadata().efetch_sra_from_accessions(run_identifiers)
-    _output_formatted_metadata(metadata, output_format)
+    _output_formatted_metadata(metadata, output_format, all_columns)
 
 
-def _output_formatted_metadata(metadata, output_format):
+def _output_formatted_metadata(metadata, output_format, all_columns):
     default_columns = ['Run','SRAStudy','Gbp','LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']
+
+    def prepare_for_tsv_csv(metadata, default_columns, all_columns):
+        metadata_sorted = metadata.sort_values('Run')
+        metadata_sorted['Gbp'] = ["%.3f" % (bases/1e9) for bases in metadata_sorted['bases']]
+        if all_columns:
+            # Re-order columns to be consistent with human format output
+            column_order = default_columns + [c for c in metadata.columns if c not in default_columns]
+            return metadata_sorted[column_order]
+        else:
+            metadata_sorted = metadata_sorted[default_columns]
+            return metadata_sorted
+
     if output_format == 'human':
         to_print = []
         for value in metadata['Run']:
@@ -427,18 +440,19 @@ def _output_formatted_metadata(metadata, output_format):
         for column in ['LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']:
             for i, value in enumerate(metadata[column]):
                 to_print[i][column] = value
+        if all_columns:
+            for col in metadata.columns:
+                if col not in default_columns:
+                    for i, value in enumerate(metadata[column]):
+                        to_print[i][column] = value
         to_print = sorted(to_print, key=lambda x: x['Run'])
         _printTable(to_print)
     elif output_format == 'csv':
-        metadata_sorted = metadata.sort_values('Run')
-        metadata_sorted['Gbp'] = ["%.3f" % (bases/1e9) for bases in metadata_sorted['bases']]
-        metadata_sorted = metadata_sorted[default_columns]
-        metadata_sorted.to_csv(sys.stdout)
+        metadata_sorted = prepare_for_tsv_csv(metadata, default_columns, all_columns)
+        metadata_sorted.to_csv(sys.stdout, index=False)
     elif output_format == 'tsv':
-        metadata_sorted = metadata.sort_values('Run')
-        metadata_sorted['Gbp'] = ["%.3f" % (bases/1e9) for bases in metadata_sorted['bases']]
-        metadata_sorted = metadata_sorted[default_columns]
-        metadata_sorted.to_csv(sys.stdout,sep='\t')
+        metadata_sorted = prepare_for_tsv_csv(metadata, default_columns, all_columns)
+        metadata_sorted.to_csv(sys.stdout, sep='\t', index=False)
     else:
         raise Exception("Unexpected output format: {}".format(output_format))
 

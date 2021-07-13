@@ -207,6 +207,11 @@ def main():
         default='human',
         choices=['human','csv','tsv']
     )
+    annotate_parser.add_argument(
+        '-a','--all-columns','--all_columns',
+        help='Print all metadata columns [default: Print only a few select ones]',
+        action='store_true',
+    )
 
     args = bird_argparser.parse_the_args()
 
@@ -246,6 +251,7 @@ def main():
         kingfisher.annotate(
             run_identifiers = args.run_identifiers,
             output_format = args.output_format,
+            all_columns = args.all_columns,
         )
     else:
         raise Exception("Programming error")
