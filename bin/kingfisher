@@ -81,9 +81,12 @@ def main():
 
     get_parser_common_options = get_parser.add_argument_group(title='common options')
     get_parser_common_options.add_argument(
-        '-r','--run-identifier','--run_identifier',
-        help='Run number to download/extract e.g. ERR1739691 [required]',
-        required=True)
+        '-r','--run-identifiers','--run_identifiers',
+        help='Run number(s) to download/extract e.g. ERR1739691',
+        nargs='+')
+    get_parser_common_options.add_argument(
+        '-p','--bioproject',
+        help='BioProject IDs number(s) to download/extract from e.g. PRJNA621514 or SRP260223')
     
     get_parser_common_options.add_argument(
         '-m','--download_methods', '--download-methods',
@@ -217,7 +220,8 @@ def main():
 
     if args.subparser_name == 'get':
         kingfisher.download_and_extract(
-            run_identifier = args.run_identifier,
+            run_identifiers = args.run_identifiers,
+            bioproject_accession = args.bioproject,
             download_methods = args.download_methods,
             output_format_possibilities = args.output_format_possibilities,
             force = args.force,

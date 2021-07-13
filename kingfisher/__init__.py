@@ -23,8 +23,17 @@ def download_and_extract(**kwargs):
     '''download an public sequence dataset and extract if necessary. kwargs
     here are largely the same as the arguments to the kingfisher executable.
     '''
-    run_identifier = kwargs.pop('run_identifier')
-    download_and_extract_one_run(run_identifier, **kwargs)
+    run_identifiers = kwargs.pop('run_identifiers')
+    bioproject_accession = kwargs.pop('bioproject_accession')
+    if run_identifiers is None:
+        if bioproject_accession is None:
+            raise Exception("Must specify either an accession or a bioproject")
+        run_identifiers = SraMetadata().fetch_runs_from_bioproject(bioproject_accession)
+        logging.info("Found {} run(s) to download".format(len(run_identifiers)))
+    elif bioproject_accession is not None:
+        raise Exception("Cannot specify both a run a bioproject")
+    for run in run_identifiers:
+        download_and_extract_one_run(run, **kwargs)
 
 def download_and_extract_one_run(run_identifier, **kwargs):
     download_methods = kwargs.pop('download_methods')
