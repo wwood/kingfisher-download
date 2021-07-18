@@ -30,8 +30,9 @@ explorer](https://ewels.github.io/sra-explorer/) site helpful.
 Kingfisher can be installed by installing its conda dependencies as follows
 
 ```
-conda create -c conda-forge -c bioconda -n kingfisher pigz python extern curl sra-tools
+conda create -c conda-forge -c bioconda -n kingfisher pigz python extern curl sra-tools pandas requests
 conda activate kingfisher
+pip install bird_tool_utils'>='0.2.15
 git clone https://github.com/wwood/kingfisher-download
 cd kingfisher-download/bin
 export PATH=$PWD:$PATH
