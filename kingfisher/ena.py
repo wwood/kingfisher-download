@@ -29,7 +29,12 @@ class EnaDownloader:
             else:
                 if line == '':
                     continue
-                fastq_ftp = line.split('\t')[1]
+                splits = line.split('\t')
+                if len(splits) != 2:
+                    logging.error("Malformed result string encountered: {}".format(splits))
+                    return False
+                else:
+                    fastq_ftp = splits[1]
                 for url in fastq_ftp.split(';'):
                     if url.strip() != '':
                         ftp_urls.append(url.strip())
