@@ -30,7 +30,7 @@ import extern
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')]+sys.path
 kingfisher = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','bin','kingfisher')
 
-from in_tempdir import in_tempdir
+from bird_tool_utils import in_tempdir
 
 class Tests(unittest.TestCase):
     maxDiff = None
