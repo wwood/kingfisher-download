@@ -97,6 +97,3 @@ class SraMetadata:
             raise Exception("Found discordant number of results during esearch, not sure what is going on")
 
         return metadata
-
-
-SraMetadata().fetch_runs_from_bioproject('SRP269290')
