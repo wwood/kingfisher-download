@@ -52,48 +52,76 @@ class SraMetadata:
                 )
             df = pd.read_csv(StringIO(res.text.strip()))
             blocks.append(df)
-            if len(df) != len(chunk_sras):
-                logging.warning("Unexpectedly found discordant number of Id hits: Expected {}, found {}".format(len(chunk_sras), len(df)))
         return pd.concat(blocks)
 
 
     def efetch_sra_from_accessions(self, accessions):
+        accessions = list(set(accessions))
+        if len(accessions) == 0:
+            return []
+        logging.info("Querying NCBI esearch for {} distinct accessions e.g. {}".format(
+            len(accessions), accessions[0]))
         sra_ids = []
         
-        # Iterate 100 at a time so that if many results are returned, that can
-        # be detected
-        for chunk in iterable_chunks(accessions, 500):
+        # Keep the URI length to 2000 characters (so something like 1600 for the
+        # term bit) because very long URIs return 414 errors.
+        term_character_length_limit = 1600
+        next_accession_index = 0
+
+        while next_accession_index < len(accessions):
+            request_term = None
+            while next_accession_index < len(accessions):
+                next_accession = accessions[next_accession_index]
+                term_bit = "{}[accn]".format(next_accession)
+                if request_term is None:
+                    request_term = term_bit
+                else:
+                    next_bit = '{} OR {}'.format(request_term, term_bit)
+                    if len(next_bit) < term_character_length_limit:
+                        request_term = next_bit
+                    else:
+                        break
+                next_accession_index += 1
+            
             retmax = 1000
-            chunk_accessions = list([a for a in accessions if a is not None])
             res = requests.get(
                 url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi", 
                 params={
                     "db": "sra",
-                    "term": " OR ".join(["{}[accn]".format(a) for a in chunk_accessions]),
+                    "term": request_term,
                     "tool": "kingfisher", 
                     "email": "kingfisher@github.com",
                     "retmax": retmax,
                     },
                 )
+            if not res.ok:
+                raise Exception("HTTP Failure when requesting efetch from accessions: {}".format(res))
             root = ET.fromstring(res.text)
-            ids = list([c.text for c in root.find('IdList').getchildren()])
-            if len(ids) != len(chunk_accessions):
-                logging.warning("Unexpectedly found a discordant number of results for this query (expected {}, found {})". \
-                    format(len(chunk_accessions), len(chunk_accessions)))
+            id_list_node = root.find('IdList')
+            ids = list(set([c.text for c in id_list_node.getchildren()]))
             sra_ids += ids
 
-        if not sra_ids:
-            raise Exception(
-                "No SRA samples found in {}"
-                .format(accessions))
-
+        logging.info("Querying NCBI efetch for {} distinct IDs e.g. {}".format(
+            len(accessions), accessions[0]))
         metadata = self.efetch_metadata_from_ids(sra_ids)
 
-        # Ensure all hits are found
-        not_found_accessions = list([a for a in accessions if a not in metadata['Run'].values])
-        if len(not_found_accessions) > 0:
-            raise Exception("Unable to find accession(s): {}".format(not_found_accessions))
-        if len(metadata) != len(accessions):
-            raise Exception("Found discordant number of results during esearch, not sure what is going on")
+        # Ensure all hits are found, and trim results to just those that are real hits
+        found_accessions_metadata = metadata[metadata['Run'].isin(accessions)]
 
-        return metadata
+        # Sometimes duplicates are returned e.g. when querying with SRR8482198.
+        # We cannot use drop_duplicates() because NaN values means equality
+        # doesn't operate as we want i.e. NaN != NaN. So we groupby instead and
+        # take the first. This assumes all rows are the same, which I hope to be
+        # true.
+        found_accessions_metadata = found_accessions_metadata.groupby('Run', as_index=False).agg('first')
+
+        found_accessions_metadata.sort_values(['SRAStudy','Run'], inplace=True)
+
+        if len(found_accessions_metadata) != len(accessions):
+            found_runs = set(found_accessions_metadata['Run'].to_list())
+            not_found = list([a for a in accessions if a not in found_runs])
+            logging.warning("Unable to find all accessions. The {} missing ones were: {}".format(
+                len(not_found), not_found
+            ))
+
+        return found_accessions_metadata
