@@ -3,6 +3,7 @@ import time
 import requests
 import xml.etree.ElementTree as ET
 import logging
+import re
 
 try:
     from StringIO import StringIO
@@ -37,21 +38,51 @@ class SraMetadata:
 
     def efetch_metadata_from_ids(self, sra_ids):
         blocks = []
-        for chunk in iterable_chunks(sra_ids, 50):
-            chunk_sras = list([c for c in chunk if c is not None])
+        header_regex = re.compile('\nRun,ReleaseDate.*?\n')
+
+        # Keep the URI length short because very long URIs return 414 errors.
+        # Larger values seem to return 414. 
+        term_character_length_limit = 2600
+        next_accession_index = 0
+
+        while next_accession_index < len(sra_ids):
+            request_term = None
+            while next_accession_index < len(sra_ids):
+                next_accession = sra_ids[next_accession_index]
+                term_bit = next_accession
+                if request_term is None:
+                    request_term = term_bit
+                else:
+                    next_bit = '{},{}'.format(request_term, term_bit)
+                    if len(next_bit) < term_character_length_limit:
+                        request_term = next_bit
+                    else:
+                        break
+                next_accession_index += 1
+            
+            retmax = 1000
+            logging.debug("Running efetch for IDs with request term: {}".format(request_term))
             res = requests.get(
                 url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi", 
                 params={
                     "db": "sra",
-                    "id": ",".join(chunk_sras),
+                    "id": request_term,
                     "tool": "kingfisher", 
                     "email": "kingfisher@github.com",
                     "rettype": "runinfo", 
                     "retmode": "text",                
                     },
                 )
-            df = pd.read_csv(StringIO(res.text.strip()))
+            if not res.ok:
+                raise Exception("HTTP Failure when requesting efetch from IDs: {}".format(res))
+
+            # For unknown reasons, sometimes a header row will appear in the
+            # middle of the response text's data. Remove it.
+            filtered_text = header_regex.sub('\n',res.text)
+
+            df = pd.read_csv(StringIO(filtered_text.strip()))
             blocks.append(df)
+
         return pd.concat(blocks)
 
 
@@ -63,9 +94,9 @@ class SraMetadata:
             len(accessions), accessions[0]))
         sra_ids = []
         
-        # Keep the URI length to 2000 characters (so something like 1600 for the
-        # term bit) because very long URIs return 414 errors.
-        term_character_length_limit = 1600
+        # Keep the URI length short because very long URIs return 414 errors.
+        # Larger values seem to return 414. 
+        term_character_length_limit = 2600
         next_accession_index = 0
 
         while next_accession_index < len(accessions):
@@ -102,7 +133,7 @@ class SraMetadata:
             sra_ids += ids
 
         logging.info("Querying NCBI efetch for {} distinct IDs e.g. {}".format(
-            len(accessions), accessions[0]))
+            len(sra_ids), sra_ids[0]))
         metadata = self.efetch_metadata_from_ids(sra_ids)
 
         # Ensure all hits are found, and trim results to just those that are real hits
