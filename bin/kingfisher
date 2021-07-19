@@ -201,9 +201,11 @@ def main():
     annotate_parser.add_argument(
         '-r','--run-identifiers','--run_identifiers',
         help='Run number to download/extract e.g. ERR1739691 [required]',
-        required=True,
         nargs='+',
     )
+    annotate_parser.add_argument(
+        '-p','--bioproject',
+        help='BioProject IDs number(s) to download/extract from e.g. PRJNA621514 or SRP260223')
     annotate_parser.add_argument(
         '-f','--output-format','--output_format',
         help='Output format',
@@ -254,6 +256,7 @@ def main():
     elif args.subparser_name == 'annotate':
         kingfisher.annotate(
             run_identifiers = args.run_identifiers,
+            bioproject_accession = args.bioproject,
             output_format = args.output_format,
             all_columns = args.all_columns,
         )

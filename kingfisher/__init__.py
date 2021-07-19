@@ -419,9 +419,18 @@ def extract(**kwargs):
 
 def annotate(**kwargs):
     run_identifiers = kwargs.pop('run_identifiers')
+    bioproject_accession = kwargs.pop('bioproject_accession')
     output_format = kwargs.pop('output_format')
     all_columns = kwargs.pop('all_columns')
 
+    if run_identifiers is None:
+        if bioproject_accession is None:
+            raise Exception("Must specify either an accession or a bioproject")
+        run_identifiers = SraMetadata().fetch_runs_from_bioproject(bioproject_accession)
+        logging.debug("Found {} run(s) to annotate".format(len(run_identifiers)))
+    elif bioproject_accession is not None:
+        raise Exception("Cannot specify both a run a bioproject")
+        
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
 
