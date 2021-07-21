@@ -15,10 +15,11 @@
 
 Kingfisher is a fast and flexible program for procurement of sequence files (and
 their annotations) from public data sources, including the European Nucleotide
-Archive (ENA), NCBI SRA, Amazon AWS and Google Cloud. It's input is an "Run"
-accession e.g. DRR001970.
+Archive (ENA), NCBI SRA, Amazon AWS and Google Cloud. It's input is one or more
+"Run" accessions e.g. DRR001970, or a BioProject accessions e.g. PRJNA621514 or
+SRP260223.
 
-It attempts to download data from a series of methods, which it attempts in
+It attempts to download data from a series of sources, which it attempts in
 order until one works. Then the downloaded data is converted to an output SRA /
 FASTQ / FASTA / GZIP file format as required. Both download and extraction
 phases are usually quicker than using the NCBI's SRA toolkit.
@@ -27,15 +28,10 @@ This software was originally known as `ena-fast-download`. Kingfisher implements
 almost all of that tool's functionality, but also handles data sources other
 than ENA. See the 'Usage' section for the equivalent invocation.
 
-The `ena-ascp` method of this tool was built based on the very helpful bio-stars
-thread https://www.biostars.org/p/325010/ written by @ATpoint. To find run
-identifiers to be used as input to kingfisher, you might find the [SRA
-explorer](https://ewels.github.io/sra-explorer/) site helpful.
-
 ## Installation
 
 Kingfisher can be installed by installing its conda dependencies as follows. We
-are working towards a proper conda release, but are not there yet - our
+are working towards a proper PyPI/conda release, but are not there yet - our
 apologies.
 
 ```
@@ -104,6 +100,11 @@ In `get` mode, there are several ways to procure the data:
 |`aws-http`|Download .SRA file from AWS Open Data Program using `aria2c` with multiple connection threads, which is then extracted with `fasterq-dump`.|
 |`aws-cp`|Download .SRA file from AWS using `aws s3 cp`, which is then extracted with fasterq-dump. May require payment, probably not.|
 |`gcp-cp`|Download .SRA file from Google Cloud `gsutil`, which is then extracted with fasterq-dump. Requires payment.|
+
+The `ena-ascp` method of this tool was built based on the very helpful bio-stars
+thread https://www.biostars.org/p/325010/ written by @ATpoint. To find run
+identifiers to be used as input to kingfisher, you might find the [SRA
+explorer](https://ewels.github.io/sra-explorer/) site helpful.
 
 ## Near parity with ena-fast-download
 
