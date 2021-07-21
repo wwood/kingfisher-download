@@ -64,12 +64,13 @@ $ kingfisher get -r ERR1739691 -m ena-ascp aws-http prefetch
 This will download `.fastq.gz` files of the run ERR1739691 from the ENA, or
 failing that, downloads an .sra file from the Amazon AWA Open Data Program and
 then converts to FASTQ, or failing that use NCBI prefetch to download and
-convert that to FASTQ.
+convert that to FASTQ. Kingfisher will do the least effort to convert a
+downloaded file into one of the formats specified in
+`--output-format-possibilities` which is `fastq fastq.gz` by default.
 
-Output files are put into the current working directory.
-
-There are many options for output formats, different download methods etc. Check
-'Method details' and the full help for more details.
+Output files are put into the current working directory. There are many options
+for output formats, different download methods etc. Check 'Method details' below
+and the full help for more details.
 
 ### 'extract' mode: Convert sequence data from .sra format
 

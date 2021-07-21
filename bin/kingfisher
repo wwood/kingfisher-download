@@ -97,7 +97,7 @@ def main():
             ['ena-ascp','Download .fastq.gz files from ENA using Aspera, which can then be further converted. This is the fastest method since no fasterq-dump is required.'],
             ['ena-ftp','Download .fastq.gz files from ENA using curl, which can then be further converted. This is relatively fast since no fasterq-dump is required.'],
             ['prefetch','Download .SRA file using NCBI prefetch from sra-tools, which is then extracted with fasterq-dump.'],
-            ['aws-http','Download .SRA file from AWS Open Data Program using curl, which is then extracted with fasterq-dump.'],
+            ['aws-http','Download .SRA file from AWS Open Data Program using `aria2c` with multiple connection threads, which is then extracted with `fasterq-dump`.'],
             ['aws-cp','Download .SRA file from AWS using aws s3 cp, which is then extracted with fasterq-dump. May require payment, probably not.'],
             ['gcp-cp','Download .SRA file from Google Cloud gsutil, which is then extracted with fasterq-dump. Requires payment.']
             ]),
@@ -140,8 +140,8 @@ def main():
         action='store_true')
     get_parser_download_args.add_argument(
         '--aws-user-key-id', '--aws_user_key_id',
-        help='Downloading from AWS requester pays buckets requires a key ID and secret key \
-            [default: not used]')
+        help='Downloading from AWS requester pays buckets requires a key ID and secret key '\
+            '[default: not used]')
     get_parser_download_args.add_argument(
         '--aws-user-key-secret', '--aws_user_key_secret',
         help=fix('Downloading from AWS requester pays buckets requires a key ID and secret key \
@@ -169,6 +169,7 @@ def main():
             [default: not used]'))
 
     get_parser_extraction_args = get_parser.add_argument_group(title='further extraction options')
+    add_extraction_args(get_parser_extraction_args)
     get_parser_extraction_args.add_argument(
         '-t', '--extraction-threads',
         type=int,
@@ -177,7 +178,6 @@ def main():
         ),
         default=kingfisher.DEFAULT_THREADS,
     )
-    add_extraction_args(get_parser_extraction_args)
 
     extract_description = 'extract .sra format files'
     extract_parser = bird_argparser.new_subparser('extract', extract_description)
@@ -187,13 +187,13 @@ def main():
         '--sra',
         help='Extract this SRA file [required]',
         required=True)
+    add_extraction_args(extract_parser_extraction_group)
     extract_parser_extraction_group.add_argument(
         '-t', '--threads',
         type=int,
         help='Number of threads to use for extraction [default: {}]'.format(
             kingfisher.DEFAULT_THREADS),
         default=kingfisher.DEFAULT_THREADS)
-    add_extraction_args(extract_parser_extraction_group)
 
     annotate_description = 'annotate runs by their metadata'
     annotate_parser = bird_argparser.new_subparser('annotate', annotate_description)
