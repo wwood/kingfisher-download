@@ -220,6 +220,8 @@ def main():
 
     args = bird_argparser.parse_the_args()
 
+    logging.info("Kingfisher v{}".format(kingfisher.__version__))
+
     if args.subparser_name == 'get':
         kingfisher.download_and_extract(
             run_identifiers = args.run_identifiers,
