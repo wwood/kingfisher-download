@@ -39,7 +39,7 @@ are working towards a proper conda release, but are not there yet - our
 apologies.
 
 ```
-conda create -c conda-forge -c bioconda -n kingfisher pigz python extern curl sra-tools pandas requests
+conda create -c conda-forge -c bioconda -n kingfisher pigz python extern curl sra-tools pandas requests aria2
 conda activate kingfisher
 pip install bird_tool_utils'>='0.2.17
 git clone https://github.com/wwood/kingfisher-download
@@ -67,6 +67,9 @@ then converts to FASTQ, or failing that use NCBI prefetch to download and
 convert that to FASTQ.
 
 Output files are put into the current working directory.
+
+There are many options for output formats, different download methods etc. Check
+'Method details' and the full help for more details.
 
 ### 'extract' mode: Convert sequence data from .sra format
 
@@ -97,7 +100,7 @@ In `get` mode, there are several ways to procure the data:
 |`ena-ascp`|Download `.fastq.gz` files from ENA using Aspera, which can then be further converted. This is the fastest method since no `fasterq-dump` is required.|
 |`ena-ftp`|Download `.fastq.gz` files from ENA using `curl`, which can then be further converted. This is relatively fast since no `fasterq-dump` is required.|
 |`prefetch`|Download .SRA file using NCBI's prefetch from sra-tools, which is then extracted with `fasterq-dump`.|
-|`aws-http`|Download .SRA file from AWS Open Data Program using `curl`, which is then extracted with `fasterq-dump`.|
+|`aws-http`|Download .SRA file from AWS Open Data Program using `aria2c` with multiple connection threads, which is then extracted with `fasterq-dump`.|
 |`aws-cp`|Download .SRA file from AWS using `aws s3 cp`, which is then extracted with fasterq-dump. May require payment, probably not.|
 |`gcp-cp`|Download .SRA file from Google Cloud `gsutil`, which is then extracted with fasterq-dump. Requires payment.|
 

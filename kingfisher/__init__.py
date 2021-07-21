@@ -16,8 +16,8 @@ from .sra_metadata import SraMetadata
 
 DEFAULT_ASPERA_SSH_KEY = 'linux'
 DEFAULT_OUTPUT_FORMAT_POSSIBILITIES = ['fastq','fastq.gz']
-DEFAULT_DOWNLOAD_THREADS = 1 # until aria2c is properly packaged in conda-forge (needs movement from bioconda)
 DEFAULT_THREADS = 8
+DEFAULT_DOWNLOAD_THREADS = DEFAULT_THREADS
 
 def download_and_extract(**kwargs):
     '''download an public sequence dataset and extract if necessary. kwargs
@@ -116,7 +116,8 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                             logging.info(
                                 "Downloading .SRA file from AWS Open Data Program HTTP link using aria2c ..")
                             verbosity_flag = '--quiet' if hide_download_progress else ''
-                            cmd = "aria2c {} -x{} -o {}.sra '{}'".format(
+                            # Redirect aria2c stdout to stderr so all logging of kingfisher is on stderr
+                            cmd = "aria2c {} -x{} -o {}.sra '{}' 1>&2".format(
                                 verbosity_flag, download_threads, run_identifier, odp_link)
                             subprocess.check_call(cmd, shell=True)
                         else:
@@ -398,14 +399,14 @@ def extract(**kwargs):
                         elif 'fasta.gz' in output_format_possibilities:
                             logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
                             out_here = f.replace('.fastq','.fasta.gz')
-                            extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} |pigz >{}".format(
-                                f, out_here
+                            extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} |pigz -p {} >{}".format(
+                                f, threads, out_here
                             ))
                             os.remove(f)
                             output_files.append(out_here)
                         elif 'fastq.gz' in output_format_possibilities:
                             logging.info("Compressing {} with pigz ..".format(f))
-                            extern.run("pigz {}".format(f))
+                            extern.run("pigz -p {} {}".format(threads, f))
                             output_files.append("{}.gz".format(f))
                         else:
                             raise Exception("Programming error")
