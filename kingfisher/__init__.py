@@ -436,6 +436,9 @@ def annotate(**kwargs):
         raise Exception("Unexpected arguments detected: %s" % kwargs)
 
     metadata = SraMetadata().efetch_sra_from_accessions(run_identifiers)
+    if metadata is None:
+        logging.error("No runs to annotate")
+        sys.exit(1)
     _output_formatted_metadata(metadata, output_format, all_columns)
 
 

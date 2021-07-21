@@ -132,6 +132,10 @@ class SraMetadata:
             ids = list(set([c.text for c in id_list_node.getchildren()]))
             sra_ids += ids
 
+        if len(sra_ids) == 0:
+            logging.warning("Unable to find any accessions, from the list: {}".format(accessions))
+            return None
+
         logging.info("Querying NCBI efetch for {} distinct IDs e.g. {}".format(
             len(sra_ids), sra_ids[0]))
         metadata = self.efetch_metadata_from_ids(sra_ids)
