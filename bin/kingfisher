@@ -44,11 +44,13 @@ def add_extraction_args(parser):
             Even pairs of reads may be split up, but it is possible to tell which pair \
             is which, and which is a forward and which is a reverse read from the name \
             [default: Do not].\n\n \
-            Currently requires "--stdout" and download from NCBI rather than ENA.'))
+            Currently requires "--stdout" and download from NCBI rather than ENA.\n\n \
+            Requires the "sracat" program which is currently not publicly available.'))
     parser.add_argument(
         '--stdout',
         action='store_true',
-        help='Output sequences to STDOUT. Currently requires --unsorted [default: Do not].')
+        help=fix('Output sequences to STDOUT. Currently requires --unsorted [default: Do not].\n\n \
+            Requires the "sracat" program which is currently not publicly available.'))
     return parser
 
 
