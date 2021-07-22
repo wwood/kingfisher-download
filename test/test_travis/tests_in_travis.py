@@ -162,5 +162,9 @@ class Tests(unittest.TestCase):
     #         self.assertTrue(os.path.getsize('ERR3209781_1.fasta')==21411192)
     #         self.assertTrue(os.path.getsize('ERR3209781_2.fasta')==21411192)
 
+    # e.g. DRR014182
+    # ERR1877729
+    # ERR3209781 => all at gcp only, so leave that be for now I think.
+
 if __name__ == "__main__":
     unittest.main()
