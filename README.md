@@ -118,7 +118,7 @@ kingfisher get -r ERR1739691 -m ena-ascp
 ## FAQ
 If you see this error `/bin/sh: 1: ascp: not found` as below:
 ```
-$ kingfisher get -r ERR3357550 -m ena-ascpkingfisher -r ERR3357550 -m ena-ascp
+$ kingfisher get -r ERR3357550 -m ena-ascp
 05/04/2021 05:13:45 AM INFO: Attempting download method ena-ascp ..
 05/04/2021 05:13:45 AM INFO: Using aspera ssh key file: $HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh
 05/04/2021 05:13:45 AM INFO: Querying ENA for FTP paths for ERR3357550..
