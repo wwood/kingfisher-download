@@ -26,7 +26,7 @@ phases are usually quicker than using the NCBI's SRA toolkit.
 
 This software was originally known as `ena-fast-download`. Kingfisher implements
 almost all of that tool's functionality, but also handles data sources other
-than ENA. See the 'Usage' section for the equivalent invocation.
+than ENA. See the [Usage](#usage) section for the equivalent invocation.
 
 ## Installation
 
@@ -132,7 +132,7 @@ Traceback (most recent call last):
     raise Exception("No more specified download methods, cannot continue")
 Exception: No more specified download methods, cannot continue
 ```
-then you have not installed the Aspera client correctly. See the Installation section of this document.
+then you have not installed the Aspera client correctly. See the [Installation](#installation) section of this document.
 
 
 ## License
