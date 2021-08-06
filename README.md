@@ -3,7 +3,7 @@
 - [Kingfisher](#kingfisher)
   - [Installation](#installation)
   - [Usage](#usage)
-    - ['get' mode: Download and optionally convert seqeunce data](#get-mode-download-and-optionally-convert-seqeunce-data)
+    - ['get' mode: Download and optionally convert sequence data](#get-mode-download-and-optionally-convert-sequence-data)
     - ['extract' mode: Convert sequence data from .sra format](#extract-mode-convert-sequence-data-from-sra-format)
     - ['annotate' mode: Get a table of metadata](#annotate-mode-get-a-table-of-metadata)
   - [Method details](#method-details)
@@ -52,7 +52,7 @@ See https://www.ibm.com/aspera/connect/ or https://www.biostars.org/p/325010/
 For all modes, a full run-down of the functionality is available using the
 `--full-help` flag e.g. `kingfisher get --full-help`.
 
-### 'get' mode: Download and optionally convert seqeunce data
+### 'get' mode: Download and optionally convert sequence data
 
 ```
 $ kingfisher get -r ERR1739691 -m ena-ascp aws-http prefetch
