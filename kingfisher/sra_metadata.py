@@ -28,7 +28,7 @@ class SraMetadata:
                 },
             )
         root = ET.fromstring(res.text)
-        sra_ids = list([c.text for c in root.find('IdList').getchildren()])
+        sra_ids = list([c.text for c in root.find('IdList')])
         if len(sra_ids) == retmax:
             logging.warning("Unexpectedly found the maximum number of results for this query, possibly some results will be missing")
 
@@ -129,7 +129,7 @@ class SraMetadata:
                 raise Exception("HTTP Failure when requesting efetch from accessions: {}".format(res))
             root = ET.fromstring(res.text)
             id_list_node = root.find('IdList')
-            ids = list(set([c.text for c in id_list_node.getchildren()]))
+            ids = list(set([c.text for c in id_list_node]))
             sra_ids += ids
 
         if len(sra_ids) == 0:
