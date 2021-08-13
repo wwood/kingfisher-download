@@ -18,6 +18,7 @@ DEFAULT_ASPERA_SSH_KEY = 'linux'
 DEFAULT_OUTPUT_FORMAT_POSSIBILITIES = ['fastq','fastq.gz']
 DEFAULT_THREADS = 8
 DEFAULT_DOWNLOAD_THREADS = DEFAULT_THREADS
+DEFAULT_ASCP_ARGS = '-k 2'
 
 def download_and_extract(**kwargs):
     '''download an public sequence dataset and extract if necessary. kwargs
@@ -51,7 +52,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
     allow_paid_from_aws = kwargs.pop('allow_paid_from_aws', None)
     guess_aws_location = kwargs.pop('guess_aws_location', False)
     ascp_ssh_key = kwargs.pop('ascp_ssh_key', DEFAULT_ASPERA_SSH_KEY)
-    ascp_args = kwargs.pop('ascp_args', '')
+    ascp_args = kwargs.pop('ascp_args', DEFAULT_ASCP_ARGS)
     download_threads = kwargs.pop('download_threads', DEFAULT_DOWNLOAD_THREADS)
     extraction_threads = kwargs.pop('extraction_threads', DEFAULT_THREADS)
     hide_download_progress = kwargs.pop('hide_download_progress', False)

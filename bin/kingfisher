@@ -130,8 +130,8 @@ def main():
     get_parser_download_args.add_argument(
         '--ascp-args', '--ascp_args',
         help=fix('extra arguments to pass to ascp e.g. \'-k 2\' to resume with a \
-        sparse file checksum [default: \'\']'),
-        default='')
+        sparse file checksum [default: \'{}\']'.format(kingfisher.DEFAULT_ASCP_ARGS)),
+        default=kingfisher.DEFAULT_ASCP_ARGS)
     get_parser_download_args.add_argument(
         '--allow-paid', '--allow_paid',
         help='Allow downloading from retriever-pays s3 and GCP buckets [default: Do not]',
