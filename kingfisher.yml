@@ -1,0 +1,17 @@
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python>=3.9
+  - pigz
+  - python
+  - extern
+  - curl
+  - sra-tools
+  - pandas
+  - requests
+  - aria2
+  - pip
+  - pip:
+    - bird_tool_utils

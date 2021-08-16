@@ -35,11 +35,11 @@ are working towards a proper PyPI/conda release, but are not there yet - our
 apologies.
 
 ```
-conda create -c conda-forge -c bioconda -n kingfisher pigz python extern curl sra-tools pandas requests aria2
-conda activate kingfisher
-pip install bird_tool_utils'>='0.2.17
 git clone https://github.com/wwood/kingfisher-download
-cd kingfisher-download/bin
+cd kingfisher-download
+conda env create -n kingfisher -f kingfisher.yml
+conda activate kingfisher
+cd bin
 export PATH=$PWD:$PATH
 kingfisher -h
 ```
