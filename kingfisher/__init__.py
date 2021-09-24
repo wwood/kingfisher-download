@@ -421,17 +421,24 @@ def extract(**kwargs):
 
 def annotate(**kwargs):
     run_identifiers = kwargs.pop('run_identifiers')
+    run_identifiers_file = kwargs.pop('run_identifiers_file')
     bioproject_accession = kwargs.pop('bioproject_accession')
     output_format = kwargs.pop('output_format')
     all_columns = kwargs.pop('all_columns')
 
-    if run_identifiers is None:
-        if bioproject_accession is None:
-            raise Exception("Must specify either an accession or a bioproject")
+    num_inputs = 0
+    if run_identifiers is not None: num_inputs += 1
+    if run_identifiers_file is not None: num_inputs += 1
+    if bioproject_accession is not None: num_inputs += 1
+    if num_inputs != 1:
+        raise Exception("Must specify exactly one input type: --run-identifiers, --bioproject_accession or --run-identifiers-list")
+    
+    if bioproject_accession is not None:
         run_identifiers = SraMetadata().fetch_runs_from_bioproject(bioproject_accession)
         logging.debug("Found {} run(s) to annotate".format(len(run_identifiers)))
-    elif bioproject_accession is not None:
-        raise Exception("Cannot specify both a run a bioproject")
+    if run_identifiers_file is not None:
+        with open(run_identifiers_file) as f:
+            run_identifiers = list([r.strip() for r in f.readlines()])
         
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
@@ -449,8 +456,12 @@ def _output_formatted_metadata(metadata, output_format, all_columns):
 
     def prepare_for_tsv_csv(metadata, default_columns, all_columns):
         metadata_sorted = metadata.sort_values(RUN_ACCESSION_KEY)
-        metadata_sorted['Gbp'] = ["%.3f" % (bases/1e9) for bases in metadata_sorted[BASES_KEY]]
-        del(metadata_sorted[BASES_KEY])
+        metadata_sorted = pd.concat(
+            [
+                metadata_sorted,
+                pd.DataFrame({'Gbp': ["%.3f" % (bases/1e9) for bases in metadata_sorted[BASES_KEY]]})
+            ],
+            axis=1)
         if all_columns:
             # Re-order columns to be consistent with human format output
             column_order = default_columns + [c for c in metadata_sorted.columns if c not in default_columns]

@@ -202,8 +202,12 @@ def main():
 
     annotate_parser.add_argument(
         '-r','--run-identifiers','--run_identifiers',
-        help='Run number to download/extract e.g. ERR1739691 [required]',
+        help='Run number to download/extract e.g. ERR1739691',
         nargs='+',
+    )
+    annotate_parser.add_argument(
+        '--run-identifiers-list','--run_identifiers_list',
+        help='File containing newline-separated run identifiers',
     )
     annotate_parser.add_argument(
         '-p','--bioproject',
@@ -260,6 +264,7 @@ def main():
     elif args.subparser_name == 'annotate':
         kingfisher.annotate(
             run_identifiers = args.run_identifiers,
+            run_identifiers_file = args.run_identifiers_list,
             bioproject_accession = args.bioproject,
             output_format = args.output_format,
             all_columns = args.all_columns,
