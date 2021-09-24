@@ -35,28 +35,29 @@ class Tests(unittest.TestCase):
     maxDiff = None
     
     def test_one_sample_annotate(self):
-        self.assertEqual('Run        | SRAStudy  | Gbp   | LibraryStrategy | LibrarySelection | Model               | SampleName   | ScientificName\n' \
-            '---------- | --------- | ----- | --------------- | ---------------- | ------------------- | ------------ | --------------\n' \
-            'ERR1739691 | ERP017539 | 2.382 | WGS             | RANDOM           | Illumina HiSeq 2500 | SAMEA4497179 | metagenome    \n',
+        self.assertEqual(
+            'run        | study_accession | Gbp   | library_strategy | library_selection | model               | sample_name                               | taxon_name\n' \
+            '---------- | --------------- | ----- | ---------------- | ----------------- | ------------------- | ----------------------------------------- | ----------\n' \
+            'ERR1739691 | ERP017539       | 2.382 | WGS              | RANDOM            | Illumina HiSeq 2500 | artificial minimal coastal microbial mats | metagenome\n',
             extern.run('{} annotate -r ERR1739691 --debug'.format(kingfisher)))
 
     def test_one_project_annotate(self):
-        self.assertEqual('Run        | SRAStudy  | Gbp   | LibraryStrategy | LibrarySelection | Model               | SampleName   | ScientificName\n' \
-            '---------- | --------- | ----- | --------------- | ---------------- | ------------------- | ------------ | --------------\n' \
-            'ERR1739691 | ERP017539 | 2.382 | WGS             | RANDOM           | Illumina HiSeq 2500 | SAMEA4497179 | metagenome    \n' \
-            'ERR1739692 | ERP017539 | 2.382 | WGS             | RANDOM           | Illumina HiSeq 2500 | SAMEA4497180 | metagenome    \n' \
-            'ERR1739693 | ERP017539 | 2.364 | WGS             | RANDOM           | Illumina HiSeq 2500 | SAMEA4497181 | metagenome    \n' \
-            'ERR1739694 | ERP017539 | 2.501 | WGS             | RANDOM           | Illumina HiSeq 2500 | SAMEA4497182 | metagenome    \n' \
-            'ERR1739695 | ERP017539 | 2.379 | WGS             | RANDOM           | Illumina HiSeq 2500 | SAMEA4497183 | metagenome    \n' \
-            'ERR1739696 | ERP017539 | 2.351 | WGS             | RANDOM           | Illumina HiSeq 2500 | SAMEA4497184 | metagenome    \n' \
-            'ERR1739697 | ERP017539 | 2.524 | WGS             | RANDOM           | Illumina HiSeq 2500 | SAMEA4497185 | metagenome    \n' \
-            'ERR1739698 | ERP017539 | 2.358 | WGS             | RANDOM           | Illumina HiSeq 2500 | SAMEA4497186 | metagenome    \n' \
-            'ERR1739699 | ERP017539 | 2.465 | WGS             | RANDOM           | Illumina HiSeq 2500 | SAMEA4497187 | metagenome    \n',
+        self.assertEqual('run        | study_accession | Gbp   | library_strategy | library_selection | model               | sample_name                               | taxon_name\n' \
+            '---------- | --------------- | ----- | ---------------- | ----------------- | ------------------- | ----------------------------------------- | ----------\n' \
+            'ERR1739691 | ERP017539       | 2.382 | WGS              | RANDOM            | Illumina HiSeq 2500 | artificial minimal coastal microbial mats | metagenome\n' \
+            'ERR1739692 | ERP017539       | 2.382 | WGS              | RANDOM            | Illumina HiSeq 2500 | artificial minimal coastal microbial mats | metagenome\n' \
+            'ERR1739693 | ERP017539       | 2.364 | WGS              | RANDOM            | Illumina HiSeq 2500 | artificial minimal coastal microbial mats | metagenome\n' \
+            'ERR1739694 | ERP017539       | 2.501 | WGS              | RANDOM            | Illumina HiSeq 2500 | artificial minimal coastal microbial mats | metagenome\n' \
+            'ERR1739695 | ERP017539       | 2.379 | WGS              | RANDOM            | Illumina HiSeq 2500 | artificial minimal coastal microbial mats | metagenome\n' \
+            'ERR1739696 | ERP017539       | 2.351 | WGS              | RANDOM            | Illumina HiSeq 2500 | artificial minimal coastal microbial mats | metagenome\n' \
+            'ERR1739697 | ERP017539       | 2.524 | WGS              | RANDOM            | Illumina HiSeq 2500 | artificial minimal coastal microbial mats | metagenome\n' \
+            'ERR1739698 | ERP017539       | 2.358 | WGS              | RANDOM            | Illumina HiSeq 2500 | artificial minimal coastal microbial mats | metagenome\n' \
+            'ERR1739699 | ERP017539       | 2.465 | WGS              | RANDOM            | Illumina HiSeq 2500 | artificial minimal coastal microbial mats | metagenome\n',
             extern.run('{} annotate -p PRJEB15706 --debug'.format(kingfisher)))
 
     def test_one_sample_annotate_csv(self):
-        self.assertEqual('Run,SRAStudy,Gbp,LibraryStrategy,LibrarySelection,Model,SampleName,ScientificName,ReleaseDate,LoadDate,spots,bases,spots_with_mates,avgLength,size_MB,AssemblyName,download_path,Experiment,LibraryName,LibrarySource,LibraryLayout,InsertSize,InsertDev,Platform,BioProject,Study_Pubmed_id,ProjectID,Sample,BioSample,SampleType,TaxID,g1k_pop_code,source,g1k_analysis_group,Subject_ID,Sex,Disease,Tumor,Affection_Status,Analyte_Type,Histological_Type,Body_Site,CenterName,Submission,dbgap_study_accession,Consent,RunHash,ReadHash\n' \
-            'ERR1739691,ERP017539,2.382,WGS,RANDOM,Illumina HiSeq 2500,SAMEA4497179,metagenome,2017-06-13 08:05:22,2017-06-13 08:09:29,7938968,2381690400,7938968,300,893,,https://sra-downloadb.st-va.ncbi.nlm.nih.gov/sos1/sra-pub-run-12/ERR1739691/ERR1739691.1,ERX1809317,unspecified,METAGENOMIC,PAIRED,800,0,ILLUMINA,PRJEB15706,,390087,ERS1396358,SAMEA4497179,simple,256318,,,,,,,no,,,,,ROYAL NETHERLANDS INSTITUTE FOR SEA RESEARCH,ERA767571,,public,8B5D4F846F55BA6589A6F4FF6D4379D1,6578A402A8F0902F56B2D1FF43882F98\n',
+        self.assertEqual('run,study_accession,Gbp,library_strategy,library_selection,model,sample_name,taxon_name,experiment_accession,experiment_title,library_name,library_source,submitter,study_alias,study_centre_project_name,sample_alias,sample_accession,sample_description,Alias,Description,ENA checklist,INSDC center name,INSDC first public,INSDC last update,INSDC status,SRA accession,Sample Name,collection date,depth,environment (biome),environment (feature),environment (material),geographic location (country and/or sea),geographic location (depth),geographic location (elevation),geographic location (latitude),geographic location (longitude),investigation type,microbial mat/biofilm environmental package,project name,sample storage duration,sample storage temperature,sequencing method,spots,run_size,published,read1_length_average,read1_length_stdev,read2_length_average,read2_length_stdev,study_title,design_description,study_abstract\n' \
+            'ERR1739691,ERP017539,2.382,WGS,RANDOM,Illumina HiSeq 2500,artificial minimal coastal microbial mats,metagenome,ERX1809317,Illumina HiSeq 2500 paired end sequencing,unspecified,METAGENOMIC,European Nucleotide Archive,ena-STUDY-NIOZ-10-10-2016-11:18:17:022-1157,Minimal Mat 1,SAMEA4497179,ERS1396358,,MM1_1,"artificial minimal coastal microbial mats at dilution 0, replicate 1",ERC000019,NIOZ,2017-06-08T17:01:18Z,2016-11-23T11:15:32Z,public,ERS1396358,ERS1396358,2015-11,0.01,Microbial Mat Material,Beach,soil,Netherlands,0,0,53.489606,6.139913,metagenome,microbial mat/biofilm,Minimal Mat,10,20,illumina PE100,7938968,936643449,2017-06-13 08:05:22,150,0,150,0,construction of minimal coastal microbial mats,,"Minimal coastal microbial mats were created with diluted coastal mat samples obtained from the Dutch barrier island of Schiermonnikoog. The MM\'s were inoculated in fresh sterilized sand in glass containers contained in a MicroBox. The MicroBox has a transparent lid (allowing photosynthetic growth) and a gas exchange filter. The MM\'s are propagated under laboratory conditions at a 16h light / 8h dark regime and at a constant 23 C. Serial dilutions used for this data-set are 0, 3 and 5-fold."\n',
             extern.run('{} annotate -r ERR1739691 -f csv --all-columns'.format(kingfisher)))
 
 if __name__ == "__main__":

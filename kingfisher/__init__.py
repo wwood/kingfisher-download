@@ -12,7 +12,7 @@ from extern import ExternCalledProcessError
 from .ena import EnaDownloader
 from .location import Location, NcbiLocationJson
 from .exception import DownloadMethodFailed
-from .sra_metadata import SraMetadata
+from .sra_metadata import *
 
 DEFAULT_ASPERA_SSH_KEY = 'linux'
 DEFAULT_OUTPUT_FORMAT_POSSIBILITIES = ['fastq','fastq.gz']
@@ -444,14 +444,16 @@ def annotate(**kwargs):
 
 
 def _output_formatted_metadata(metadata, output_format, all_columns):
-    default_columns = ['Run','SRAStudy','Gbp','LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']
+    # default_columns = ['Run','SRAStudy','Gbp','LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']
+    default_columns = [RUN_ACCESSION_KEY,STUDY_ACCESSION_KEY,'Gbp','library_strategy','library_selection','model',SAMPLE_NAME_KEY,'taxon_name']
 
     def prepare_for_tsv_csv(metadata, default_columns, all_columns):
-        metadata_sorted = metadata.sort_values('Run')
-        metadata_sorted['Gbp'] = ["%.3f" % (bases/1e9) for bases in metadata_sorted['bases']]
+        metadata_sorted = metadata.sort_values(RUN_ACCESSION_KEY)
+        metadata_sorted['Gbp'] = ["%.3f" % (bases/1e9) for bases in metadata_sorted[BASES_KEY]]
+        del(metadata_sorted[BASES_KEY])
         if all_columns:
             # Re-order columns to be consistent with human format output
-            column_order = default_columns + [c for c in metadata.columns if c not in default_columns]
+            column_order = default_columns + [c for c in metadata_sorted.columns if c not in default_columns]
             return metadata_sorted[column_order]
         else:
             metadata_sorted = metadata_sorted[default_columns]
@@ -459,21 +461,22 @@ def _output_formatted_metadata(metadata, output_format, all_columns):
 
     if output_format == 'human':
         to_print = []
-        for value in metadata['Run']:
-            to_print.append({'Run': value})
-        for i, value in enumerate(metadata['SRAStudy']):
-            to_print[i]['SRAStudy'] = value
-        for i, value in enumerate(metadata['bases']):
+        for value in metadata[RUN_ACCESSION_KEY]:
+            to_print.append({RUN_ACCESSION_KEY: value})
+        for i, value in enumerate(metadata[STUDY_ACCESSION_KEY]):
+            to_print[i][STUDY_ACCESSION_KEY] = value
+        for i, value in enumerate(metadata[BASES_KEY]):
             to_print[i]['Gbp'] = "%.3f" % (value/1e9)
-        for column in ['LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']:
+        # for column in ['LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']:
+        for column in ['library_strategy','library_selection','model',SAMPLE_NAME_KEY,'taxon_name']:
             for i, value in enumerate(metadata[column]):
                 to_print[i][column] = value
         if all_columns:
             for col in metadata.columns:
                 if col not in default_columns:
-                    for i, value in enumerate(metadata[column]):
-                        to_print[i][column] = value
-        to_print = sorted(to_print, key=lambda x: x['Run'])
+                    for i, value in enumerate(metadata[col]):
+                        to_print[i][col] = value
+        to_print = sorted(to_print, key=lambda x: x[RUN_ACCESSION_KEY])
         _printTable(to_print)
     elif output_format == 'csv':
         metadata_sorted = prepare_for_tsv_csv(metadata, default_columns, all_columns)

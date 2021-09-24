@@ -4,6 +4,7 @@ import requests
 import xml.etree.ElementTree as ET
 import logging
 import re
+import collections
 
 try:
     from StringIO import StringIO
@@ -14,15 +15,22 @@ import pandas as pd
 
 from bird_tool_utils import iterable_chunks
 
+# Define these constants so that they can be referred to in other classes
+# without index errors.
+STUDY_ACCESSION_KEY = 'study_accession'
+RUN_ACCESSION_KEY = 'run'
+BASES_KEY = 'bases'
+SAMPLE_NAME_KEY = 'sample_name'
+
 class SraMetadata:
     def fetch_runs_from_bioproject(self, bioproject_accession):
         retmax = 10000
         res = requests.get(
-            url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi", 
+            url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
             params={
                 "db": "sra",
                 "term": "{}[BioProject]".format(bioproject_accession),
-                "tool": "kingfisher", 
+                "tool": "kingfisher",
                 "email": "kingfisher@github.com",
                 "retmax": retmax,
                 },
@@ -34,14 +42,14 @@ class SraMetadata:
 
         # Now convert the IDs into runs
         metadata = self.efetch_metadata_from_ids(sra_ids)
-        return metadata['Run'].to_list()
+        return metadata[RUN_ACCESSION_KEY].to_list()
 
     def efetch_metadata_from_ids(self, sra_ids):
-        blocks = []
+        data_frames = []
         header_regex = re.compile('\nRun,ReleaseDate.*?\n')
 
         # Keep the URI length short because very long URIs return 414 errors.
-        # Larger values seem to return 414. 
+        # Larger values seem to return 414.
         term_character_length_limit = 2600
         next_accession_index = 0
 
@@ -59,32 +67,93 @@ class SraMetadata:
                     else:
                         break
                 next_accession_index += 1
-            
+
             retmax = 1000
             logging.debug("Running efetch for IDs with request term: {}".format(request_term))
             res = requests.get(
-                url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi", 
+                url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
                 params={
                     "db": "sra",
                     "id": request_term,
-                    "tool": "kingfisher", 
+                    "tool": "kingfisher",
                     "email": "kingfisher@github.com",
-                    "rettype": "runinfo", 
-                    "retmode": "text",                
+                    # "rettype": "runinfo",
+                    # "retmode": "full",
                     },
-                )
+                ) # type/mode full/xml
             if not res.ok:
                 raise Exception("HTTP Failure when requesting efetch from IDs: {}".format(res))
 
-            # For unknown reasons, sometimes a header row will appear in the
-            # middle of the response text's data. Remove it.
-            filtered_text = header_regex.sub('\n',res.text)
+            root = ET.fromstring(res.text)
 
-            df = pd.read_csv(StringIO(filtered_text.strip()))
-            blocks.append(df)
+            def try_get(func):
+                try:
+                    return func()
+                except AttributeError:
+                    return ''
 
-        return pd.concat(blocks)
+            if root.find("ERROR") is not None:
+                logging.error("Error when fetching metadata: {}".format(root.find("ERROR").text))
 
+            for pkg in root.findall('EXPERIMENT_PACKAGE'):
+                d = collections.OrderedDict()
+                d['experiment_accession'] = try_get(lambda: pkg.find('./EXPERIMENT').attrib['accession'])
+                d['experiment_title'] = try_get(lambda: pkg.find('./EXPERIMENT/TITLE').text)
+                l = pkg.find('./EXPERIMENT/DESIGN/LIBRARY_DESCRIPTOR')
+                d['library_name'] = try_get(lambda: l.find('LIBRARY_NAME').text)
+                d['library_strategy'] = try_get(lambda: l.find('LIBRARY_STRATEGY').text)
+                d['library_source'] = try_get(lambda: l.find('LIBRARY_SOURCE').text)
+                d['library_selection'] = try_get(lambda: l.find('LIBRARY_SELECTION').text)
+                d['model'] = try_get(lambda: pkg.find('./EXPERIMENT/PLATFORM/')[0].text)
+                d['submitter'] = ''
+                for k, v in pkg.find('./SUBMISSION').attrib.items():
+                    if k not in ('accession','alias'):
+                        if d['submitter'] == '':
+                            d['submitter'] = v
+                        else:
+                            d['submitter'] = "{}, {}".format(d['submitter'], v)
+                d[STUDY_ACCESSION_KEY] = try_get(lambda: pkg.find('./STUDY').attrib['accession'])
+                d['study_alias'] = try_get(lambda: pkg.find('./STUDY').attrib['alias'])
+                d['study_centre_project_name'] = try_get(lambda: pkg.find('./STUDY/DESCRIPTOR/CENTER_PROJECT_NAME').text)
+                d['sample_alias'] = try_get(lambda: pkg.find('./SAMPLE').attrib['alias'])
+                d['sample_accession'] = try_get(lambda: pkg.find('./SAMPLE').attrib['accession'])
+                d['taxon_name'] = try_get(lambda: pkg.find('./SAMPLE/SAMPLE_NAME/SCIENTIFIC_NAME').text)
+                d['sample_description'] = try_get(lambda: pkg.find('./SAMPLE/DESCRIPTION').text)
+                d[SAMPLE_NAME_KEY] = d['library_name'] #default, maybe there's always a title though?
+                for attr in pkg.find('./SAMPLE/SAMPLE_ATTRIBUTES'):
+                    tag = attr.find('TAG').text
+                    value = attr.find('VALUE').text
+                    if tag == 'Title':
+                        d[SAMPLE_NAME_KEY] = value
+                    else:
+                        d[tag] = value
+                d['spots'] = try_get(lambda: int(pkg.find('./RUN_SET/RUN').attrib['total_spots']))
+                d[BASES_KEY] = try_get(lambda: int(pkg.find('./RUN_SET/RUN').attrib['total_bases']))
+                d['run_size'] = try_get(lambda: int(pkg.find('./RUN_SET/RUN').attrib['size']))
+                d[RUN_ACCESSION_KEY] = try_get(lambda: pkg.find('./RUN_SET/RUN').attrib['accession'])
+                d['published'] = try_get(lambda: pkg.find('./RUN_SET/RUN').attrib['published'])
+                for (i, r) in enumerate(pkg.find('./RUN_SET/RUN/Statistics')):
+                    d['read{}_length_average'.format(i+1)] = r.attrib['average']
+                    d['read{}_length_stdev'.format(i+1)] = r.attrib['stdev']
+                d['study_title'] = try_get(lambda: pkg.find('./STUDY/DESCRIPTOR/STUDY_TITLE').text)
+                d['design_description'] = try_get(lambda: pkg.find('./EXPERIMENT/DESIGN/DESIGN_DESCRIPTION').text)
+                d['study_abstract'] = try_get(lambda: pkg.find('./STUDY/DESCRIPTOR/STUDY_ABSTRACT').text)
+
+                data_frames.append(d)
+
+        return pd.DataFrame(data_frames)
+
+    def _print_xml(self, element, prefix):
+        if prefix is None or prefix == '':
+            p2 = ""
+        else:
+            p2 = "{}_".format(prefix)
+        for k, v in element.attrib.items():
+            print("\t".join(['{}{}'.format(p2,k),v]))
+        if element.text:
+            print("\t".join(['{}{}'.format(p2, element.tag), element.text]))
+        for e in element:
+            self.print_xml(e, '{}{}'.format(p2, e.tag))
 
     def efetch_sra_from_accessions(self, accessions):
         accessions = list(set(accessions))
@@ -93,9 +162,9 @@ class SraMetadata:
         logging.info("Querying NCBI esearch for {} distinct accessions e.g. {}".format(
             len(accessions), accessions[0]))
         sra_ids = []
-        
+
         # Keep the URI length short because very long URIs return 414 errors.
-        # Larger values seem to return 414. 
+        # Larger values seem to return 414.
         term_character_length_limit = 2600
         next_accession_index = 0
 
@@ -113,20 +182,20 @@ class SraMetadata:
                     else:
                         break
                 next_accession_index += 1
-            
+
             retmax = 1000
             res = requests.get(
-                url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi", 
+                url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
                 params={
                     "db": "sra",
                     "term": request_term,
-                    "tool": "kingfisher", 
+                    "tool": "kingfisher",
                     "email": "kingfisher@github.com",
                     "retmax": retmax,
                     },
                 )
             if not res.ok:
-                raise Exception("HTTP Failure when requesting efetch from accessions: {}".format(res))
+                raise Exception("HTTP Failure when requesting esearch from accessions: {}".format(res))
             root = ET.fromstring(res.text)
             id_list_node = root.find('IdList')
             ids = list(set([c.text for c in id_list_node]))
@@ -141,19 +210,21 @@ class SraMetadata:
         metadata = self.efetch_metadata_from_ids(sra_ids)
 
         # Ensure all hits are found, and trim results to just those that are real hits
-        found_accessions_metadata = metadata[metadata['Run'].isin(accessions)]
+        if RUN_ACCESSION_KEY not in metadata.columns:
+            raise Exception("No metadata could be retrieved")
+        found_accessions_metadata = metadata[metadata[RUN_ACCESSION_KEY].isin(accessions)]
 
         # Sometimes duplicates are returned e.g. when querying with SRR8482198.
         # We cannot use drop_duplicates() because NaN values means equality
         # doesn't operate as we want i.e. NaN != NaN. So we groupby instead and
         # take the first. This assumes all rows are the same, which I hope to be
         # true.
-        found_accessions_metadata = found_accessions_metadata.groupby('Run', as_index=False).agg('first')
+        found_accessions_metadata = found_accessions_metadata.groupby(RUN_ACCESSION_KEY, as_index=False).agg('first')
 
-        found_accessions_metadata.sort_values(['SRAStudy','Run'], inplace=True)
+        found_accessions_metadata.sort_values([STUDY_ACCESSION_KEY,RUN_ACCESSION_KEY], inplace=True)
 
         if len(found_accessions_metadata) != len(accessions):
-            found_runs = set(found_accessions_metadata['Run'].to_list())
+            found_runs = set(found_accessions_metadata[RUN_ACCESSION_KEY].to_list())
             not_found = list([a for a in accessions if a not in found_runs])
             logging.warning("Unable to find all accessions. The {} missing ones were: {}".format(
                 len(not_found), not_found

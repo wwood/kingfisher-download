@@ -12,6 +12,8 @@ dependencies:
   - pandas
   - requests
   - aria2
+  - sracat
+  - nose # For testing only
   - pip
   - pip:
     - bird_tool_utils
