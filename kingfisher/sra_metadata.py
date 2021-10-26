@@ -45,7 +45,7 @@ class SraMetadata:
         webenv = root.find('WebEnv').text
 
         # Now convert the IDs into runs
-        metadata = self.efetch_metadata_from_ids(webenv, accessions, len(sra_ids))
+        metadata = self.efetch_metadata_from_ids(webenv, None, len(sra_ids))
         return metadata[RUN_ACCESSION_KEY].to_list()
 
     def efetch_metadata_from_ids(self, webenv, accessions, num_ids):
@@ -78,7 +78,7 @@ class SraMetadata:
             logging.error("Error when fetching metadata: {}".format(root.find("ERROR").text))
 
         # Some samples such as SAMN13241871 are linked to multiple runs e.g. SRR10489833
-        accessions_set = set(accessions)
+        accessions_set = None if accessions is None else set(accessions)
 
         for pkg in root.findall('EXPERIMENT_PACKAGE'):
             d = collections.OrderedDict()
@@ -123,7 +123,7 @@ class SraMetadata:
 
             for run in pkg.findall('./RUN_SET/RUN'):
                 accession_here = run.attrib['accession']
-                if accession_here in accessions:
+                if accessions_set is None or accession_here in accessions_set:
                     d2 = d.copy()
                     d2['spots'] = try_get(lambda: int(run.attrib['total_spots']))
                     d2[BASES_KEY] = try_get(lambda: int(run.attrib['total_bases']))
