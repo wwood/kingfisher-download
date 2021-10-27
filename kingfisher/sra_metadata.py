@@ -104,15 +104,23 @@ class SraMetadata:
             d['sample_accession'] = try_get(lambda: pkg.find('./SAMPLE').attrib['accession'])
             d['taxon_name'] = try_get(lambda: pkg.find('./SAMPLE/SAMPLE_NAME/SCIENTIFIC_NAME').text)
             d['sample_description'] = try_get(lambda: pkg.find('./SAMPLE/DESCRIPTION').text)
-            d[SAMPLE_NAME_KEY] = d['library_name'] #default, maybe there's always a title though?
+            sample_sample_name = None
+            sample_title = None
             if pkg.find('./SAMPLE/SAMPLE_ATTRIBUTES'):
                 for attr in pkg.find('./SAMPLE/SAMPLE_ATTRIBUTES'):
                     tag = attr.find('TAG').text
                     value = attr.find('VALUE').text
                     if tag == 'Title':
-                        d[SAMPLE_NAME_KEY] = value
-                    else:
-                        d[tag] = value
+                        sample_title = value
+                    elif tag == 'sample name':
+                        sample_sample_name = value
+                    d[tag] = value
+            if sample_sample_name is not None:
+                d[SAMPLE_NAME_KEY] = sample_sample_name
+            elif sample_title is not None:
+                d[SAMPLE_NAME_KEY] = sample_title
+            else:
+                d[SAMPLE_NAME_KEY] = d['library_name'] #default, maybe there's always a title though?
             d['study_title'] = try_get(lambda: pkg.find('./STUDY/DESCRIPTOR/STUDY_TITLE').text)
             d['design_description'] = try_get(lambda: pkg.find('./EXPERIMENT/DESIGN/DESIGN_DESCRIPTION').text)
             d['study_abstract'] = try_get(lambda: pkg.find('./STUDY/DESCRIPTOR/STUDY_ABSTRACT').text)
