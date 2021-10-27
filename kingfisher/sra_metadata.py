@@ -21,20 +21,26 @@ STUDY_ACCESSION_KEY = 'study_accession'
 RUN_ACCESSION_KEY = 'run'
 BASES_KEY = 'bases'
 SAMPLE_NAME_KEY = 'sample_name'
+NCBI_API_KEY_ENV = 'NCBI_API_KEY'
 
 class SraMetadata:
+    def add_api_key(self, other_params):
+        if NCBI_API_KEY_ENV in os.environ:
+            other_params['api_key'] = os.environ[NCBI_API_KEY_ENV]
+        return other_params
+
     def fetch_runs_from_bioproject(self, bioproject_accession):
         retmax = 10000
         res = requests.get(
             url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
-            params={
+            params=self.add_api_key({
                 "db": "sra",
                 "term": "{}[BioProject]".format(bioproject_accession),
                 "tool": "kingfisher",
                 "email": "kingfisher@github.com",
                 "retmax": retmax,
                 "usehistory": "y",
-                },
+                }),
             )
         if not res.ok:
             raise Exception("HTTP Failure when requesting search from bioproject: {}: {}".format(res, res.text))
@@ -55,13 +61,13 @@ class SraMetadata:
         logging.debug("Running efetch ..")
         res = requests.get(
             url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
-            params={
+            params=self.add_api_key({
                 "db": "sra",
                 "tool": "kingfisher",
                 "email": "kingfisher@github.com",
                 "webenv": webenv,
                 "query_key": 1
-                },
+                }),
             )
         if not res.ok:
             raise Exception("HTTP Failure when requesting efetch from IDs: {}: {}".format(res, res.text))
@@ -171,14 +177,14 @@ class SraMetadata:
         request_term = ' OR '.join(["{}[accn]".format(acc) for acc in accessions])
 
         retmax = len(accessions)+10
-        params={
+        params=self.add_api_key({
             "db": "sra",
             "term": request_term,
             "tool": "kingfisher",
             "email": "kingfisher@github.com",
             "retmax": retmax,
             "usehistory": "y",
-            }
+            })
         if webenv is None:
             params['WebEnv'] = webenv
         res = requests.post(

@@ -11,6 +11,7 @@
   - [FAQ](#faq)
     - [ascp: not found](#ascp-not-found)
     - [Failed to authenticate with ascp](#failed-to-authenticate-with-ascp)
+    - [API rate limit exceeded](#api-rate-limit-exceeded)
   - [License](#license)
 
 # Kingfisher
@@ -163,6 +164,14 @@ Traceback (most recent call last):
 Exception: No more specified download methods, cannot continue
 ```
 This could be caused by (1) your being on a network that interferes with ascp operation, or (2) a temporary downtime at ENA. You may try moving to a different network or following the instructions at the [Aspera support](https://www.ibm.com/support/pages/error-code-19-failed-authenticate) or checking the [log files](https://www.ibm.com/support/pages/node/747513) to see if that helps diagnose the error.
+
+### API rate limit exceeded
+Using `kingfisher annotate` repeatedly and in parallel can mean that the default
+allowable rate of requests (3 per second) is exceeded. To get around this error,
+you can generate an [NCBI API
+key](https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities/)
+and then set the environment variable `NCBI_API_KEY` before running kingfisher.
+This key will then be used in all requests.
 
 ## License
 
