@@ -163,7 +163,7 @@ Traceback (most recent call last):
     raise Exception("No more specified download methods, cannot continue")
 Exception: No more specified download methods, cannot continue
 ```
-This could be caused by (1) your being on a network that interferes with ascp operation, or (2) a temporary downtime at ENA. You may try moving to a different network or following the instructions at the [Aspera support](https://www.ibm.com/support/pages/error-code-19-failed-authenticate) or checking the [log files](https://www.ibm.com/support/pages/node/747513) to see if that helps diagnose the error.
+This could be caused by (1) your being on a network that interferes with ascp operation, or (2) a temporary downtime at ENA. You may try moving to a different network or following the instructions at the [Aspera support](https://www.ibm.com/support/pages/error-code-19-failed-authenticate) or checking the [log files](https://www.ibm.com/support/pages/node/747513) to see if that helps diagnose the error. See [this issue](https://github.com/wwood/kingfisher-download/issues/9#issuecomment-952576784) for more information about a specific WLAN that was causing an issue.
 
 ### API rate limit exceeded
 Using `kingfisher annotate` repeatedly and in parallel can mean that the default
