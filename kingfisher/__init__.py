@@ -56,6 +56,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
     download_threads = kwargs.pop('download_threads', DEFAULT_DOWNLOAD_THREADS)
     extraction_threads = kwargs.pop('extraction_threads', DEFAULT_THREADS)
     hide_download_progress = kwargs.pop('hide_download_progress', False)
+    prefetch_max_size = kwargs.pop('prefetch_max_size',None)
 
     
 
@@ -104,8 +105,12 @@ def download_and_extract_one_run(run_identifier, **kwargs):
             logging.info("Attempting download method {} ..".format(method))
             if method == 'prefetch':
                 try:
-                    extern.run("prefetch -o {}.sra {}".format(
-                        run_identifier, run_identifier))
+                    if prefetch_max_size is None:
+                        prefetch_max_size_argument = '--max-size 0G'
+                    else:
+                        prefetch_max_size_argument = '--max-size {}'.format(prefetch_max_size)
+                    extern.run("prefetch {} -o {}.sra {}".format(
+                        prefetch_max_size_argument, run_identifier, run_identifier))
                     downloaded_files = ['{}.sra'.format(run_identifier)]
                 except ExternCalledProcessError as e:
                     logging.warning("Method {} failed: Error was: {}".format(method, e))

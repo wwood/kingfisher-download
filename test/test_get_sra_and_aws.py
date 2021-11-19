@@ -154,6 +154,13 @@ class Tests(unittest.TestCase):
                 extern.run('{} get -r DRR014182 --force -f sra -m aws-http --guess-aws-location --download-threads 5'.format(kingfisher))
             self.assertFalse(os.path.exists('DRR014182.sra'))
 
+    def test_prefetch_max_size_limit(self):
+        with in_tempdir():
+            with self.assertRaises(extern.ExternCalledProcessError):
+                # As of writing DRR014182 actually doesn't exist at AWS.
+                extern.run('{} get -r SRR12118866 -f sra -m prefetch --prefetch-max-size 1M'.format(kingfisher))
+            self.assertFalse(os.path.exists('DRR014182.sra'))
+
 
 
     # def test_noqual(self):

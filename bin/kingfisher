@@ -169,6 +169,12 @@ def main():
             Use this option to specify a JSON-formatted service account key, as per \
             https://cloud.google.com/iam/docs/creating-managing-service-account-keys \
             [default: not used]'))
+    get_parser_download_args.add_argument(
+        '--prefetch-max-size', '--prefetch_max_size',
+        help=fix('Downloading with prefetch has a default limit of 20G file size. \
+            Kingfisher disables this. Use this option to reinstate this file size limit \
+            e.g. --prefetch-max-size "1G" for a 1 GB limit \
+            [default: not used]'))
 
     get_parser_extraction_args = get_parser.add_argument_group(title='further extraction options')
     add_extraction_args(get_parser_extraction_args)
@@ -250,6 +256,7 @@ def main():
             download_threads = args.download_threads,
             extraction_threads = args.extraction_threads,
             hide_download_progress = args.hide_download_progress,
+            prefetch_max_size = args.prefetch_max_size,
         )
     elif args.subparser_name == 'extract':
         output_files = kingfisher.extract(
