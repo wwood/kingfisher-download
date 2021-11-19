@@ -161,6 +161,16 @@ class Tests(unittest.TestCase):
                 extern.run('{} get -r SRR12118866 -f sra -m prefetch --prefetch-max-size 1M'.format(kingfisher))
             self.assertFalse(os.path.exists('DRR014182.sra'))
 
+    def test_get_run_identifiers_list(self):
+        with in_tempdir():
+            with open('runlist','w') as f:
+                f.write('SRR12118864\n')
+                f.write('SRR12118866\n')
+            extern.run('{} get --run-identifiers-list runlist -f sra -m prefetch'.format(kingfisher))
+            self.assertTrue(os.path.exists('SRR12118864.sra'))
+            self.assertTrue(os.path.exists('SRR12118866.sra'))
+        
+
 
 
     # def test_noqual(self):

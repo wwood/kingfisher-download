@@ -87,6 +87,9 @@ def main():
         help='Run number(s) to download/extract e.g. ERR1739691',
         nargs='+')
     get_parser_common_options.add_argument(
+        '--run-identifiers-list','--run_identifiers_list',
+        help='File containing a newline-separated list of run identifiers')
+    get_parser_common_options.add_argument(
         '-p','--bioproject',
         help='BioProject IDs number(s) to download/extract from e.g. PRJNA621514 or SRP260223')
     
@@ -213,7 +216,7 @@ def main():
     )
     annotate_parser.add_argument(
         '--run-identifiers-list','--run_identifiers_list',
-        help='File containing newline-separated run identifiers',
+        help='File containing newline-separated list of run identifiers',
     )
     annotate_parser.add_argument(
         '-p','--bioproject',
@@ -237,6 +240,7 @@ def main():
     if args.subparser_name == 'get':
         kingfisher.download_and_extract(
             run_identifiers = args.run_identifiers,
+            run_identifiers_file = args.run_identifiers_list,
             bioproject_accession = args.bioproject,
             download_methods = args.download_methods,
             output_format_possibilities = args.output_format_possibilities,

@@ -25,14 +25,22 @@ def download_and_extract(**kwargs):
     here are largely the same as the arguments to the kingfisher executable.
     '''
     run_identifiers = kwargs.pop('run_identifiers')
+    run_identifiers_file = kwargs.pop('run_identifiers_file')
     bioproject_accession = kwargs.pop('bioproject_accession')
-    if run_identifiers is None:
-        if bioproject_accession is None:
-            raise Exception("Must specify either an accession or a bioproject")
+    num_inputs = 0
+    if run_identifiers is not None: num_inputs += 1
+    if run_identifiers_file is not None: num_inputs += 1
+    if bioproject_accession is not None: num_inputs += 1
+    if num_inputs != 1:
+        raise Exception("Must specify exactly one input type: --run-identifiers, --bioproject_accession or --run-identifiers-list")
+
+    if bioproject_accession is not None:
         run_identifiers = SraMetadata().fetch_runs_from_bioproject(bioproject_accession)
-        logging.info("Found {} run(s) to download".format(len(run_identifiers)))
-    elif bioproject_accession is not None:
-        raise Exception("Cannot specify both a run a bioproject")
+        logging.debug("Found {} run(s) to annotate".format(len(run_identifiers)))
+    if run_identifiers_file is not None:
+        with open(run_identifiers_file) as f:
+            run_identifiers = list([r.strip() for r in f.readlines()])
+
     for run in run_identifiers:
         download_and_extract_one_run(run, **kwargs)
 
@@ -102,7 +110,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
         # Download phase
         worked = False
         for method in download_methods:
-            logging.info("Attempting download method {} ..".format(method))
+            logging.info("Attempting download method {} for run {} ..".format(method, run_identifier))
             if method == 'prefetch':
                 try:
                     if prefetch_max_size is None:
