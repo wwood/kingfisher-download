@@ -31,6 +31,9 @@ This software was originally known as `ena-fast-download`. Kingfisher implements
 almost all of that tool's functionality, but also handles data sources other
 than ENA. See the [Usage](#usage) section for the equivalent invocation.
 
+If you are looking to download GenBank/RefSeq data instead, then you might try
+[ncbi-acc-download](https://github.com/kblin/ncbi-acc-download).
+
 ## Installation
 
 Kingfisher can be installed by installing its conda dependencies as follows. We
