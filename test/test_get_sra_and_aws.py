@@ -169,7 +169,12 @@ class Tests(unittest.TestCase):
             extern.run('{} get --run-identifiers-list runlist -f sra -m prefetch'.format(kingfisher))
             self.assertTrue(os.path.exists('SRR12118864.sra'))
             self.assertTrue(os.path.exists('SRR12118866.sra'))
-        
+
+    def test_aws_cp(self):
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 --force -f sra -m aws-cp'.format(kingfisher))
+            self.assertTrue(os.path.exists('SRR12118866.sra'))     
+            self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)  
 
 
 

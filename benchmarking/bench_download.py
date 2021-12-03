@@ -57,5 +57,10 @@ if __name__ == '__main__':
                 if form=='sra':
                     os.remove(acc+'.{}'.format(form))
                 else:
-                    os.remove(acc+'_1.{}'.format(form))
-                    os.remove(acc+'_2.{}'.format(form))
+                    for p in [
+                        acc+'_1.fastq.gz',
+                        acc+'_2.fastq.gz',
+                        acc+'.fastq.gz'
+                    ]:
+                        if os.path.exists(p):
+                            os.remove(p)

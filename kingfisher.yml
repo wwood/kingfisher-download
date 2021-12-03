@@ -15,3 +15,4 @@ dependencies:
   - sracat
   - nose # For testing only
   - bird_tool_utils_python
+  - awscli
