@@ -71,12 +71,21 @@ def download_and_extract_one_run(run_identifier, **kwargs):
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
 
-    allowable_sources = []
+
+    if allow_paid:
+        allowable_sources = ['s3', 'gcp']
+    else:
+        allowable_sources = []
     if allow_paid or allow_paid_from_gcp:
         if 'gcp-cp' not in download_methods:
             logging.warning("Allowing download from requester-pays GCP buckets, "\
                 "but gcp-cp is not specified download method, so --allow-paid and --allow-paid-from-gcp have no effect")
         allowable_sources.append('gcp')
+    if allow_paid_from_aws:
+        if 'aws-cp' not in download_methods:
+            logging.warning("Allowing download from requester-pays AWS buckets, "\
+                "but aws-cp is not specified download method, so --allow-paid-from-aws has no effect")
+        allowable_sources.append('s3')
         
     logging.debug("Allowing non-NCBI sources for download: {}".format(allowable_sources))
 
@@ -179,7 +188,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                 s3_locations = ncbi_locations.object_locations(
                     NcbiLocationJson.OBJECT_TYPE_SRA,
                     NcbiLocationJson.AWS_SERVICE,
-                    True
+                    's3' in allowable_sources
                 )
 
                 # TODO: Sort so unpaid are first
