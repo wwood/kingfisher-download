@@ -188,24 +188,24 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                     for s3_location in s3_locations:
                         logging.info("Found s3 link {}".format(s3_location.link()))
 
-                        # Use --no-sign-request to avoid the AWS CLI signing
-                        # into an account, avoiding potential usage charges.
-                        # There is a possibility here that a non-ODP link is
-                        # specified in the location API, but this will only case
-                        # an error since we are using --no-sign-request.
-                        command = '{} --no-sign-request {}.sra'.format(
-                            s3_location.s3_command_prefix(run_identifier), run_identifier
-                        )
-                        if aws_user_key_id:
-                            os.environ['AWS_ACCESS_KEY_ID'] = aws_user_key_id
-                        if aws_user_key_id:
-                            os.environ['AWS_SECRET_ACCESS_KEY'] = aws_user_key_secret
-                        logging.info("Downloading from S3..")
                         try:
-                            extern.run(command)
-                            downloaded_files = ['{}.sra'.format(run_identifier)]
-                        except ExternCalledProcessError as e:
-                            logging.warning("Method {} failed: Error was: {}".format(method, e))
+                            command = '{} {}.sra'.format(
+                                s3_location.s3_command_prefix(run_identifier), run_identifier
+                            )
+                            if aws_user_key_id:
+                                os.environ['AWS_ACCESS_KEY_ID'] = aws_user_key_id
+                            if aws_user_key_id:
+                                os.environ['AWS_SECRET_ACCESS_KEY'] = aws_user_key_secret
+                            logging.info("Downloading from S3..")
+                            try:
+                                extern.run(command)
+                                downloaded_files = ['{}.sra'.format(run_identifier)]
+                            except ExternCalledProcessError as e:
+                                logging.warning("Method {} failed: Error was: {}".format(method, e))
+                        except DownloadMethodFailed as e:
+                            logging.warning("Method {} failed, error was {}".format(
+                                method, e
+                            ))
                 else:
                     logging.warning("Method {} failed: No S3 location could be found".format(method))
 

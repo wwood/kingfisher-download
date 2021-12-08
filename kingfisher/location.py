@@ -30,6 +30,8 @@ class AwsLocation:
 
     def service(self):
         if self.j['service'] == 's3':
+            # The run ERR209516 for instance is non-ODP at s3://sra-pub-run-3/ERR209516/ERR209516.2
+            # whereas SRR12324253 is Open Data, at https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR12324253/SRR12324253
             if 'sra-pub-run-odp' in self.j['link']:
                 return 's3-odp'
             else:
@@ -39,11 +41,20 @@ class AwsLocation:
 
     def s3_command_prefix(self, run_id):
         if self.service() == 's3-pay':
-            return 'aws s3api get-object --bucket {} --key {} --request-payer requester'.format(
-                self.j['bucket'], self.j['key']
-            )
+            # bucket/key not present in paid link from
+            # 'https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?&acc=ERR209516&accept-alternate-locations=yes'
+            # for instance.
+            if 'bucket' not in self.j or 'key' not in self.j:
+                raise DownloadMethodFailed("Unexpected form of S3 location JSON: {}".format(self.j))
+            # Below return is not tested currently, because I do not currently
+            # know of an SRA accession that falls into this category.
+            return 'aws s3 cp s3://{}/{}'.format(self.j['bucket'], self.j['key'])
         elif self.service() == 's3-odp':
-            return 'aws s3 cp s3://sra-pub-run-odp/sra/{}/{}'.format(run_id, run_id)
+            # Use --no-sign-request to avoid the AWS CLI signing into an
+            # account, avoiding potential usage charges. There is a possibility
+            # here that a non-ODP link is specified in the location API, but
+            # this will only case an error since we are using --no-sign-request.
+            return 'aws s3 cp --no-sign-request s3://sra-pub-run-odp/sra/{}/{}'.format(run_id, run_id)
         else:
             raise Exception("Unexpected json location found: {}", self.j)
 
