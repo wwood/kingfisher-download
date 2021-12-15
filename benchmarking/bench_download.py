@@ -28,7 +28,7 @@ if __name__ == '__main__':
         ('aws-cp','sra',None,None),
         ('gcp-cp ','sra',None, '--allow-paid'),
         ('ena-ascp','fastq.gz',None,None),
-        ('ena-ftp','fastq.gz',None,None),
+        ('ena-ftp','fastq.gz',1,None),
         ('prefetch','sra',None,None),
         ('aws-http','sra',4,None)
     ]
