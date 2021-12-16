@@ -71,6 +71,11 @@ class Tests(unittest.TestCase):
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)
 
+    def test_aws_cp_covid(self):
+        with in_tempdir():
+            extern.run('{} get -r ERR6167542 --force -f sra -m aws-cp'.format(kingfisher))
+            self.assertTrue(os.path.getsize('ERR6167542.sra')==3463862)
+
     def test_stdout_unsorted_fasta_via_sra(self):
         self.assertEqual('e53aeb5b0ae367d24bea4023ce940eea  -\n',
             extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities fasta --stdout --unsorted |md5sum'.format(
