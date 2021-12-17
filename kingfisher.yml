@@ -5,13 +5,12 @@ channels:
 dependencies:
   - python>=3.9
   - pigz
-  - python
   - extern
   - curl
   - sra-tools
   - pandas
   - requests
-  - aria2
+  - aria2>=1.36.0
   - sracat
   - nose # For testing only
   - bird_tool_utils_python
