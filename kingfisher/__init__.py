@@ -359,9 +359,8 @@ def extract(**kwargs):
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
 
-    if stdout or unsorted:
-        if not (stdout and unsorted):
-            raise Exception("Currently --stdout and --unsorted must be specified together")
+    if stdout and not unsorted:
+        raise Exception("Currently --stdout must be used with --unsorted")
 
     run_identifier = os.path.basename(sra_file)
     if sra_file.endswith(".sra"):
@@ -399,6 +398,30 @@ def extract(**kwargs):
             raise Exception("Extraction of .sra to fasta format failed. Command run was '{}'. STDERR was '{}'".format(
                 cmd, e.stderr
             ))
+            
+    elif unsorted and not stdout:
+        # By default, we want separate outputs for forward and reverse.
+        format = output_format_possibilities[0]
+        if format == 'fasta':
+            logging.info("Extracting unsorted .sra file to file(s) in FASTA format ..")
+            cmd = f"sracat -o {run_identifier} {os.path.abspath(sra_file)}"
+        elif format == 'fasta.gz':
+            logging.info("Extracting unsorted .sra file to file(s) in FASTA.GZ format ..")
+            cmd = f"sracat -z -o {run_identifier} {os.path.abspath(sra_file)}"
+        elif format == 'fastq':
+            logging.info("Extracting unsorted .sra file to file(s) in FASTQ format ..")
+            cmd = f"sracat --qual -o {run_identifier} {os.path.abspath(sra_file)}"
+        elif format == 'fastq.gz':
+            logging.info("Extracting unsorted .sra file to file(s) in FASTQ.GZ format ..")
+            cmd = f"sracat -z --qual -o {run_identifier} {os.path.abspath(sra_file)}"
+        else:
+            raise Exception("Cannot extract with --unsorted format {}".format(format))
+        logging.debug("Running command {}".format(cmd))
+        try:
+            subprocess.check_call(cmd, shell=True, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Extraction of .sra to format {format} failed. Command run was '{cmd}'. STDERR was '{e.stderr}'")
+
     else:
         if not skip_download_and_extraction:
             logging.info("Extracting .sra file with fasterq-dump ..")
