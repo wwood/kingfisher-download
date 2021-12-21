@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+import gzip
 
 import extern
 from extern import ExternCalledProcessError
@@ -420,14 +421,53 @@ def extract(**kwargs):
                     output_files.append(new_name)
         elif format == 'fasta.gz':
             logging.info("Extracting .sra file to file(s) in unsorted FASTA.GZ format ..")
-            cmd = f"sracat -z -o {run_identifier} {os.path.abspath(sra_file)}"
+            cmd = f"sracat -o {run_identifier} {os.path.abspath(sra_file)}"
+
+            # Make FIFOs so that we can use pigz instead of the slower built-in sracat -z.
+            logging.debug("Creating FIFOs ..")
+            os.mkfifo(f'{run_identifier}_1.fna')
+            os.mkfifo(f'{run_identifier}_2.fna')
+            os.mkfifo(f'{run_identifier}.fna')
+            # Spawn pigz to read FIFOs.
+            def spawn_pigz_it(in_name, out_name, threads):
+                return subprocess.Popen(['bash','-c',f'pigz -c -p {threads} {in_name} > {out_name}'])
+            pigz_commands = []
+            for name in ['x_1.fna','x_2.fna','x.fna']:
+                f = name.replace('x',run_identifier)
+                output = f.replace('.fna','.fasta.gz')
+                pigz_commands.append([f, output, spawn_pigz_it(f'{f}', f"{output}", threads)])
             run_command(cmd)
-            for name in ['x_1.fna.gz','x_2.fna.gz','x.fna.gz']:
+            for (fifo, output, c) in pigz_commands:
+                logging.debug(f"Waiting for pigz command {c.args} ..")
+
+                # If sracat doesn't write to a fifo, then the pigz reading it
+                # never finishes. So run another echo on top so at least 1 EOF
+                # arrives to terminate the pigz process.
+                logging.debug("Running echo to make sure at least one EOF arrived on the pipe")
+                subprocess.Popen(['bash','-c',f'cat {fifo} > /dev/null'])
+                extern.run(f'echo -n >> {fifo}')
+                
+                ret = c.wait()
+                if ret != 0:
+                    raise subprocess.SubprocessError(f"Command {c.args} returned with non-zero exitstatus {ret}")
+                logging.debug("Process finished")
+                os.remove(fifo)
+
+                # Open the gzip file. If there is anything inside, keep it,
+                # otherwise remove it as sracat never read it.
+                remove_it = False
+                with gzip.open(output) as f:
+                    some = f.read(10)
+                    if len(some) == 0:
+                        logging.debug(f"Compressed file {output} is empty, removing")
+                        remove_it = True
+                if remove_it:
+                    os.remove(output)
+
+            for name in ['x_1.fasta.gz','x_2.fasta.gz','x.fasta.gz']:
                 f = name.replace('x',run_identifier)
                 if os.path.exists(f):
-                    new_name = f.replace('.fna.gz','.fasta.gz')
-                    os.rename(f, new_name)
-                    output_files.append(new_name)
+                    output_files.append(f)
         elif format == 'fastq':
             logging.info("Extracting .sra file to file(s) in unsorted FASTQ format ..")
             cmd = f"sracat --qual -o {run_identifier} {os.path.abspath(sra_file)}"
