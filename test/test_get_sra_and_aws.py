@@ -77,17 +77,50 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.getsize('ERR6167542.sra')==3463862)
 
     def test_stdout_unsorted_fasta_via_sra(self):
-        self.assertEqual('e53aeb5b0ae367d24bea4023ce940eea  -\n',
-            extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities fasta --stdout --unsorted |md5sum'.format(
-                kingfisher
-            )))
+        with in_tempdir():
+            self.assertEqual('e53aeb5b0ae367d24bea4023ce940eea  -\n',
+                extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities fasta --stdout --unsorted |md5sum'.format(
+                    kingfisher
+                )))
 
     def test_extract_stdout_fasta(self):
-        extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities sra'.format(kingfisher))
-        self.assertEqual('e53aeb5b0ae367d24bea4023ce940eea  -\n',
-            extern.run('{} extract --sra SRR12118866.sra --output-format-possibilities fasta --stdout --unsorted |md5sum'.format(
-                kingfisher
-            )))
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities sra'.format(kingfisher))
+            self.assertEqual('e53aeb5b0ae367d24bea4023ce940eea  -\n',
+                extern.run('{} extract --sra SRR12118866.sra --output-format-possibilities fasta --stdout --unsorted |md5sum'.format(
+                    kingfisher
+                )))
+
+    def test_unsorted_get_fasta_file_output(self):
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities fasta --unsorted'.format(kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fasta')==10122654)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10122654)
+            self.assertFalse(os.path.exists('SRR12118866.fasta'))
+
+    def test_unsorted_extract_file_outputs(self):
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities sra'.format(kingfisher))
+
+            extern.run('{} extract --sra SRR12118866.sra --output-format-possibilities fasta --unsorted'.format(kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fasta')==10122654)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10122654)
+            self.assertFalse(os.path.exists('SRR12118866.fasta'))
+
+            extern.run('{} extract --sra SRR12118866.sra --output-format-possibilities fasta.gz --unsorted'.format(kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==631825)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==782376)
+            self.assertFalse(os.path.exists('SRR12118866.fasta.gz'))
+
+            extern.run('{} extract --sra SRR12118866.sra --output-format-possibilities fastq --unsorted'.format(kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==19662366)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==19662366)
+            self.assertFalse(os.path.exists('SRR12118866.fastq'))
+
+            extern.run('{} extract --sra SRR12118866.sra --output-format-possibilities fastq.gz --unsorted'.format(kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4009949)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4834456)
+            self.assertFalse(os.path.exists('SRR12118866.fastq.gz'))
 
     def test_extract_fastq(self):
         with in_tempdir():

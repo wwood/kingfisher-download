@@ -40,15 +40,16 @@ def add_extraction_args(parser):
     parser.add_argument(
         '--unsorted',
         action='store_true',
-        help=fix('Output the sequences in a single file, where the reads are in arbitrary order. \
-            Even pairs of reads may be split up, but it is possible to tell which pair \
+        # Possible to specify --unsorted with -m ena-ftp aws-http, for example, which means that the order will be unknown.
+        help=fix('Output the sequences in arbitrary order, usually the order that they appear in the .sra file. \
+            Even pairs of reads may be in the usual order, but it is possible to tell which pair \
             is which, and which is a forward and which is a reverse read from the name \
-            [default: Do not].\n\n \
+            [default: Do not].\n\n\
             Currently requires download from NCBI rather than ENA.'))
     parser.add_argument(
         '--stdout',
         action='store_true',
-        help=fix('Output sequences to STDOUT. Currently requires --unsorted [default: Do not]'))
+        help=fix('Output sequences to STDOUT. Currently requires --unsorted [default: Do not].'))
     return parser
 
 
@@ -67,7 +68,7 @@ def main():
                 'Download a .sra from GCP using a service account key with "gcp cp". Payment is required.',
                 'kingfisher get -r ERR1739691 -m gcp-cp -f sra --gcp-user-key-file sa-private-key.json --allow-paid'),
             Example(
-                'Download a .sra from the free AWS open data program using 8 threads for download and extraction, coverting to FASTA. Requires aria2 to be installed.',
+                'Download a .sra from the free AWS open data program using 8 threads for download and extraction, coverting to FASTA.',
                 'kingfisher get -r ERR1739691 -m aws-http -f fasta --download-threads 8')],
             'extract': [
                 Example(
@@ -182,7 +183,7 @@ def main():
     get_parser_extraction_args.add_argument(
         '-t', '--extraction-threads',
         type=int,
-        help='Number of threads to use when extracting .sra files [default: {}]'.format(
+        help='Number of threads to use when extracting .sra files. Ignored when --unsorted is specified. [default: {}]'.format(
             kingfisher.DEFAULT_THREADS
         ),
         default=kingfisher.DEFAULT_THREADS,

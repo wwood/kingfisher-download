@@ -92,9 +92,8 @@ def download_and_extract_one_run(run_identifier, **kwargs):
     if gcp_project and gcp_user_key_file:
         raise Exception("--gcp-project is incompatible with --gcp-user-key-file. The project specified in the key file will be used when gcp_project is not specified.")
 
-    if stdout or unsorted:
-        if not (stdout and unsorted):
-            raise Exception("Currently --stdout and --unsorted must be specified together")
+    if stdout and not unsorted:
+        raise Exception("Currently --stdout must be used with --unsorted")
 
     output_files = []
     ncbi_locations = None
@@ -311,8 +310,8 @@ def download_and_extract_one_run(run_identifier, **kwargs):
             else:
                 output_files.append("{}.sra".format(run_identifier))
         else:
-            if unsorted or stdout:
-                raise Exception("--unsorted and --stdout currently must be via download of a .sra format file, rather than a download from ENA. I imagine this will be fixed in future.")
+            if stdout:
+                raise Exception("--stdout currently must be via download of a .sra format file, rather than a download from ENA. I imagine this will be fixed in future.")
             if 'fastq.gz' not in output_format_possibilities:
                 for fq in ['x_1.fastq.gz','x_2.fastq.gz','x.fastq.gz']:
                     f = fq.replace('x',run_identifier)
@@ -400,27 +399,53 @@ def extract(**kwargs):
             ))
             
     elif unsorted and not stdout:
+        def run_command(cmd):
+            logging.debug("Running command {}".format(cmd))
+            try:
+                subprocess.check_call(cmd, shell=True, stderr=subprocess.PIPE)
+            except subprocess.CalledProcessError as e:
+                raise Exception(f"Extraction of .sra to format unsorted {format} failed. Command run was '{cmd}'. STDERR was '{e.stderr}'")
+
         # By default, we want separate outputs for forward and reverse.
         format = output_format_possibilities[0]
         if format == 'fasta':
-            logging.info("Extracting unsorted .sra file to file(s) in FASTA format ..")
+            logging.info("Extracting .sra file to file(s) in unsorted FASTA format ..")
             cmd = f"sracat -o {run_identifier} {os.path.abspath(sra_file)}"
+            run_command(cmd)
+            for name in ['x_1.fna','x_2.fna','x.fna']:
+                f = name.replace('x',run_identifier)
+                if os.path.exists(f):
+                    new_name = f.replace('.fna','.fasta')
+                    os.rename(f, new_name)
+                    output_files.append(new_name)
         elif format == 'fasta.gz':
-            logging.info("Extracting unsorted .sra file to file(s) in FASTA.GZ format ..")
+            logging.info("Extracting .sra file to file(s) in unsorted FASTA.GZ format ..")
             cmd = f"sracat -z -o {run_identifier} {os.path.abspath(sra_file)}"
+            run_command(cmd)
+            for name in ['x_1.fna.gz','x_2.fna.gz','x.fna.gz']:
+                f = name.replace('x',run_identifier)
+                if os.path.exists(f):
+                    new_name = f.replace('.fna.gz','.fasta.gz')
+                    os.rename(f, new_name)
+                    output_files.append(new_name)
         elif format == 'fastq':
-            logging.info("Extracting unsorted .sra file to file(s) in FASTQ format ..")
+            logging.info("Extracting .sra file to file(s) in unsorted FASTQ format ..")
             cmd = f"sracat --qual -o {run_identifier} {os.path.abspath(sra_file)}"
+            run_command(cmd)
+            for name in ['x_1.fastq','x_2.fastq','x.fastq']:
+                f = name.replace('x',run_identifier)
+                if os.path.exists(f):
+                    output_files.append(f)
         elif format == 'fastq.gz':
-            logging.info("Extracting unsorted .sra file to file(s) in FASTQ.GZ format ..")
+            logging.info("Extracting .sra file to file(s) in unsorted FASTQ.GZ format ..")
             cmd = f"sracat -z --qual -o {run_identifier} {os.path.abspath(sra_file)}"
+            run_command(cmd)
+            for name in ['x_1.fastq.gz','x_2.fastq.gz','x.fastq.gz']:
+                f = name.replace('x',run_identifier)
+                if os.path.exists(f):
+                    output_files.append(f)
         else:
             raise Exception("Cannot extract with --unsorted format {}".format(format))
-        logging.debug("Running command {}".format(cmd))
-        try:
-            subprocess.check_call(cmd, shell=True, stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError as e:
-            raise Exception(f"Extraction of .sra to format {format} failed. Command run was '{cmd}'. STDERR was '{e.stderr}'")
 
     else:
         if not skip_download_and_extraction:
