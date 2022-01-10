@@ -53,6 +53,8 @@ kingfisher -h
 Optionally, to use the `ena-ascp` method, an Aspera connect client is also required.
 See https://www.ibm.com/aspera/connect/ or https://www.biostars.org/p/325010/
 
+@MakeTheBrainHappy implemented an example installation (and usage) guide in [Google Colaboratory](https://colab.research.google.com/drive/1k3RC-WbVAAl6h8yXtfEhwqCAvCMHspzz?usp=sharing) and [Jupyter Notebook](https://github.com/MakeTheBrainHappy/kingfisher-cloud).
+
 ## Usage
 
 For all modes, a full run-down of the functionality is available using the
