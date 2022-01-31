@@ -1,0 +1,3 @@
+[submodule "benchmarking"]
+	path = benchmarking
+	url = git@github.com:wwood/kingfisher-benchmarking.git
