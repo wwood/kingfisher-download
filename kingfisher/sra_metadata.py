@@ -30,6 +30,29 @@ class SraMetadata:
             other_params['api_key'] = os.environ[NCBI_API_KEY_ENV]
         return other_params
 
+    def _retry_request(self, description, func):
+        '''Retry a reqests.post or requests.get 3 times, returning the request
+        when OK, otherwise raising an Exception'''
+
+        num_retries = 3
+        def retrying(i, num_retries=3):
+            if i < num_retries-1:
+                logging.warning("Retrying request (retry {} of {})".format(i+1, num_retries-1))
+        
+        for i in range(num_retries):
+            try:
+                this_res = func()
+                if not this_res.ok:
+                    logging.warning("Request not OK when {}: {}: {}".format(description, this_res, this_res.text))
+                    retrying(i)
+                else:
+                    return this_res
+            except Exception as e:
+                logging.warning("Exception raised when {}: {}".format(description, e))
+                retrying(i)
+        raise Exception("Failed to {} after {} attempts".format(description, num_retries))
+
+
     def fetch_runs_from_bioproject(self, bioproject_accession):
         retmax = 10000
         res = requests.get(
@@ -80,6 +103,8 @@ class SraMetadata:
                 return func()
             except AttributeError:
                 return ''
+            except KeyError:
+                return None
 
         if root.find("ERROR") is not None:
             logging.error("Error when fetching metadata: {}".format(root.find("ERROR").text))
@@ -207,11 +232,13 @@ class SraMetadata:
             })
         if webenv is None:
             params['WebEnv'] = webenv
-        res = requests.post(
-            url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
-            data=params)
-        if not res.ok:
-            raise Exception("HTTP Failure when requesting esearch from accessions: {}: {}".format(res, res.text))
+
+        res = self._retry_request(
+            "esearch from accessions", 
+            lambda: requests.post(
+                url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+                data=params))
+
         root = ET.fromstring(res.text)
         if webenv is None:
             webenv = root.find('WebEnv').text
