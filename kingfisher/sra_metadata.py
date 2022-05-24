@@ -171,8 +171,8 @@ class SraMetadata:
             if study_links_xrefs is not None:
                 # Convert db to lower case because otherwise have PUBMED and pubmed e.g. ERR1914274 and SRR9113719
                 d['study_links'] = json.dumps(list([
-                    {'db': x.find('XREF_LINK/DB').text.lower(), 'id': x.find('XREF_LINK/ID').text}
-                    for x in study_links_xrefs.findall('STUDY_LINK')]))
+                    {'db': x.find('DB').text.lower(), 'id': x.find('ID').text}
+                    for x in study_links_xrefs.findall('STUDY_LINK/XREF_LINK')]))
             else:
                 d['study_links'] = []
             
