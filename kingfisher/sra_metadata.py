@@ -151,13 +151,20 @@ class SraMetadata:
             sample_title = None
             if pkg.find('./SAMPLE/SAMPLE_ATTRIBUTES'):
                 for attr in pkg.find('./SAMPLE/SAMPLE_ATTRIBUTES'):
-                    tag = attr.find('TAG').text
-                    value = attr.find('VALUE').text
-                    if tag == 'Title':
-                        sample_title = value
-                    elif tag == 'sample name':
-                        sample_sample_name = value
-                    d[tag] = value
+                    tag_el = attr.find('TAG')
+                    value_el = attr.find('VALUE')
+
+                    # Some samples like
+                    # https://www.ncbi.nlm.nih.gov/sra?term=ERS1240061&report=FullXml
+                    # have entries with a tag, but no value. Ignore these.
+                    if tag_el is not None and value_el is not None:
+                        tag = tag_el.text
+                        value = value_el.text
+                        if tag == 'Title':
+                            sample_title = value
+                        elif tag == 'sample name':
+                            sample_sample_name = value
+                        d[tag] = value
             if sample_sample_name is not None:
                 d[SAMPLE_NAME_KEY] = sample_sample_name
             elif sample_title is not None:
