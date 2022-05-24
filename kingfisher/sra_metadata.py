@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 import logging
 import re
 import collections
+import json
 
 try:
     from StringIO import StringIO
@@ -106,6 +107,17 @@ class SraMetadata:
             d[STUDY_ACCESSION_KEY] = try_get(lambda: pkg.find('./STUDY').attrib['accession'])
             d['study_alias'] = try_get(lambda: pkg.find('./STUDY').attrib['alias'])
             d['study_centre_project_name'] = try_get(lambda: pkg.find('./STUDY/DESCRIPTOR/CENTER_PROJECT_NAME').text)
+            d['organisation'] = try_get(lambda: pkg.find('./Organization/Name').text)
+            d['organisation_department'] = try_get(lambda: pkg.find('./Organization/Address/Department').text)
+            d['organisation_institution'] = try_get(lambda: pkg.find('./Organization/Address/Institution').text)
+            d['organisation_street'] = try_get(lambda: pkg.find('./Organization/Address/Street').text)
+            d['organisation_city'] = try_get(lambda: pkg.find('./Organization/Address/City').text)
+            d['organisation_country'] = try_get(lambda: pkg.find('./Organization/Address/Country').text)
+            first_name = try_get(lambda: pkg.find('./Organization/Contact/Name/First').text)
+            last_name = try_get(lambda: pkg.find('./Organization/Contact/Name/Last').text)
+            d['organisation_contact_name'] = "{} {}".format(first_name, last_name)
+            d['organisation_contact_email'] = try_get(lambda: pkg.find('./Organization/Contact').attrib['email'])
+            d['sample_description'] = try_get(lambda: pkg.find('./SAMPLE/DESCRIPTION').text)
             d['sample_alias'] = try_get(lambda: pkg.find('./SAMPLE').attrib['alias'])
             d['sample_accession'] = try_get(lambda: pkg.find('./SAMPLE').attrib['accession'])
             d['taxon_name'] = try_get(lambda: pkg.find('./SAMPLE/SAMPLE_NAME/SCIENTIFIC_NAME').text)
@@ -130,6 +142,14 @@ class SraMetadata:
             d['study_title'] = try_get(lambda: pkg.find('./STUDY/DESCRIPTOR/STUDY_TITLE').text)
             d['design_description'] = try_get(lambda: pkg.find('./EXPERIMENT/DESIGN/DESIGN_DESCRIPTION').text)
             d['study_abstract'] = try_get(lambda: pkg.find('./STUDY/DESCRIPTOR/STUDY_ABSTRACT').text)
+            study_links_xrefs = try_get(lambda: pkg.find('./STUDY/STUDY_LINKS'))
+            if study_links_xrefs is not None:
+                # Convert db to lower case because otherwise have PUBMED and pubmed e.g. ERR1914274 and SRR9113719
+                d['study_links'] = json.dumps(list([
+                    {'db': x.find('XREF_LINK/DB').text.lower(), 'id': x.find('XREF_LINK/ID').text}
+                    for x in study_links_xrefs.findall('STUDY_LINK')]))
+            else:
+                d['study_links'] = []
             
             # Account for the fact that multiple runs may be associated with
             # this sample
