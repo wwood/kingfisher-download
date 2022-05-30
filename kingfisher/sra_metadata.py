@@ -142,11 +142,11 @@ class SraMetadata:
             last_name = try_get(lambda: pkg.find('./Organization/Contact/Name/Last').text)
             d['organisation_contact_name'] = "{} {}".format(first_name, last_name)
             d['organisation_contact_email'] = try_get(lambda: pkg.find('./Organization/Contact').attrib['email'])
-            d['sample_description'] = try_get(lambda: pkg.find('./SAMPLE/DESCRIPTION').text)
+            # Remove carriage return from sample description e.g. for SRR1263047
+            d['sample_description'] = try_get(lambda: pkg.find('./SAMPLE/DESCRIPTION').text.replace('\r',''))
             d['sample_alias'] = try_get(lambda: pkg.find('./SAMPLE').attrib['alias'])
             d['sample_accession'] = try_get(lambda: pkg.find('./SAMPLE').attrib['accession'])
             d['taxon_name'] = try_get(lambda: pkg.find('./SAMPLE/SAMPLE_NAME/SCIENTIFIC_NAME').text)
-            d['sample_description'] = try_get(lambda: pkg.find('./SAMPLE/DESCRIPTION').text)
             sample_sample_name = None
             sample_title = None
             if pkg.find('./SAMPLE/SAMPLE_ATTRIBUTES'):
