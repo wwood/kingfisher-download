@@ -177,9 +177,16 @@ class SraMetadata:
             study_links_xrefs = try_get(lambda: pkg.find('./STUDY/STUDY_LINKS'))
             if study_links_xrefs is not None:
                 # Convert db to lower case because otherwise have PUBMED and pubmed e.g. ERR1914274 and SRR9113719
-                d['study_links'] = json.dumps(list([
+                study_links = list([
                     {'db': x.find('DB').text.lower(), 'id': x.find('ID').text}
-                    for x in study_links_xrefs.findall('STUDY_LINK/XREF_LINK')]))
+                    for x in study_links_xrefs.findall('STUDY_LINK/XREF_LINK')])
+                # Record URL links like SRR7051324
+                for x in study_links_xrefs.findall('STUDY_LINK/URL_LINK'):
+                    study_links.append({
+                        'label': x.find('LABEL').text,
+                        'url': x.find('URL').text
+                    })
+                d['study_links'] = json.dumps(study_links)
             else:
                 d['study_links'] = []
             
