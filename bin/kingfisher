@@ -221,10 +221,14 @@ def main():
         '-p','--bioproject',
         help='BioProject IDs number(s) to download/extract from e.g. PRJNA621514 or SRP260223')
     annotate_parser.add_argument(
+        '-o','--output-file',
+        help='Output file to write to [default: stdout]'
+    )
+    annotate_parser.add_argument(
         '-f','--output-format','--output_format',
         help='Output format',
         default='human',
-        choices=['human','csv','tsv']
+        choices=['human','csv','tsv','json','feather','parquet']
     )
     annotate_parser.add_argument(
         '-a','--all-columns','--all_columns',
@@ -272,10 +276,14 @@ def main():
         )
         logging.info("Output files: {}".format(', '.join(output_files)))
     elif args.subparser_name == 'annotate':
+        if args.output_format in ('feather','parquet') and not args.output_file:
+            logging.error("--output-file is required when --output-format is {}".format(args.output_format))
+            sys.exit(1)
         kingfisher.annotate(
             run_identifiers = args.run_identifiers,
             run_identifiers_file = args.run_identifiers_list,
             bioproject_accession = args.bioproject,
+            output_file = args.output_file,
             output_format = args.output_format,
             all_columns = args.all_columns,
         )

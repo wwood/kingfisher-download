@@ -531,6 +531,7 @@ def annotate(**kwargs):
     run_identifiers = kwargs.pop('run_identifiers')
     run_identifiers_file = kwargs.pop('run_identifiers_file')
     bioproject_accession = kwargs.pop('bioproject_accession')
+    output_file = kwargs.pop('output_file')
     output_format = kwargs.pop('output_format')
     all_columns = kwargs.pop('all_columns')
 
@@ -555,10 +556,10 @@ def annotate(**kwargs):
     if metadata is None:
         logging.error("No runs to annotate")
         sys.exit(1)
-    _output_formatted_metadata(metadata, output_format, all_columns)
+    _output_formatted_metadata(metadata, output_file, output_format, all_columns)
 
 
-def _output_formatted_metadata(metadata, output_format, all_columns):
+def _output_formatted_metadata(metadata, output_file, output_format, all_columns):
     # default_columns = ['Run','SRAStudy','Gbp','LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']
     default_columns = [RUN_ACCESSION_KEY,STUDY_ACCESSION_KEY,'Gbp','library_strategy','library_selection','model',SAMPLE_NAME_KEY,'taxon_name']
 
@@ -567,7 +568,7 @@ def _output_formatted_metadata(metadata, output_format, all_columns):
         metadata_sorted = pd.concat(
             [
                 metadata_sorted,
-                pd.DataFrame({'Gbp': ["%.3f" % (bases/1e9) for bases in metadata_sorted[BASES_KEY]]})
+                pd.DataFrame({'Gbp': [round(bases/1e9, 3) for bases in metadata_sorted[BASES_KEY]]})
             ],
             axis=1)
         if all_columns:
@@ -577,6 +578,8 @@ def _output_formatted_metadata(metadata, output_format, all_columns):
         else:
             metadata_sorted = metadata_sorted[default_columns]
             return metadata_sorted
+
+    output_path = sys.stdout if output_file is None else output_file
 
     if output_format == 'human':
         to_print = []
@@ -596,24 +599,39 @@ def _output_formatted_metadata(metadata, output_format, all_columns):
                     for i, value in enumerate(metadata[col]):
                         to_print[i][col] = value
         to_print = sorted(to_print, key=lambda x: x[RUN_ACCESSION_KEY])
-        _printTable(to_print)
+        if output_path == sys.stdout:
+            _printTable(sys.stdout, to_print)
+        else:
+            with open(output_path, 'w') as f:
+                _printTable(f, to_print)
     elif output_format == 'csv':
         metadata_sorted = prepare_for_tsv_csv(metadata, default_columns, all_columns)
-        metadata_sorted.to_csv(sys.stdout, index=False)
+        metadata_sorted.to_csv(output_path, index=False)
     elif output_format == 'tsv':
         metadata_sorted = prepare_for_tsv_csv(metadata, default_columns, all_columns)
-        metadata_sorted.to_csv(sys.stdout, sep='\t', index=False)
+        metadata_sorted.to_csv(output_path, sep='\t', index=False)
+    elif output_format == 'json':
+        metadata_sorted = prepare_for_tsv_csv(metadata, default_columns, all_columns)
+        metadata_sorted.to_json(output_path, orient='records', indent=2)
+    elif output_format == 'feather':
+        metadata_sorted = prepare_for_tsv_csv(metadata, default_columns, all_columns)
+        with open(output_file,'wb') as f:
+            metadata_sorted.to_feather(f)
+    elif output_format == 'parquet':
+        metadata_sorted = prepare_for_tsv_csv(metadata, default_columns, all_columns)
+        with open(output_file,'wb') as f:
+            metadata_sorted.to_parquet(f, index=False)
     else:
         raise Exception("Unexpected output format: {}".format(output_format))
 
-def _printTable(myDict, colList=None):
+def _printTable(output_stream, myDict, colList=None):
    if not colList: colList = list(myDict[0].keys() if myDict else [])
    myList = [colList] # 1st row = header
    for item in myDict: myList.append([str(item[col] if item[col] is not None else '') for col in colList])
    colSize = [max(map(len,col)) for col in zip(*myList)]
    formatStr = ' | '.join(["{{:<{}}}".format(i) for i in colSize])
    myList.insert(1, ['-' * i for i in colSize]) # Seperating line
-   for item in myList: print(formatStr.format(*item))
+   for item in myList: print(formatStr.format(*item), file=output_stream)
 
 def _check_for_existing_files(run_identifier, output_format_possibilities, force):
     skip_download_and_extraction = False
