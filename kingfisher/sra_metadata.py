@@ -6,6 +6,7 @@ import logging
 import re
 import collections
 import json
+from tqdm import tqdm
 
 try:
     from StringIO import StringIO
@@ -227,59 +228,82 @@ class SraMetadata:
             self.print_xml(e, '{}{}'.format(p2, e.tag))
 
     def efetch_sra_from_accessions(self, accessions):
-        accessions = list(set(accessions))
-        if len(accessions) == 0:
+        all_accessions = list(set(accessions))
+        if len(all_accessions) == 0:
             return []
-        logging.info("Querying NCBI esearch for {} distinct accessions e.g. {}".format(
-            len(accessions), accessions[0]))
-        sra_ids = []
 
-        webenv = None
-        request_term = ' OR '.join(["{}[accn]".format(acc) for acc in accessions])
+        metadata_chunks = []
+        chunk_size = 500
 
-        retmax = len(accessions)+10
-        params=self.add_api_key({
-            "db": "sra",
-            "term": request_term,
-            "tool": "kingfisher",
-            "email": "kingfisher@github.com",
-            "retmax": retmax,
-            "usehistory": "y",
-            })
-        if webenv is None:
-            params['WebEnv'] = webenv
+        # Complicated calculation here.
+        num_chunks = len(all_accessions)/chunk_size
+        if num_chunks > int(num_chunks):
+            num_chunks = int(num_chunks) + 1
+        num_chunks = int(num_chunks)
 
-        res = self._retry_request(
-            "esearch from accessions", 
-            lambda: requests.post(
-                url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
-                data=params))
+        if len(all_accessions) > chunk_size:
+            logging.info("Querying for {} accessions in {} chunks".format(len(all_accessions), num_chunks))
+            accession_iter = tqdm(iterable_chunks(all_accessions, chunk_size), total=num_chunks)
+        else:
+            accession_iter = [all_accessions]
 
-        root = ET.fromstring(res.text)
-        if webenv is None:
-            webenv = root.find('WebEnv').text
-        id_list_node = root.find('IdList')
-        sra_ids = list(set([c.text for c in id_list_node]))
+        for accessions_plus in accession_iter:
+            accessions = [a for a in accessions_plus if a is not None]
 
-        if len(sra_ids) == 0:
-            logging.warning("Unable to find any accessions, from the list: {}".format(accessions))
-            return None
+            if num_chunks == 1:
+                logging.info("Querying NCBI esearch for {} distinct accessions e.g. {}".format(
+                    len(accessions), accessions[0]))
+            sra_ids = []
 
-        logging.info("Querying NCBI efetch for {} distinct IDs e.g. {}".format(
-            len(sra_ids), sra_ids[0]))
-        metadata = self.efetch_metadata_from_ids(webenv, accessions, len(sra_ids))
+            webenv = None
+            request_term = ' OR '.join(["{}[accn]".format(acc) for acc in accessions])
 
-        # Ensure all hits are found, and trim results to just those that are real hits
-        if RUN_ACCESSION_KEY not in metadata.columns:
-            raise Exception("No metadata could be retrieved")
+            retmax = len(accessions)+10
+            params=self.add_api_key({
+                "db": "sra",
+                "term": request_term,
+                "tool": "kingfisher",
+                "email": "kingfisher@github.com",
+                "retmax": retmax,
+                "usehistory": "y",
+                })
+            if webenv is None:
+                params['WebEnv'] = webenv
 
+            res = self._retry_request(
+                "esearch from accessions", 
+                lambda: requests.post(
+                    url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+                    data=params))
+
+            root = ET.fromstring(res.text)
+            if webenv is None:
+                webenv = root.find('WebEnv').text
+            id_list_node = root.find('IdList')
+            sra_ids = list(set([c.text for c in id_list_node]))
+
+            if len(sra_ids) == 0:
+                logging.warning("Unable to find any accessions, from the list: {}".format(accessions))
+                return None
+
+            if num_chunks == 1:
+                logging.info("Querying NCBI efetch for {} distinct IDs e.g. {}".format(
+                    len(sra_ids), sra_ids[0]))
+            metadata = self.efetch_metadata_from_ids(webenv, accessions, len(sra_ids))
+
+            # Ensure all hits are found, and trim results to just those that are real hits
+            if RUN_ACCESSION_KEY not in metadata.columns:
+                raise Exception("No metadata could be retrieved")
+
+            if len(metadata) != len(accessions):
+                found_runs = set(metadata[RUN_ACCESSION_KEY].to_list())
+                not_found = list([a for a in accessions if a not in found_runs])
+                logging.warning("Unable to find all accessions. The {} missing ones were: {}".format(
+                    len(not_found), not_found
+                ))
+            metadata_chunks.append(metadata)
+
+        metadata = pd.concat(metadata_chunks)
         metadata.sort_values([STUDY_ACCESSION_KEY,RUN_ACCESSION_KEY], inplace=True)
-
-        if len(metadata) != len(accessions):
-            found_runs = set(metadata[RUN_ACCESSION_KEY].to_list())
-            not_found = list([a for a in accessions if a not in found_runs])
-            logging.warning("Unable to find all accessions. The {} missing ones were: {}".format(
-                len(not_found), not_found
-            ))
 
         return metadata

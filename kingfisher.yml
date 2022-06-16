@@ -16,3 +16,4 @@ dependencies:
   - bird_tool_utils_python
   - awscli
   - pyarrow
+  - tqdm
