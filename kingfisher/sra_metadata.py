@@ -186,8 +186,10 @@ class SraMetadata:
                         'label': x.find('LABEL').text,
                         'url': x.find('URL').text
                     })
-                d['study_links'] = json.dumps(study_links)
+                # d['study_links'] = json.dumps(study_links)
+                d['study_links'] = study_links
             else:
+                # d['study_links'] = json.dumps([])
                 d['study_links'] = []
             
             # Account for the fact that multiple runs may be associated with

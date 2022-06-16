@@ -83,6 +83,11 @@ class Tests(unittest.TestCase):
         with tempfile.NamedTemporaryFile() as f:
             extern.run('{} annotate -r SRR13774710 --output-format parquet --output-file {}'.format(kingfisher, f.name))
             self.assertEqual(eg_df.to_dict(), pd.read_parquet(f.name).to_dict())
+    
+    def test_parquet_all_columns(self):
+        with tempfile.NamedTemporaryFile() as f:
+            extern.run('{} annotate -r SRR13774710 SRR7051324 --all-columns --output-format parquet --output-file {}'.format(kingfisher, f.name))
+            self.assertEqual(str(pd.read_parquet('test/data/2_accessions.annotate.pq').to_dict()), str(pd.read_parquet(f.name).to_dict()))
 
     def test_feather(self):
         with tempfile.NamedTemporaryFile() as f:
