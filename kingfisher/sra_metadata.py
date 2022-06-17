@@ -84,16 +84,18 @@ class SraMetadata:
 
         retmax = num_ids+10
         logging.debug("Running efetch ..")
-        res = requests.get(
-            url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
-            params=self.add_api_key({
-                "db": "sra",
-                "tool": "kingfisher",
-                "email": "kingfisher@github.com",
-                "webenv": webenv,
-                "query_key": 1
-                }),
-            )
+        res = self._retry_request(
+            'efetch_from_ids',
+            lambda: requests.get(
+                url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
+                params=self.add_api_key({
+                    "db": "sra",
+                    "tool": "kingfisher",
+                    "email": "kingfisher@github.com",
+                    "webenv": webenv,
+                    "query_key": 1
+                    }),
+                ))
         if not res.ok:
             raise Exception("HTTP Failure when requesting efetch from IDs: {}: {}".format(res, res.text))
 
@@ -187,11 +189,9 @@ class SraMetadata:
                         'label': x.find('LABEL').text,
                         'url': x.find('URL').text
                     })
-                # d['study_links'] = json.dumps(study_links)
-                d['study_links'] = study_links
+                d['study_links'] = json.dumps(study_links)
             else:
-                # d['study_links'] = json.dumps([])
-                d['study_links'] = []
+                d['study_links'] = json.dumps([])
             
             # Account for the fact that multiple runs may be associated with
             # this sample
