@@ -565,6 +565,13 @@ def _output_formatted_metadata(metadata, output_file, output_format, all_columns
 
     def prepare_for_tsv_csv(metadata, default_columns, all_columns):
         metadata_sorted = metadata.sort_values(RUN_ACCESSION_KEY)
+        # For very large data frames, pandas throws an error 'InvalidIndexError:
+        # Reindexing only valid with uniquely valued Index objects' when doing
+        # the pd.concat() below. We have to do that concat because a simple
+        # metadata_sorted['Gbp'] = ... gives a Performance warning. To get
+        # around this, we reset the index to a RangeIndex, which does not
+        # contain duplicates.
+        metadata_sorted.reset_index(drop=True, inplace=True)
         metadata_sorted = pd.concat(
             [
                 metadata_sorted,

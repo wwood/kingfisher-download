@@ -36,6 +36,7 @@ class SraMetadata:
         when OK, otherwise raising an Exception'''
 
         num_retries = 3
+        sleep_time = 60
         def retrying(i, num_retries=3):
             if i < num_retries-1:
                 logging.warning("Retrying request (retry {} of {})".format(i+1, num_retries-1))
@@ -45,11 +46,15 @@ class SraMetadata:
                 this_res = func()
                 if not this_res.ok:
                     logging.warning("Request not OK when {}: {}: {}".format(description, this_res, this_res.text))
+                    logging.warning("Sleeping for {} seconds before retrying".format(sleep_time))
+                    time.sleep(60)
                     retrying(i)
                 else:
                     return this_res
             except Exception as e:
                 logging.warning("Exception raised when {}: {}".format(description, e))
+                logging.warning("Sleeping for {} seconds before retrying".format(sleep_time))
+                time.sleep(60)
                 retrying(i)
         raise Exception("Failed to {} after {} attempts".format(description, num_retries))
 
