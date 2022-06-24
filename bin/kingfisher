@@ -18,7 +18,6 @@ from bird_tool_utils.people import *
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 import kingfisher
-from kingfisher.ena import DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION, DEFAULT_OSX_ASPERA_SSH_KEY_LOCATION
 
 def fix(help_string):
     multispace_re = re.compile('  *')
@@ -122,13 +121,8 @@ def main():
     )
     get_parser_download_args.add_argument(
         '--ascp-ssh-key', '--ascp_ssh_key',
-        help=fix('\"linux\" or \"osx\" for default paths used in each OS ({} and {} respectively), \
-            otherwise a path to the openssh key to used for aspera (i.e. the \
-            -i flag of ascp) [default: \'{}\']'.format(
-                DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION,
-                DEFAULT_OSX_ASPERA_SSH_KEY_LOCATION,
-                kingfisher.DEFAULT_ASPERA_SSH_KEY)),
-        default=kingfisher.DEFAULT_ASPERA_SSH_KEY)
+        help=fix('a path to the openssh key to used for aspera (i.e. the \
+            -i flag of ascp) [default: Use the one bundled with Kingfisher]'))
     get_parser_download_args.add_argument(
         '--ascp-args', '--ascp_args',
         help=fix('extra arguments to pass to ascp e.g. \'-k 2\' to resume with a \

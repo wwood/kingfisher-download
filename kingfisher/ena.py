@@ -4,9 +4,7 @@ import os
 
 import extern
 
-DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION = '$HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh'
-DEFAULT_OSX_ASPERA_SSH_KEY_LOCATION = '$HOME/Applications/Aspera Connect.app/Contents/\
-                Resources/asperaweb_id_dsa.openssh'
+DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','asperaweb_id_dsa.openssh')
 
 class EnaDownloader:
     def get_ftp_download_urls(self, run_id):
@@ -49,11 +47,9 @@ class EnaDownloader:
                 len(ftp_urls), ", ".join(ftp_urls)))
         return ftp_urls
 
-    def download_with_aspera(self, run_id, output_directory, quiet=False, ascp_args='', ssh_key='linux'):
-        if ssh_key == 'linux':
+    def download_with_aspera(self, run_id, output_directory, quiet=False, ascp_args='', ssh_key=None):
+        if ssh_key is None:
             ssh_key_file = DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION
-        elif ssh_key == 'osx':
-            ssh_key_file = DEFAULT_OSX_ASPERA_SSH_KEY_LOCATION
         else:
             ssh_key_file = ssh_key
         logging.info("Using aspera ssh key file: {}".format(ssh_key_file))
