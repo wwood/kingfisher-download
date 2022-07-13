@@ -86,7 +86,7 @@ def main():
         nargs='+')
     get_parser_common_options.add_argument(
         '--run-identifiers-list','--run_identifiers_list',
-        help='File containing a newline-separated list of run identifiers')
+        help='Text file containing a newline-separated list of run identifiers i.e. a 1 column CSV file.')
     get_parser_common_options.add_argument(
         '-p','--bioproject',
         help='BioProject IDs number(s) to download/extract from e.g. PRJNA621514 or SRP260223')
@@ -209,7 +209,7 @@ def main():
     )
     annotate_parser.add_argument(
         '--run-identifiers-list','--run_identifiers_list',
-        help='File containing newline-separated list of run identifiers',
+        help='Text file containing a newline-separated list of run identifiers i.e. a 1 column CSV file.',
     )
     annotate_parser.add_argument(
         '-p','--bioproject',
