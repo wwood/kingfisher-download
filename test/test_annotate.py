@@ -24,6 +24,7 @@
 import unittest
 import os.path
 import sys
+import math
 
 import extern
 import json
@@ -93,6 +94,22 @@ class Tests(unittest.TestCase):
         with tempfile.NamedTemporaryFile() as f:
             extern.run('{} annotate -r SRR13774710 --output-format feather --output-file {}'.format(kingfisher, f.name))
             self.assertEqual(eg_df.to_dict(), pd.read_feather(f.name).to_dict())
+
+    def test_bases_missing_field(self):
+        with tempfile.NamedTemporaryFile() as f:
+            extern.run('{} annotate -r ERR2178284 --output-format csv --output-file {}'.format(kingfisher, f.name))
+            expected = {'run': {0: 'ERR2178284'},
+                'study_accession': {0: 'ERP104812'},
+                'library_strategy': {0: 'WGS'},
+                'library_selection': {0: 'Hybrid Selection'},
+                'model': {0: 'Illumina HiSeq 2500'},
+                'sample_name': {0: 'STR486'},
+                'taxon_name': {0: 'Homo sapiens'}}
+            observed = pd.read_csv(f.name).to_dict()
+            self.assertTrue(math.isnan(observed['Gbp'][0]))
+            del observed['Gbp'] # nan != nan apparently
+            self.assertEqual(expected, observed)
+
 
 
 if __name__ == "__main__":

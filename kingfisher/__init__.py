@@ -575,7 +575,8 @@ def _output_formatted_metadata(metadata, output_file, output_format, all_columns
         metadata_sorted = pd.concat(
             [
                 metadata_sorted,
-                pd.DataFrame({'Gbp': [round(bases/1e9, 3) for bases in metadata_sorted[BASES_KEY]]})
+                pd.DataFrame({'Gbp': [
+                    round(bases/1e9, 3) if bases is not None else None for bases in metadata_sorted[BASES_KEY]]})
             ],
             axis=1)
         if all_columns:
@@ -595,7 +596,7 @@ def _output_formatted_metadata(metadata, output_file, output_format, all_columns
         for i, value in enumerate(metadata[STUDY_ACCESSION_KEY]):
             to_print[i][STUDY_ACCESSION_KEY] = value
         for i, value in enumerate(metadata[BASES_KEY]):
-            to_print[i]['Gbp'] = "%.3f" % (value/1e9)
+            to_print[i]['Gbp'] = "%.3f" % (value/1e9) if value is not None else None
         # for column in ['LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']:
         for column in ['library_strategy','library_selection','model',SAMPLE_NAME_KEY,'taxon_name']:
             for i, value in enumerate(metadata[column]):
