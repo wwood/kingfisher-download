@@ -66,7 +66,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
     extraction_threads = kwargs.pop('extraction_threads', DEFAULT_THREADS)
     hide_download_progress = kwargs.pop('hide_download_progress', False)
     prefetch_max_size = kwargs.pop('prefetch_max_size',None)
-
+    check_md5sums = kwargs.pop('check_md5sums', False)
     
 
     if len(kwargs) > 0:
@@ -274,12 +274,16 @@ def download_and_extract_one_run(run_identifier, **kwargs):
             elif method == 'ena-ascp':
                 result = EnaDownloader().download_with_aspera(run_identifier, '.',
                     ascp_args=ascp_args,
-                    ssh_key=ascp_ssh_key)
+                    ssh_key=ascp_ssh_key,
+                    check_md5sums=check_md5sums)
                 if result is not False:
                     downloaded_files = result
 
             elif method == 'ena-ftp':
-                result = EnaDownloader().download_with_curl(run_identifier, download_threads)
+                result = EnaDownloader().download_with_curl(
+                    run_identifier,
+                    download_threads,
+                    check_md5sums=check_md5sums)
                 if result is not False:
                     downloaded_files = result
 

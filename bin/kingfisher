@@ -171,6 +171,11 @@ def main():
             Kingfisher disables this. Use this option to reinstate this file size limit \
             e.g. --prefetch-max-size "1G" for a 1 GB limit \
             [default: not used]'))
+    get_parser_download_args.add_argument(
+        '--check-md5sums', '--check_md5sums',
+        help=fix('Check md5sums of downloaded files. This is only implemented for ena-ftp and ena-ascp download methods. \
+            [default: not used]'),
+        action='store_true')
 
     get_parser_extraction_args = get_parser.add_argument_group(title='further extraction options')
     add_extraction_args(get_parser_extraction_args)
@@ -258,6 +263,7 @@ def main():
             extraction_threads = args.extraction_threads,
             hide_download_progress = args.hide_download_progress,
             prefetch_max_size = args.prefetch_max_size,
+            check_md5sums = args.check_md5sums,
         )
     elif args.subparser_name == 'extract':
         output_files = kingfisher.extract(
