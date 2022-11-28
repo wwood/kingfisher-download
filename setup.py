@@ -41,7 +41,7 @@ setup(
       'requests',
       'tqdm',
       'pandas',
-      'bird_tool_utils_python',
+      'bird_tool_utils',
       'pyarrow',
     ],
     scripts=['bin/kingfisher'],
