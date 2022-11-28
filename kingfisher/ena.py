@@ -7,6 +7,8 @@ import hashlib
 
 import extern
 
+from .md5sum import MD5
+
 DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','asperaweb_id_dsa.openssh')
 
 class EnaFileReport:
@@ -17,7 +19,7 @@ class EnaFileReport:
 class EnaDownloader:
     def get_ftp_download_urls(self, run_id):
         # Get the textual representation of the run. We specifically need the
-        # fastq_ftp bit
+        # fastq_ftp bit, and the MD5
         logging.info("Querying ENA for FTP paths for {}..".format(run_id))
         query_url = "https://www.ebi.ac.uk/ena/portal/api/filereport?accession={}&" \
             "result=read_run&fields=fastq_ftp,fastq_md5".format(
@@ -86,7 +88,7 @@ class EnaDownloader:
                 logging.warn("Error downloading from ENA with ASCP: {}".format(e))
                 return False
             if check_md5sums:
-                if self.check_md5sum(output_file, md5):
+                if MD5.check_md5sum(output_file, md5):
                     logging.info("MD5sum OK for {}".format(output_file))
                 else:
                     logging.error("MD5sum failed for {}".format(output_file))
@@ -117,26 +119,11 @@ class EnaDownloader:
                 return False
             
             if check_md5sums:
-                if self.check_md5sum(output_file, md5):
+                if MD5.check_md5sum(output_file, md5):
                     logging.info("MD5sum OK for {}".format(output_file))
                 else:
                     logging.error("MD5sum failed for {}".format(output_file))
                     return False
             downloaded.append(output_file)
         return downloaded
-
-    def check_md5sum(self, file_path, expected_md5sum):
-        logging.debug("Checking md5sum for {} ..".format(file_path))
-        md5sum = self._md5(file_path)
-        if md5sum == expected_md5sum:
-            return True
-        else:
-            return False
-
-    def _md5(self, fname):
-        hash_md5 = hashlib.md5()
-        with open(fname, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                hash_md5.update(chunk)
-        return hash_md5.hexdigest()
 

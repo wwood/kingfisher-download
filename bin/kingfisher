@@ -173,7 +173,8 @@ def main():
             [default: not used]'))
     get_parser_download_args.add_argument(
         '--check-md5sums', '--check_md5sums',
-        help=fix('Check md5sums of downloaded files. This is only implemented for ena-ftp and ena-ascp download methods. \
+        help=fix('Check md5sums of downloaded files. This is only implemented for ena-ftp, ena-ascp and aws-http download methods. \
+            The prefetch, aws-cp and gcp-cp methods calculate checksums as part of the download process. \
             [default: not used]'),
         action='store_true')
 

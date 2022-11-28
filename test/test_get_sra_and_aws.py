@@ -224,7 +224,16 @@ class Tests(unittest.TestCase):
         with in_tempdir():
             extern.run('{} get -r SRR12118866 --force -f sra -m aws-cp'.format(kingfisher))
             self.assertTrue(os.path.exists('SRR12118866.sra'))     
-            self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)  
+            self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)
+
+    def test_aws_http_md5sums(self):
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 --force -f sra -m aws-http --check-md5sums 2>kingfisher_stderr'.format(kingfisher))
+            self.assertTrue(os.path.exists('SRR12118866.sra'))
+            self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)
+            with open('kingfisher_stderr') as f:
+                stderr = f.read()
+                self.assertTrue('MD5sum OK for SRR12118866.sra' in stderr)
 
 
 

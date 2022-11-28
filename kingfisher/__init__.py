@@ -14,6 +14,7 @@ from .ena import EnaDownloader
 from .location import Location, NcbiLocationJson
 from .exception import DownloadMethodFailed
 from .sra_metadata import *
+from .md5sum import MD5
 
 DEFAULT_ASPERA_SSH_KEY = 'linux'
 DEFAULT_OUTPUT_FORMAT_POSSIBILITIES = ['fastq','fastq.gz']
@@ -72,6 +73,8 @@ def download_and_extract_one_run(run_identifier, **kwargs):
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
 
+    if guess_aws_location and check_md5sums:
+        logging.warning("Guessing AWS location is not compatible with checking md5sums. Not carrying out md5sum checks for downloads from AWS.")
 
     if allow_paid:
         allowable_sources = ['s3', 'gcp']
@@ -178,6 +181,14 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                             logging.info("Found ODP link {}".format(odp_http_location.link()))
                             odp_link = odp_http_location.link()
                             downloaded_files = download_from_aws(odp_link, run_identifier, download_threads, method)
+                            if downloaded_files is not None and check_md5sums:
+                                for downloaded_file in downloaded_files:
+                                    # Is there always just 1 .sra file? There is only 1 md5sum
+                                    logging.info("Checking md5sum of downloaded file {} ..".format(downloaded_file))
+                                    if MD5.check_md5sum(downloaded_file, odp_http_location.md5sum()):
+                                        logging.info("MD5sum OK for {}".format(downloaded_file))
+                                    else:
+                                        logging.warning("MD5sum check failed for {}".format(downloaded_file))
                     else:
                         logging.warning("Method {} failed: No ODP URL could be found".format(method))
 

@@ -86,6 +86,18 @@ class Tests(unittest.TestCase):
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4117481)
             self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4945891)
+
+    def test_aria2_ena_fastq_gz_check_md5sum(self):
+        '''cannot test this in travis because conda aria2 is broken'''
+        with in_tempdir():
+            extern.run('{} get --download-threads 4 -r SRR12118866 -m ena-ftp -f fastq.gz --check-md5sums 2>kingfisher_stderr'.format(
+                kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4117481)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4945891)
+            with open('kingfisher_stderr') as f:
+                stderr = f.read()
+                self.assertTrue('MD5sum OK for SRR12118866_1.fastq.gz' in stderr)
+                self.assertTrue('MD5sum OK for SRR12118866_2.fastq.gz' in stderr)
         
 
 if __name__ == "__main__":

@@ -77,6 +77,9 @@ class AwsLocation:
     def link(self):
         return self.j['link']
 
+    def md5sum(self):
+        return self.object_json['md5']
+
 
 class GcpLocation:
     def __init__(self, object_json, location_json):
@@ -98,6 +101,9 @@ class GcpLocation:
                 return 'gs://{}/{}'.format(m[1],m[2])
         else:
             raise DownloadMethodFailed("Unsure how to copy from GCP location {}".format(self.j))
+
+    def md5sum(self):
+        return self.object_json['md5']
 
 
 class NcbiLocationJson:
