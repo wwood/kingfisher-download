@@ -51,6 +51,12 @@ class EnaDownloader:
 
         return EnaFileReport(ftp_urls, md5sums)
 
+    def _clean_incomplete_files(self, paths):
+        for path in paths:
+            if os.path.exists(path):
+                logging.info("Removing file that is either incomplete or part of an incomplete pair: {}".format(path))
+                os.remove(path)
+
     def download_with_aspera(self, run_id, output_directory, quiet=False, ascp_args='', ssh_key=None, check_md5sums=False):
         if ssh_key is None:
             ssh_key_file = DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION
@@ -86,12 +92,14 @@ class EnaDownloader:
                 extern.run(cmd)
             except Exception as e:
                 logging.warn("Error downloading from ENA with ASCP: {}".format(e))
+                self._clean_incomplete_files(output_files+[output_file])
                 return False
             if check_md5sums:
                 if MD5.check_md5sum(output_file, md5):
                     logging.info("MD5sum OK for {}".format(output_file))
                 else:
                     logging.error("MD5sum failed for {}".format(output_file))
+                    self._clean_incomplete_files(output_files+[output_file])
                     return False
             output_files.append(output_file)
         return output_files
@@ -116,6 +124,7 @@ class EnaDownloader:
                 subprocess.check_call(cmd, shell=True)
             except subprocess.CalledProcessError as e:
                 logging.warning("Method ena-ftp failed, error was {}".format(e))
+                self._clean_incomplete_files(downloaded+[output_file])
                 return False
             
             if check_md5sums:
@@ -123,6 +132,7 @@ class EnaDownloader:
                     logging.info("MD5sum OK for {}".format(output_file))
                 else:
                     logging.error("MD5sum failed for {}".format(output_file))
+                    self._clean_incomplete_files(downloaded+[output_file])
                     return False
             downloaded.append(output_file)
         return downloaded

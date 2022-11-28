@@ -117,50 +117,58 @@ def download_and_extract_one_run(run_identifier, **kwargs):
         for method in download_methods:
             logging.info("Attempting download method {} for run {} ..".format(method, run_identifier))
             if method == 'prefetch':
+                output_path = '{}.sra'.format(run_identifier)
                 try:
                     if prefetch_max_size is None:
                         prefetch_max_size_argument = '--max-size 0G'
                     else:
                         prefetch_max_size_argument = '--max-size {}'.format(prefetch_max_size)
-                    extern.run("prefetch {} -o {}.sra {}".format(
-                        prefetch_max_size_argument, run_identifier, run_identifier))
-                    downloaded_files = ['{}.sra'.format(run_identifier)]
+                    extern.run("prefetch {} -o {} {}".format(
+                        prefetch_max_size_argument, output_path, run_identifier))
+                    downloaded_files = [output_path]
                 except ExternCalledProcessError as e:
                     logging.warning("Method {} failed: Error was: {}".format(method, e))
+                    if os.path.exists(output_path):
+                        logging.info("Removing file {} because download failed ..".format(output_path))
+                        os.remove(f)
                 
             elif method == 'aws-http':
                 def download_from_aws(odp_link, run_identifier, download_threads, method):
+                    output_path = '{}.sra'.format(run_identifier)
                     try:
                         if download_threads > 1:
                             logging.info(
                                 "Downloading .SRA file from AWS Open Data Program HTTP link using aria2c ..")
                             verbosity_flag = '--quiet' if hide_download_progress else ''
                             # Redirect aria2c stdout to stderr so all logging of kingfisher is on stderr
-                            cmd = "aria2c {} -x{} -o {}.sra '{}' 1>&2".format(
-                                verbosity_flag, download_threads, run_identifier, odp_link)
+                            cmd = "aria2c {} -x{} -o {} '{}' 1>&2".format(
+                                verbosity_flag, download_threads, output_path, odp_link)
                             subprocess.check_call(cmd, shell=True)
                         else:
                             logging.info(
                                 "Downloading .SRA file from AWS Open Data Program HTTP link using curl ..")
                             verbosity_flag = '--silent --show-error' if hide_download_progress else ''
-                            cmd = "curl {} -o {}.sra '{}'".format(verbosity_flag, run_identifier, odp_link)
+                            cmd = "curl {} -o {} '{}'".format(verbosity_flag, output_path, odp_link)
                             subprocess.check_call(cmd, shell=True)
                         logging.info("Download finished, validating ..")
                         # A download with curl of a bad AWS address does not
                         # result in a non-zero exitstatus. Instead an XML
                         # document is returned. If it is XML, then download has
                         # failed.
-                        with open('{}.sra'.format(run_identifier),'rb') as f:
+                        with open(output_path,'rb') as f:
                             aws_failed = (f.read(8) != b'NCBI.sra')
 
                         if aws_failed:
                             logging.info("The file downloaded from AWS appears not to be a .sra file, deleting it, this download method failed")
-                            os.remove('{}.sra'.format(run_identifier))
+                            os.remove(output_path)
                             return None
                         else:
-                            return ['{}.sra'.format(run_identifier)]
+                            return [output_path]
                     except subprocess.CalledProcessError as e:
                         logging.warning("Method {} failed when downloading from {}: Error was: {}".format(method, odp_link, e))
+                        if os.path.exists(output_path):
+                            logging.info("Removing file {} because download failed ..".format(output_path))
+                            os.remove(f)
                         return None
 
                 if guess_aws_location:
@@ -203,14 +211,15 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                 )
 
                 # TODO: Sort so unpaid are first
+                output_path = '{}.sra'.format(run_identifier)
 
                 if len(s3_locations) > 0:
                     for s3_location in s3_locations:
                         logging.info("Found s3 link {}".format(s3_location.link()))
 
                         try:
-                            command = '{} {}.sra'.format(
-                                s3_location.s3_command_prefix(run_identifier), run_identifier
+                            command = '{} {}'.format(
+                                s3_location.s3_command_prefix(run_identifier), output_path
                             )
                             if aws_user_key_id:
                                 os.environ['AWS_ACCESS_KEY_ID'] = aws_user_key_id
@@ -219,17 +228,24 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                             logging.info("Downloading from S3..")
                             try:
                                 extern.run(command)
-                                downloaded_files = ['{}.sra'.format(run_identifier)]
+                                downloaded_files = [output_path]
                             except ExternCalledProcessError as e:
                                 logging.warning("Method {} failed: Error was: {}".format(method, e))
                         except DownloadMethodFailed as e:
                             logging.warning("Method {} failed, error was {}".format(
                                 method, e
                             ))
+                            if os.path.exists(output_path):
+                                logging.info("Removing file {} because download failed ..".format(output_path))
+                                os.remove(f)
                 else:
                     logging.warning("Method {} failed: No S3 location could be found".format(method))
+                    if os.path.exists(output_path):
+                        logging.info("Removing file {} because download failed ..".format(output_path))
+                        os.remove(f)
 
             elif method == 'gcp-cp':
+                output_path = '{}.sra'.format(run_identifier)
                 if 'gcp' in allowable_sources:
                     if ncbi_locations is None:
                         ncbi_locations = Location.get_ncbi_locations(run_identifier)
@@ -264,19 +280,23 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                             if not failed:
                                 try:
                                     gs_path = loc.gs_path()
-                                    command += ' cp {} {}.sra'.format(
-                                        gs_path, run_identifier
+                                    command += ' cp {} {}'.format(
+                                        gs_path, output_path
                                     )
                                     logging.info("Downloading from GCP..")
                                     try:
                                         extern.run(command)
-                                        downloaded_files = ['{}.sra'.format(run_identifier)]
+                                        downloaded_files = [output_path]
                                     except ExternCalledProcessError as e:
                                         logging.warning("Method {} failed: Error was: {}".format(method, e))
+                                        
                                 except DownloadMethodFailed as e:
                                     logging.warning("Method {} failed, error was {}".format(
                                         method, e
                                     ))
+                                    if os.path.exists(output_path):
+                                        logging.info("Removing file {} because download failed ..".format(output_path))
+                                        os.remove(f)
                     else:
                         logging.warning("Method {} failed: No GCP location could be found".format(method))
                 else:
