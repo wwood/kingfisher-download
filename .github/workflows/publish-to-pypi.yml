@@ -1,0 +1,19 @@
+name: Publish to PyPI
+on:
+  push:
+    # Pattern matched against refs/tags
+    tags:        
+      - '*'           # Push events to every tag not containing /
+jobs:
+  Publish-to-PyPI:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: casperdcl/deploy-pypi@v2
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          # pip: wheel -w dist/ --no-deps .
+          build: true
+          # only upload if a tag is pushed (otherwise just build & check)
+          upload: ${{ github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags') }}

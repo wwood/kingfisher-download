@@ -1,0 +1,12 @@
+---
+title: "Kingfisher"
+base_path: /kingfisher
+logo: kingfisher.png
+colors:
+  main: "#4185ad"
+navigation:
+  # - path: docs/usage
+  #   children: # Manually specify so in same order as default help msg
+  - path: docs/usage/get.md
+  - path: docs/usage/extract.md
+  - path: docs/usage/annotate.md
