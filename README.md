@@ -57,6 +57,8 @@ See https://www.ibm.com/aspera/connect/ or https://www.biostars.org/p/325010/
 
 ## Usage
 
+An online version of the help text is available at [https://wwood.github.io/kingfisher-download/](https://wwood.github.io/kingfisher-download/).
+
 For all modes, a full run-down of the functionality is available using the
 `--full-help` flag e.g. `kingfisher get --full-help`.
 
