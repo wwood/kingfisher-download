@@ -8,9 +8,6 @@ DESCRIPTION
 
 Download and extract sequence data from SRA or ENA
 
-OPTIONS
-=======
-
 COMMON OPTIONS
 ==============
 

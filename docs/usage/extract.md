@@ -8,9 +8,6 @@ DESCRIPTION
 
 extract .sra format files
 
-OPTIONS
-=======
-
 EXTRACTION OPTIONS
 ==================
 
