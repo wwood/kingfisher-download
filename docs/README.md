@@ -1,26 +1,38 @@
+Welcome.
+
 Kingfisher is a fast and flexible program for procurement of sequence files (and
 their annotations) from public data sources, including the European Nucleotide
 Archive (ENA), NCBI SRA, Amazon AWS and Google Cloud. It's input is one or more
 "Run" accessions e.g. DRR001970, or a BioProject accessions e.g. PRJNA621514 or
 SRP260223.
 
-It attempts to download data from a series of sources, which it attempts in
-order until one works. Then the downloaded data is converted to an output SRA /
-FASTQ / FASTA / GZIP file format as required. Both download and extraction
-phases are usually quicker than using the NCBI's SRA toolkit.
-
-This software was originally known as `ena-fast-download`. Kingfisher implements
-almost all of that tool's functionality, but also handles data sources other
-than ENA. See the usage section below for the equivalent invocation.
+In the `get` subcommand, kingfisher downloads data from a series of redundant
+sources, which it attempts in order until one works. The downloaded data is then
+converted to an output SRA / FASTQ / FASTA / GZIP file format as required. Both
+download and extraction phases can be quicker than using the NCBI's SRA toolkit.
+In particular, downloading from ENA means that FASTQ files are downloaded
+directly, so there is no need for the extraction step.
 
 If you are looking to download GenBank/RefSeq data instead, then you might try
 [ncbi-acc-download](https://github.com/kblin/ncbi-acc-download).
 
 ## Installation
 
-Kingfisher can be installed by installing its conda dependencies as follows. We
-are working towards a proper PyPI/conda release, but are not there yet - our
-apologies.
+### Installation through bioconda
+
+Kingfisher can be installed in the usual way through conda/bioconda e.g.
+
+```
+conda create -n kingfisher -c conda-forge -c bioconda kingfisher
+```
+
+Optionally, to use the `ena-ascp` method, an Aspera connect client is also required.
+See https://www.ibm.com/aspera/connect/ or https://www.biostars.org/p/325010/
+
+### Conda-based development environment
+
+Kingfisher can be installed by installing its conda dependencies as follows.
+Then it can be run from the source directory:
 
 ```
 git clone https://github.com/wwood/kingfisher-download
@@ -162,4 +174,6 @@ This key will then be used in all requests.
 
 ## License
 
-Copyright Ben Woodcroft 2019-2021. Licensed under GPL3+. See LICENSE.txt.
+Copyright Ben Woodcroft 2019-2022. Licensed under GPL3+. See LICENSE.txt.
+
+The source code is available at https://github.com/wwood/kingfisher-download
