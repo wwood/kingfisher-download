@@ -1,3 +1,5 @@
 gcp_service_key.json
 temp_test_data
 *pyc
+docker/Dockerfile
+docker/kingfisher.yml

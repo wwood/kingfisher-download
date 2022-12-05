@@ -1,0 +1,29 @@
+FROM mambaorg/micromamba:1.1.0
+
+# This dockerfile uses cached mounts, so to build use e.g.
+# $ DOCKER_BUILDKIT=1 docker build .
+
+WORKDIR /tmp
+
+# Install man-db. We cannot use conda because man-db doesn't appear to be
+# available in any conda repo
+USER root
+RUN apt update && apt install -y man-db
+USER $MAMBA_USER
+
+ADD kingfisher.yml /kingfisher.yml
+RUN --mount=type=cache,target=/opt/conda/pkgs micromamba install -c conda-forge -c bioconda -c defaults -n base git -f /kingfisher.yml
+RUN --mount=type=cache,target=/opt/conda/pkgs micromamba clean --all --yes
+# This is needed to activate the environment in the dockerfile
+ARG MAMBA_DOCKERFILE_ACTIVATE=1
+
+RUN git clone https://github.com/wwood/kingfisher-download && cd kingfisher-download && git checkout vKINGFISHER_VERSION
+
+# Run some tests
+RUN /tmp/kingfisher-download/bin/kingfisher --version
+RUN /tmp/kingfisher-download/bin/kingfisher get --full-help
+
+WORKDIR /data
+ENTRYPOINT ["/usr/local/bin/_entrypoint.sh","/tmp/kingfisher-download/bin/kingfisher"]
+
+# CMD /bin/bash
