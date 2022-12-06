@@ -187,4 +187,4 @@ This key will then be used in all requests.
 
 Copyright Ben Woodcroft 2019-2022. Licensed under GPL3+. See LICENSE.txt.
 
-The source code is available at https://github.com/wwood/kingfisher-download
+The source code is available at [https://github.com/wwood/kingfisher-download](https://github.com/wwood/kingfisher-download).
