@@ -29,6 +29,17 @@ conda create -n kingfisher -c conda-forge -c bioconda kingfisher
 Optionally, to use the `ena-ascp` method, an Aspera connect client is also required.
 See https://www.ibm.com/aspera/connect/ or https://www.biostars.org/p/325010/
 
+### Installation through DockerHub
+
+A docker image generated from the conda package is available on DockerHub. After installing Docker, run the following, replacing `[RELEASE_TAG]` with a tag from https://hub.docker.com/r/wwood/kingfisher/tags:
+```
+docker pull wwood/singlem:[RELEASE_TAG]
+```
+To download data into the current directory:
+```
+docker run -v `pwd`:/data wwood/kingfisher:[RELEASE_TAG] get -r SRR12118866 -m ena-ftp
+```
+
 ### Conda-based development environment
 
 Kingfisher can be installed by installing its conda dependencies as follows.
