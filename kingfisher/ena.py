@@ -9,7 +9,7 @@ import extern
 
 from .md5sum import MD5
 
-DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','asperaweb_id_dsa.openssh')
+DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION = os.path.join(os.path.dirname(os.path.realpath(__file__)),'data','asperaweb_id_dsa.openssh')
 
 class EnaFileReport:
     def __init__(self, file_paths, md5sums):
