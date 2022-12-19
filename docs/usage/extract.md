@@ -72,10 +72,3 @@ AUTHOR
 ======
 
 >     Ben J. Woodcroft, Centre for Microbiome Research, School of Biomedical Sciences, Faculty of Health, Queensland University of Technology <benjwoodcroft near gmail.com>
-
-EXAMPLES
-========
-
-Extract an SRA file to FASTQ.GZ format using 16 threads (default is 8)
-
-  **\$ kingfisher extract \--sra ERR1739691.sra -t 16 -f fastq.gz**

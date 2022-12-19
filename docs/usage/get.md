@@ -183,20 +183,3 @@ AUTHOR
 ======
 
 >     Ben J. Woodcroft, Centre for Microbiome Research, School of Biomedical Sciences, Faculty of Health, Queensland University of Technology <benjwoodcroft near gmail.com>
-
-EXAMPLES
-========
-
-Download .fastq.gz files of the run ERR1739691 from the ENA, or failing that, download an .sra file from the Amazon AWA Open Data Program and then convert to FASTQ (not FASTQ.GZ), or failing that use NCBI prefetch to download and convert that to FASTQ. Output files are put into the current working directory.
-
-  **\$ kingfisher get -r ERR1739691 -m ena-ascp aws-http prefetch**
-
-Download a .sra from GCP using a service account key with \"gcp cp\". Payment is required.
-
-  **\$ kingfisher get -r ERR1739691 -m gcp-cp -f sra
-    \--gcp-user-key-file sa-private-key.json \--allow-paid**
-
-Download a .sra from the free AWS open data program using 8 threads for download and extraction, coverting to FASTA.
-
-  **\$ kingfisher get -r ERR1739691 -m aws-http -f fasta
-    \--download-threads 8**
