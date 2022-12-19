@@ -9,7 +9,6 @@ import extern
 
 from .md5sum import MD5
 
-DEFAULT_PKG_ASPERA_SSH_KEY_LOCATION = os.path.join(os.path.dirname(__file__),'asperaweb_id_dsa.openssh')
 DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','asperaweb_id_dsa.openssh')
 
 class EnaFileReport:
@@ -60,9 +59,8 @@ class EnaDownloader:
 
     def download_with_aspera(self, run_id, output_directory, quiet=False, ascp_args='', ssh_key=None, check_md5sums=False):
         if ssh_key is None:
-            if os.path.exists(DEFAULT_PKG_ASPERA_SSH_KEY_LOCATION):
-                ssh_key_file = DEFAULT_PKG_ASPERA_SSH_KEY_LOCATION
-            elif os.path.exists(DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION):
+            logging.debug("Attempting to find aspera ssh key file at {}".format(DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION))
+            if os.path.exists(DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION):
                 ssh_key_file = DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION
             else:
                 raise Exception("Cannot find aspera ssh key file, please specify with --aspera-ssh-key")

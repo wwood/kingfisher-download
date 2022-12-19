@@ -32,9 +32,9 @@ setup(
     long_description_content_type='text/markdown',
     packages=['kingfisher'],
     package_data={'kingfisher': [
-            'asperaweb_id_dsa.openssh',
+            'data/asperaweb_id_dsa.openssh',
                        ]},
-    data_files=[(".", ["README.md", "LICENCE.txt",'asperaweb_id_dsa.openssh'])],
+    data_files=[(".", ["README.md", "LICENCE.txt"])],
     include_package_data=True,
     install_requires= [
       'extern',
