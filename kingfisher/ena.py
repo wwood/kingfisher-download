@@ -44,6 +44,10 @@ class EnaDownloader:
             return False
 
         for _, row in df.iterrows():
+            # e.g. ERR1346134 at time of writing. See https://github.com/wwood/kingfisher-download/issues/25
+            if isinstance(float("nan"), type(row['fastq_ftp'])):
+                logging.error("No ENA FTP download URLs found for run {}, cannot continue".format(run_id))
+                return False
             ftp_urls = row['fastq_ftp'].split(';')
             md5sums = row['fastq_md5'].split(';')
             logging.debug("Found {} FTP URLs for download: {}".format(
