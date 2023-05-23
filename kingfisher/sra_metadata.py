@@ -24,6 +24,7 @@ RUN_ACCESSION_KEY = 'run'
 BASES_KEY = 'bases'
 SAMPLE_NAME_KEY = 'sample_name'
 NCBI_API_KEY_ENV = 'NCBI_API_KEY'
+BIOPROJECT_ACCESSION_KEY = 'bioproject'
 
 class SraMetadata:
     def add_api_key(self, other_params):
@@ -138,6 +139,7 @@ class SraMetadata:
                     else:
                         d['submitter'] = "{}, {}".format(d['submitter'], v)
             d[STUDY_ACCESSION_KEY] = try_get(lambda: pkg.find('./STUDY').attrib['accession'])
+            d[BIOPROJECT_ACCESSION_KEY] = try_get(lambda: pkg.find('./STUDY/IDENTIFIERS/EXTERNAL_ID[@namespace="BioProject"]').text)
             d['study_alias'] = try_get(lambda: pkg.find('./STUDY').attrib['alias'])
             d['study_centre_project_name'] = try_get(lambda: pkg.find('./STUDY/DESCRIPTOR/CENTER_PROJECT_NAME').text)
             d['organisation'] = try_get(lambda: pkg.find('./Organization/Name').text)

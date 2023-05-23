@@ -596,7 +596,7 @@ def annotate(**kwargs):
 
 def _output_formatted_metadata(metadata, output_file, output_format, all_columns):
     # default_columns = ['Run','SRAStudy','Gbp','LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']
-    default_columns = [RUN_ACCESSION_KEY,STUDY_ACCESSION_KEY,'Gbp','library_strategy','library_selection','model',SAMPLE_NAME_KEY,'taxon_name']
+    default_columns = [RUN_ACCESSION_KEY,BIOPROJECT_ACCESSION_KEY,'Gbp','library_strategy','library_selection','model',SAMPLE_NAME_KEY,'taxon_name']
 
     def prepare_for_tsv_csv(metadata, default_columns, all_columns):
         metadata_sorted = metadata.sort_values(RUN_ACCESSION_KEY)
