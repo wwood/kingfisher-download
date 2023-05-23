@@ -3,13 +3,13 @@ title: Kingfisher extract
 ---
 # kingfisher extract
 
-DESCRIPTION
-===========
+# DESCRIPTION
 
 extract .sra format files
 
-EXTRACTION OPTIONS
-==================
+# OPTIONS
+
+# EXTRACTION OPTIONS
 
 **\--sra** *SRA*
 
@@ -45,8 +45,7 @@ Currently requires download from NCBI rather than ENA.
 
   Number of threads to use for extraction [default: 8]
 
-OTHER GENERAL OPTIONS
-=====================
+# OTHER GENERAL OPTIONS
 
 **\--debug**
 
@@ -68,14 +67,12 @@ OTHER GENERAL OPTIONS
 
   print longer help message in ROFF (manpage) format
 
-AUTHOR
-======
+# AUTHOR
 
 >     Ben J. Woodcroft, Centre for Microbiome Research, School of Biomedical Sciences, Faculty of Health, Queensland University of Technology <benjwoodcroft near gmail.com>
 
-EXAMPLES
-========
+# EXAMPLES
 
-Extract an SRA file to FASTQ.GZ format using 16 threads (default is 8)
+\\fB\$ kingfisher extract \--sra ERR1739691.sra -t 16 -f fastq.gz\\fR
 
-  **\$ kingfisher extract \--sra ERR1739691.sra -t 16 -f fastq.gz**
+  

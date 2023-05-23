@@ -3,13 +3,11 @@ title: Kingfisher annotate
 ---
 # kingfisher annotate
 
-DESCRIPTION
-===========
+# DESCRIPTION
 
 annotate runs by their metadata
 
-OPTIONS
-=======
+# OPTIONS
 
 **-r**, **\--run-identifiers** *RUN_IDENTIFIERS* [*RUN_IDENTIFIERS* \...]
 
@@ -37,8 +35,7 @@ OPTIONS
 
   Print all metadata columns [default: Print only a few select ones]
 
-OTHER GENERAL OPTIONS
-=====================
+# OTHER GENERAL OPTIONS
 
 **\--debug**
 
@@ -60,7 +57,6 @@ OTHER GENERAL OPTIONS
 
   print longer help message in ROFF (manpage) format
 
-AUTHOR
-======
+# AUTHOR
 
 >     Ben J. Woodcroft, Centre for Microbiome Research, School of Biomedical Sciences, Faculty of Health, Queensland University of Technology <benjwoodcroft near gmail.com>

@@ -12,8 +12,9 @@ dependencies:
   - requests
   - aria2>=1.36.0
   - sracat
-  - pytest # For testing only
   - bird_tool_utils_python
   - awscli
   - pyarrow
   - tqdm
+  - pytest # For testing only
+  - pandoc # For releasing only

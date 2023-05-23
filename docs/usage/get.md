@@ -3,13 +3,13 @@ title: Kingfisher get
 ---
 # kingfisher get
 
-DESCRIPTION
-===========
+# DESCRIPTION
 
 Download and extract sequence data from SRA or ENA
 
-COMMON OPTIONS
-==============
+# OPTIONS
+
+# COMMON OPTIONS
 
 **-r**, **\--run-identifiers** *RUN_IDENTIFIERS* [*RUN_IDENTIFIERS* \...]
 
@@ -39,8 +39,7 @@ COMMON OPTIONS
 | aws-cp   | Download .SRA file from AWS using aws s3 cp, which is then extracted with fasterq-dump. Does not usually require payment or an AWS account.        |
 | gcp-cp   | Download .SRA file from Google Cloud gsutil, which is then extracted with fasterq-dump. Requires payment and a Google Cloud account.               |
 
-FURTHER DOWNLOAD OPTIONS
-========================
+# FURTHER DOWNLOAD OPTIONS
 
 **\--download-threads** *DOWNLOAD_THREADS*
 
@@ -122,8 +121,7 @@ FURTHER DOWNLOAD OPTIONS
     aws-cp and gcp-cp methods calculate checksums as part of the
     download process. [default: not used]
 
-FURTHER EXTRACTION OPTIONS
-==========================
+# FURTHER EXTRACTION OPTIONS
 
 **-f**, **\--output-format-possibilities** {sra,fastq,fastq.gz,fasta,fasta.gz} [{sra,fastq,fastq.gz,fasta,fasta.gz} \...]
 
@@ -156,8 +154,7 @@ Currently requires download from NCBI rather than ENA.
   Number of threads to use when extracting .sra files. Ignored when
     \--unsorted is specified. [default: 8]
 
-OTHER GENERAL OPTIONS
-=====================
+# OTHER GENERAL OPTIONS
 
 **\--debug**
 
@@ -179,24 +176,22 @@ OTHER GENERAL OPTIONS
 
   print longer help message in ROFF (manpage) format
 
-AUTHOR
-======
+# AUTHOR
 
 >     Ben J. Woodcroft, Centre for Microbiome Research, School of Biomedical Sciences, Faculty of Health, Queensland University of Technology <benjwoodcroft near gmail.com>
 
-EXAMPLES
-========
+# EXAMPLES
 
-Download .fastq.gz files of the run ERR1739691 from the ENA, or failing that, download an .sra file from the Amazon AWA Open Data Program and then convert to FASTQ (not FASTQ.GZ), or failing that use NCBI prefetch to download and convert that to FASTQ. Output files are put into the current working directory.
+that, download an .sra file from the Amazon AWA Open Data Program and then
 
-  **\$ kingfisher get -r ERR1739691 -m ena-ascp aws-http prefetch**
+  convert to FASTQ (not FASTQ.GZ), or failing that use NCBI prefetch
+    to download and convert that to FASTQ. Output files are put into the
+    current working directory. \\fB\$ kingfisher get -r ERR1739691 -m
+    ena-ascp aws-http prefetch\\fR
 
-Download a .sra from GCP using a service account key with \"gcp cp\". Payment is required.
+Payment is required. \\fB\$ kingfisher get -r ERR1739691 -m gcp-cp -f sra \--gcp-
 
-  **\$ kingfisher get -r ERR1739691 -m gcp-cp -f sra
-    \--gcp-user-key-file sa-private-key.json \--allow-paid**
-
-Download a .sra from the free AWS open data program using 8 threads for download and extraction, coverting to FASTA.
-
-  **\$ kingfisher get -r ERR1739691 -m aws-http -f fasta
-    \--download-threads 8**
+  user-key-file sa-private-key.json \--allow-paid\\fR .TP Download a
+    .sra from the free AWS open data program using 8 threads for
+    download and extraction, coverting to FASTA. \\fB\$ kingfisher get
+    -r ERR1739691 -m aws-http -f fasta \--download-threads 8\\fR
