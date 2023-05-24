@@ -12,7 +12,7 @@ dependencies:
   - requests
   - aria2>=1.36.0
   - sracat
-  - bird_tool_utils_python
+  - bird_tool_utils_python >=0.4.1
   - awscli
   - pyarrow
   - tqdm
