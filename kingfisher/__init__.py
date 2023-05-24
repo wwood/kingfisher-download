@@ -595,7 +595,7 @@ def annotate(**kwargs):
 
 
 def _output_formatted_metadata(metadata, output_file, output_format, all_columns):
-    # default_columns = ['Run','SRAStudy','Gbp','LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']
+    # NOTE: If changing this default set, also need to change the default set in human readable output below too.
     default_columns = [RUN_ACCESSION_KEY,BIOPROJECT_ACCESSION_KEY,'Gbp','library_strategy','library_selection','model',SAMPLE_NAME_KEY,'taxon_name']
 
     def prepare_for_tsv_csv(metadata, default_columns, all_columns):
@@ -628,8 +628,8 @@ def _output_formatted_metadata(metadata, output_file, output_format, all_columns
         to_print = []
         for value in metadata[RUN_ACCESSION_KEY]:
             to_print.append({RUN_ACCESSION_KEY: value})
-        for i, value in enumerate(metadata[STUDY_ACCESSION_KEY]):
-            to_print[i][STUDY_ACCESSION_KEY] = value
+        for i, value in enumerate(metadata[BIOPROJECT_ACCESSION_KEY]):
+            to_print[i][BIOPROJECT_ACCESSION_KEY] = value
         for i, value in enumerate(metadata[BASES_KEY]):
             to_print[i]['Gbp'] = "%.3f" % (value/1e9) if value is not None else None
         # for column in ['LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']:
