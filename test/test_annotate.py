@@ -44,23 +44,23 @@ class Tests(unittest.TestCase):
     
     def test_one_sample_annotate(self):
         self.assertEqual(
-            'run        | study_accession | Gbp   | library_strategy | library_selection | model               | sample_name | taxon_name\n' \
-            '---------- | --------------- | ----- | ---------------- | ----------------- | ------------------- | ----------- | ----------\n' \
-            'ERR1739691 | ERP017539       | 2.382 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_1       | metagenome\n',
+            'run        | bioproject | Gbp   | library_strategy | library_selection | model               | sample_name | taxon_name\n' \
+            '---------- | ---------- | ----- | ---------------- | ----------------- | ------------------- | ----------- | ----------\n' \
+            'ERR1739691 | PRJEB15706 | 2.382 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_1       | metagenome\n',
             extern.run('{} annotate -r ERR1739691 --debug'.format(kingfisher)))
 
     def test_one_project_annotate(self):
-        self.assertEqual('run        | study_accession | Gbp   | library_strategy | library_selection | model               | sample_name | taxon_name\n' \
-        '---------- | --------------- | ----- | ---------------- | ----------------- | ------------------- | ----------- | ----------\n' \
-        'ERR1739691 | ERP017539       | 2.382 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_1       | metagenome\n' \
-        'ERR1739692 | ERP017539       | 2.382 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_2       | metagenome\n' \
-        'ERR1739693 | ERP017539       | 2.364 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_3       | metagenome\n' \
-        'ERR1739694 | ERP017539       | 2.501 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_4       | metagenome\n' \
-        'ERR1739695 | ERP017539       | 2.379 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_5       | metagenome\n' \
-        'ERR1739696 | ERP017539       | 2.351 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_6       | metagenome\n' \
-        'ERR1739697 | ERP017539       | 2.524 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_7       | metagenome\n' \
-        'ERR1739698 | ERP017539       | 2.358 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_8       | metagenome\n' \
-        'ERR1739699 | ERP017539       | 2.465 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_9       | metagenome\n',
+        self.assertEqual('run        | bioproject | Gbp   | library_strategy | library_selection | model               | sample_name | taxon_name\n' \
+        '---------- | ---------- | ----- | ---------------- | ----------------- | ------------------- | ----------- | ----------\n' \
+        'ERR1739691 | PRJEB15706 | 2.382 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_1       | metagenome\n' \
+        'ERR1739692 | PRJEB15706 | 2.382 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_2       | metagenome\n' \
+        'ERR1739693 | PRJEB15706 | 2.364 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_3       | metagenome\n' \
+        'ERR1739694 | PRJEB15706 | 2.501 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_4       | metagenome\n' \
+        'ERR1739695 | PRJEB15706 | 2.379 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_5       | metagenome\n' \
+        'ERR1739696 | PRJEB15706 | 2.351 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_6       | metagenome\n' \
+        'ERR1739697 | PRJEB15706 | 2.524 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_7       | metagenome\n' \
+        'ERR1739698 | PRJEB15706 | 2.358 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_8       | metagenome\n' \
+        'ERR1739699 | PRJEB15706 | 2.465 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_9       | metagenome\n',
             extern.run('{} annotate -p PRJEB15706 --debug'.format(kingfisher)))
 
     def test_one_sample_annotate_csv(self):
