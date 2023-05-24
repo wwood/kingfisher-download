@@ -27,11 +27,11 @@ conda create -n kingfisher -c conda-forge -c bioconda kingfisher
 ```
 
 Optionally, to use the `ena-ascp` method, an Aspera connect client is also required.
-See https://www.ibm.com/aspera/connect/ or https://www.biostars.org/p/325010/
+See [https://www.ibm.com/aspera/connect/](https://www.ibm.com/aspera/connect/) or [https://www.biostars.org/p/325010/](https://www.biostars.org/p/325010/).
 
 ### Installation through DockerHub
 
-A docker image generated from the conda package is available on DockerHub. After installing Docker, run the following, replacing `[RELEASE_TAG]` with a tag from https://hub.docker.com/r/wwood/kingfisher/tags:
+A docker image generated from the conda package is available on DockerHub. After installing Docker, run the following, replacing `[RELEASE_TAG]` with a tag from [https://hub.docker.com/r/wwood/kingfisher/tags](https://hub.docker.com/r/wwood/kingfisher/tags):
 ```
 docker pull wwood/kingfisher:[RELEASE_TAG]
 ```
@@ -56,7 +56,7 @@ kingfisher -h
 ```
 
 Optionally, to use the `ena-ascp` method, an Aspera connect client is also required.
-See https://www.ibm.com/aspera/connect/ or https://www.biostars.org/p/325010/
+See [https://www.ibm.com/aspera/connect/](https://www.ibm.com/aspera/connect/) or [https://www.biostars.org/p/325010/](https://www.biostars.org/p/325010/).
 
 @MakeTheBrainHappy implemented an example installation (and usage) guide in [Google Colaboratory](https://colab.research.google.com/drive/1k3RC-WbVAAl6h8yXtfEhwqCAvCMHspzz?usp=sharing) and [Jupyter Notebook](https://github.com/MakeTheBrainHappy/kingfisher-cloud).
 
@@ -115,7 +115,7 @@ In `get` mode, there are several ways to procure the data:
 |`gcp-cp`|Download .SRA file from Google Cloud `gsutil`, which is then extracted with fasterq-dump. Requires payment and a Google Cloud account.|
 
 The `ena-ascp` method of this tool was built based on the very helpful bio-stars
-thread https://www.biostars.org/p/325010/ written by @ATpoint. To find run
+[thread](https://www.biostars.org/p/325010/) written by @ATpoint. To find run
 identifiers to be used as input to kingfisher, you might find the [SRA
 explorer](https://ewels.github.io/sra-explorer/) site helpful.
 
