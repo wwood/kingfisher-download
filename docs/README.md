@@ -33,7 +33,7 @@ See https://www.ibm.com/aspera/connect/ or https://www.biostars.org/p/325010/
 
 A docker image generated from the conda package is available on DockerHub. After installing Docker, run the following, replacing `[RELEASE_TAG]` with a tag from https://hub.docker.com/r/wwood/kingfisher/tags:
 ```
-docker pull wwood/singlem:[RELEASE_TAG]
+docker pull wwood/kingfisher:[RELEASE_TAG]
 ```
 To download data into the current directory:
 ```
@@ -94,12 +94,12 @@ create two files `ERR1739691_1.fastq.gz` and `ERR1739691_2.fastq.gz`.
 
 ```
 $ kingfisher annotate -r ERR1739691
-Run        | SRAStudy  | Gbp   | LibraryStrategy | LibrarySelection | Model               | SampleName   | ScientificName
----------- | --------- | ----- | --------------- | ---------------- | ------------------- | ------------ | --------------
-ERR1739691 | ERP017539 | 2.382 | WGS             | RANDOM           | Illumina HiSeq 2500 | SAMEA4497179 | metagenome    
+run        | bioproject | Gbp   | library_strategy | library_selection | model               | sample_name | taxon_name
+---------- | ---------- | ----- | ---------------- | ----------------- | ------------------- | ----------- | ----------
+ERR1739691 | PRJEB15706 | 2.382 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_1       | metagenome
 ```
 A fuller set of information is available with `--all-columns` and the table can
-also be output as comma- or tab- separated values using the `-f` flag.
+also be output in CSV, TSV, JSON, feather or parquet formats using the `-f` flag.
 
 ## Method details
 
@@ -185,6 +185,6 @@ This key will then be used in all requests.
 
 ## License
 
-Copyright Ben Woodcroft 2019-2022. Licensed under GPL3+. See LICENSE.txt.
+Copyright Ben Woodcroft 2019-2023. Licensed under GPL3+. See LICENSE.txt.
 
 The source code is available at [https://github.com/wwood/kingfisher-download](https://github.com/wwood/kingfisher-download).
