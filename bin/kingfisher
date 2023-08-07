@@ -214,7 +214,7 @@ def main():
         nargs='+',
     )
     annotate_parser.add_argument(
-        '--run-identifiers-list','--run_identifiers_list',
+        '--run-identifiers-list','--run_identifiers_list','--run-accession-list','--run_accession_list','--run-identifiers-list','--run_identifiers_list',
         help='Text file containing a newline-separated list of run identifiers i.e. a 1 column CSV file.',
     )
     annotate_parser.add_argument(

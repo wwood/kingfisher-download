@@ -13,7 +13,7 @@ annotate runs by their metadata
 
   Run number to download/extract e.g. ERR1739691
 
-**\--run-identifiers-list** *RUN_IDENTIFIERS_LIST*
+**\--run-identifiers-list**, **\--run-accession-list**, **\--run-identifiers-list** *RUN_IDENTIFIERS_LIST*
 
   Text file containing a newline-separated list of run identifiers
     i.e. a 1 column CSV file.
