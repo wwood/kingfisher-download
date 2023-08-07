@@ -13,8 +13,9 @@ download and extraction phases can be quicker than using the NCBI's SRA toolkit.
 In particular, downloading from ENA means that FASTQ files are downloaded
 directly, so there is no need for the extraction step.
 
-If you are looking to download GenBank/RefSeq data instead, then you might try
-[ncbi-acc-download](https://github.com/kblin/ncbi-acc-download).
+If you are looking to download GenBank/RefSeq data instead, then you might try [NCBI datasets](https://www.ncbi.nlm.nih.gov/datasets) or [ncbi-acc-download](https://github.com/kblin/ncbi-acc-download).
+
+In the `annotation` subcommand, metadata about the run(s) is downloaded from NCBI and output in one of several formats e.g. human-readable, CSV, TSV, JSON, feather or parquet. By default, a small amount of metadata is downloaded - more details can be output using the `--all-columns` flag.
 
 ## Installation
 
