@@ -130,6 +130,8 @@ class SraMetadata:
             d['library_strategy'] = try_get(lambda: l.find('LIBRARY_STRATEGY').text)
             d['library_source'] = try_get(lambda: l.find('LIBRARY_SOURCE').text)
             d['library_selection'] = try_get(lambda: l.find('LIBRARY_SELECTION').text)
+            d['library_layout'] = try_get(lambda: l.find('LIBRARY_LAYOUT')[0].tag)
+            d['platform'] = try_get(lambda: pkg.find('./EXPERIMENT/PLATFORM')[0].tag)
             d['model'] = try_get(lambda: pkg.find('./EXPERIMENT/PLATFORM/')[0].text)
             d['submitter'] = ''
             for k, v in pkg.find('./SUBMISSION').attrib.items():
@@ -156,6 +158,8 @@ class SraMetadata:
             d['sample_description'] = try_get(lambda: pkg.find('./SAMPLE/DESCRIPTION').text.replace('\r',''))
             d['sample_alias'] = try_get(lambda: pkg.find('./SAMPLE').attrib['alias'])
             d['sample_accession'] = try_get(lambda: pkg.find('./SAMPLE').attrib['accession'])
+            d['biosample'] = try_get(lambda: pkg.find('./SAMPLE/IDENTIFIERS/EXTERNAL_ID[@namespace="BioSample"]').text)
+            d['sample_title'] = try_get(lambda: pkg.find('./SAMPLE/TITLE').text)
             d['taxon_name'] = try_get(lambda: pkg.find('./SAMPLE/SAMPLE_NAME/SCIENTIFIC_NAME').text)
             sample_sample_name = None
             sample_title = None
