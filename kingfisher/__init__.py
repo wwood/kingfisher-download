@@ -123,7 +123,13 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                         prefetch_max_size_argument = '--max-size 0G'
                     else:
                         prefetch_max_size_argument = '--max-size {}'.format(prefetch_max_size)
-                    extern.run("prefetch {} -o {} {}".format(
+                    # If we only need FASTA format, we do not need to download quality information
+                    if 'fasta' in output_format_possibilities or 'fasta.gz' in output_format_possibilities:
+                        qual_arg = '--eliminate-quals'
+                    else:
+                        qual_arg = ''
+                    extern.run("prefetch {} {} -o {} {}".format(
+                        qual_arg,
                         prefetch_max_size_argument, output_path, run_identifier))
                     downloaded_files = [output_path]
                 except ExternCalledProcessError as e:
@@ -389,7 +395,7 @@ def extract(**kwargs):
     force = kwargs.pop('force', False)
     unsorted = kwargs.pop('unsorted', False)
     stdout = kwargs.pop('stdout', False)
-    threads = kwargs.pop('threads',DEFAULT_THREADS)
+    threads = kwargs.pop('threads', DEFAULT_THREADS)
 
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
