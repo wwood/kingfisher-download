@@ -98,7 +98,7 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10122654)
             self.assertFalse(os.path.exists('SRR12118866.fasta'))
 
-    def test_unsorted_extract_file_outputs(self):
+    def test_unsorted_extract_file_outputs_fasta_uncompressed(self):
         sra = f"test/data/SRR12118866.sra"
 
         if os.path.exists('SRR12118866_1.fasta'):
@@ -113,6 +113,14 @@ class Tests(unittest.TestCase):
         os.remove('SRR12118866_1.fasta')
         os.remove('SRR12118866_2.fasta')
 
+    def test_unsorted_extract_file_outputs_fasta_gz(self):
+        sra = f"test/data/SRR12118866.sra"
+
+        if os.path.exists('SRR12118866_1.fasta.gz'):
+            os.remove('SRR12118866_1.fasta.gz')
+        if os.path.exists('SRR12118866_2.fasta.gz'):
+            os.remove('SRR12118866_2.fasta.gz')
+
         extern.run('{} extract --sra {} --output-format-possibilities fasta.gz --unsorted'.format(kingfisher, sra))
         self.assertEqual('fb284c28aac4513249b196ec75dc3c8d  -\n', extern.run('pigz -cd SRR12118866_1.fasta.gz |md5sum'))
         self.assertEqual('311f8898bd6d575ae3ec6a7188b08836  -\n', extern.run('pigz -cd SRR12118866_2.fasta.gz |md5sum'))
@@ -120,6 +128,13 @@ class Tests(unittest.TestCase):
         os.remove('SRR12118866_1.fasta.gz')
         os.remove('SRR12118866_2.fasta.gz')
 
+    def test_unsorted_extract_file_outputs_fastq_uncompressed(self):
+        sra = f"test/data/SRR12118866.sra"
+
+        if os.path.exists('SRR12118866_1.fastq'):
+            os.remove('SRR12118866_1.fastq')
+        if os.path.exists('SRR12118866_2.fastq'):
+            os.remove('SRR12118866_2.fastq')
         extern.run('{} extract --sra {} --output-format-possibilities fastq --unsorted'.format(kingfisher, sra))
         self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==19662366)
         self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==19662366)
@@ -127,6 +142,13 @@ class Tests(unittest.TestCase):
         os.remove('SRR12118866_1.fastq')
         os.remove('SRR12118866_2.fastq')
 
+    def test_unsorted_extract_file_outputs_fastq_gz(self):
+        sra = f"test/data/SRR12118866.sra"
+
+        if os.path.exists('SRR12118866_1.fastq.gz'):
+            os.remove('SRR12118866_1.fasta')
+        if os.path.exists('SRR12118866_2.fastq.gz'):
+            os.remove('SRR12118866_2.fasta')
         extern.run('{} extract --sra {} --output-format-possibilities fastq.gz --unsorted'.format(kingfisher, sra))
         self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4009949)
         self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4834456)
