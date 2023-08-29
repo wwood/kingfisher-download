@@ -31,4 +31,4 @@ jobs:
             # ascp does not work in bare conda env, so don't run tests
             echo key is $NCBI_API_KEY && \
             rm test/test_ena.py && \
-            pytest
+            pytest -v --timeout=600

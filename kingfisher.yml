@@ -17,4 +17,5 @@ dependencies:
   - pyarrow
   - tqdm
   - pytest # For testing only
+  - pytest-timeout # For testing only
   - pandoc # For releasing only
