@@ -308,6 +308,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                     ssh_key=ascp_ssh_key,
                     check_md5sums=check_md5sums)
                 if result is not False:
+                    gzip_test_files(result)
                     downloaded_files = result
 
             elif method == 'ena-ftp':
@@ -316,6 +317,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                     download_threads,
                     check_md5sums=check_md5sums)
                 if result is not False:
+                    gzip_test_files(result)
                     downloaded_files = result
 
             else:
@@ -561,6 +563,16 @@ def extract(**kwargs):
                         output_files.append(f)
 
     return output_files
+
+def gzip_test_files(gzip_files):
+    """
+    Run "pigz -t" on each result file, to check that it is a valid gzip file.
+
+    Assumes the input is a list of paths of gzip files
+    """
+    for f in gzip_files:
+        logging.info("Verifying gzip file {} ..".format(f))
+        extern.run("pigz -t '{}'".format(f))
 
 def annotate(**kwargs):
     run_identifiers = kwargs.pop('run_identifiers')
