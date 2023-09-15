@@ -110,6 +110,14 @@ class Tests(unittest.TestCase):
             del observed['Gbp'] # nan != nan apparently
             self.assertEqual(expected, observed)
 
+    def test_multiple_bioprojects(self):
+        expected = """run         | bioproject  | Gbp    | library_strategy | library_selection | model                 | sample_name | taxon_name        
+----------- | ----------- | ------ | ---------------- | ----------------- | --------------------- | ----------- | ------------------
+SRR11703773 | PRJNA621515 | 15.264 | WGS              | RANDOM            | Illumina NovaSeq 6000 | GNNTP       | wetland metagenome
+SRR11703788 | PRJNA621514 | 21.045 | WGS              | RANDOM            | Illumina NovaSeq 6000 | GNNTO       | wetland metagenome
+"""
+        stdout = extern.run('{} annotate --bioprojects PRJNA621515 PRJNA621514'.format(kingfisher))
+        self.assertEqual(stdout, expected)
 
 
 if __name__ == "__main__":

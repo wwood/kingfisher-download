@@ -88,7 +88,7 @@ def main():
         '--run-identifiers-list','--run_identifiers_list',
         help='Text file containing a newline-separated list of run identifiers i.e. a 1 column CSV file.')
     get_parser_common_options.add_argument(
-        '-p','--bioproject',
+        '-p','--bioprojects', nargs='+',
         help='BioProject IDs number(s) to download/extract from e.g. PRJNA621514 or SRP260223')
     
     get_parser_common_options.add_argument(
@@ -218,7 +218,7 @@ def main():
         help='Text file containing a newline-separated list of run identifiers i.e. a 1 column CSV file.',
     )
     annotate_parser.add_argument(
-        '-p','--bioproject',
+        '-p','--bioprojects', nargs='+',
         help='BioProject IDs number(s) to download/extract from e.g. PRJNA621514 or SRP260223')
     annotate_parser.add_argument(
         '-o','--output-file',
@@ -244,7 +244,7 @@ def main():
         kingfisher.download_and_extract(
             run_identifiers = args.run_identifiers,
             run_identifiers_file = args.run_identifiers_list,
-            bioproject_accession = args.bioproject,
+            bioproject_accessions = args.bioprojects,
             download_methods = args.download_methods,
             output_format_possibilities = args.output_format_possibilities,
             force = args.force,
@@ -283,7 +283,7 @@ def main():
         kingfisher.annotate(
             run_identifiers = args.run_identifiers,
             run_identifiers_file = args.run_identifiers_list,
-            bioproject_accession = args.bioproject,
+            bioproject_accessions = args.bioprojects,
             output_file = args.output_file,
             output_format = args.output_format,
             all_columns = args.all_columns,

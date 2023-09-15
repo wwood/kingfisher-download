@@ -3,7 +3,6 @@ import time
 import requests
 import xml.etree.ElementTree as ET
 import logging
-import re
 import collections
 import json
 from tqdm import tqdm
@@ -60,13 +59,15 @@ class SraMetadata:
         raise Exception("Failed to {} after {} attempts".format(description, num_retries))
 
 
-    def fetch_runs_from_bioproject(self, bioproject_accession):
+    def fetch_runs_from_bioprojects(self, bioproject_accessions):
         retmax = 10000
+        query_string = " OR ".join(["{}[BioProject]".format(bioproject_accession) for bioproject_accession in bioproject_accessions])
+        logging.debug("Querying with string: {}".format(query_string))
         res = requests.get(
             url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
             params=self.add_api_key({
                 "db": "sra",
-                "term": "{}[BioProject]".format(bioproject_accession),
+                "term": query_string,
                 "tool": "kingfisher",
                 "email": "kingfisher@github.com",
                 "retmax": retmax,

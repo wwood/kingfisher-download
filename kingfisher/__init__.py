@@ -28,16 +28,16 @@ def download_and_extract(**kwargs):
     '''
     run_identifiers = kwargs.pop('run_identifiers')
     run_identifiers_file = kwargs.pop('run_identifiers_file')
-    bioproject_accession = kwargs.pop('bioproject_accession')
+    bioproject_accessions = kwargs.pop('bioproject_accessions')
     num_inputs = 0
     if run_identifiers is not None: num_inputs += 1
     if run_identifiers_file is not None: num_inputs += 1
-    if bioproject_accession is not None: num_inputs += 1
+    if bioproject_accessions is not None: num_inputs += 1
     if num_inputs != 1:
         raise Exception("Must specify exactly one input type: --run-identifiers, --bioproject_accession or --run-identifiers-list")
 
-    if bioproject_accession is not None:
-        run_identifiers = SraMetadata().fetch_runs_from_bioproject(bioproject_accession)
+    if bioproject_accessions is not None:
+        run_identifiers = SraMetadata().fetch_runs_from_bioprojects(bioproject_accessions)
         logging.debug("Found {} run(s) to annotate".format(len(run_identifiers)))
     if run_identifiers_file is not None:
         with open(run_identifiers_file) as f:
@@ -577,7 +577,7 @@ def gzip_test_files(gzip_files):
 def annotate(**kwargs):
     run_identifiers = kwargs.pop('run_identifiers')
     run_identifiers_file = kwargs.pop('run_identifiers_file')
-    bioproject_accession = kwargs.pop('bioproject_accession')
+    bioproject_accessions = kwargs.pop('bioproject_accessions')
     output_file = kwargs.pop('output_file')
     output_format = kwargs.pop('output_format')
     all_columns = kwargs.pop('all_columns')
@@ -585,12 +585,12 @@ def annotate(**kwargs):
     num_inputs = 0
     if run_identifiers is not None: num_inputs += 1
     if run_identifiers_file is not None: num_inputs += 1
-    if bioproject_accession is not None: num_inputs += 1
+    if bioproject_accessions is not None: num_inputs += 1
     if num_inputs != 1:
         raise Exception("Must specify exactly one input type: --run-identifiers, --bioproject_accession or --run-identifiers-list")
     
-    if bioproject_accession is not None:
-        run_identifiers = SraMetadata().fetch_runs_from_bioproject(bioproject_accession)
+    if bioproject_accessions is not None:
+        run_identifiers = SraMetadata().fetch_runs_from_bioprojects(bioproject_accessions)
         logging.debug("Found {} run(s) to annotate".format(len(run_identifiers)))
     if run_identifiers_file is not None:
         with open(run_identifiers_file) as f:

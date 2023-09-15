@@ -257,6 +257,32 @@ class Tests(unittest.TestCase):
                 stderr = f.read()
                 self.assertTrue('MD5sum OK for SRR12118866.sra' in stderr)
 
+    def test_get_by_bioproject(self):
+        with in_tempdir():
+            extern.run('{} get --bioproject PRJNA177893 --force -f sra -m aws-http --check-md5sums 2>kingfisher_stderr'.format(kingfisher))
+            # -rw-rw-r-- 1 ben ben 45099009 Sep 16 08:01 SRR600121.sra
+            # -rw-rw-r-- 1 ben ben 31203681 Sep 16 08:01 SRR605326.sra
+            # -rw-rw-r-- 1 ben ben  4291189 Sep 16 08:01 SRR605331.sra
+            # -rw-rw-r-- 1 ben ben  4645669 Sep 16 08:01 SRR609442.sra
+            # -rw-rw-r-- 1 ben ben 31203681 Sep 16 08:02 SRR609443.sra
+            # -rw-rw-r-- 1 ben ben 33424541 Sep 16 08:02 SRR616039.sra
+            # -rw-rw-r-- 1 ben ben  7736661 Sep 16 08:02 SRR616042.sra
+            # -rw-rw-r-- 1 ben ben  5218613 Sep 16 08:02 SRR616043.sra
+            # -rw-rw-r-- 1 ben ben  1468505 Sep 16 08:02 SRR616044.sra
+            self.assertTrue(os.path.getsize('SRR600121.sra')==45099009)
+            self.assertTrue(os.path.getsize('SRR605326.sra')==31203681)
+            self.assertTrue(os.path.getsize('SRR605331.sra')==4291189)
+            self.assertTrue(os.path.getsize('SRR609442.sra')==4645669)
+            self.assertTrue(os.path.getsize('SRR609443.sra')==31203681)
+            self.assertTrue(os.path.getsize('SRR616039.sra')==33424541)
+            self.assertTrue(os.path.getsize('SRR616042.sra')==7736661)
+            self.assertTrue(os.path.getsize('SRR616043.sra')==5218613)
+            self.assertTrue(os.path.getsize('SRR616044.sra')==1468505)
+
+            with open('kingfisher_stderr') as f:
+                stderr = f.read()
+                self.assertTrue('MD5sum OK for SRR600121.sra' in stderr)
+
 
 
     # def test_noqual(self):
