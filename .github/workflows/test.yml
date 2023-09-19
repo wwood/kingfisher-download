@@ -29,6 +29,8 @@ jobs:
           NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
         run: |
             # ascp does not work in bare conda env, so don't run tests
+            echo "aws manual testing.." && \
+            aws s3 cp --no-sign-request s3://sra-pub-run-odp/sra/SRR12118866/SRR12118866 SRR12118866.sra && \
             echo key is $NCBI_API_KEY && \
             rm test/test_ena.py && \
-            pytest -v --timeout=600
+            pytest -v --timeout=600 -k test_aws_cp
