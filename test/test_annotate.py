@@ -35,6 +35,7 @@ from io import StringIO
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')]+sys.path
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','..')]+sys.path
 kingfisher = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','bin','kingfisher')
+path_to_data = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))
 
 eg_df = pd.read_csv(StringIO('run,bioproject,Gbp,library_strategy,library_selection,model,sample_name,taxon_name\n'
     'SRR13774710,PRJNA630999,10.342,WGS,RANDOM,Illumina NovaSeq 6000,SCB2WXA,human gut metagenome'))
@@ -88,7 +89,7 @@ class Tests(unittest.TestCase):
     def test_parquet_all_columns(self):
         with tempfile.NamedTemporaryFile() as f:
             extern.run('{} annotate -r SRR13774710 SRR7051324 --all-columns --output-format parquet --output-file {}'.format(kingfisher, f.name))
-            self.assertEqual(str(pd.read_parquet('test/data/2_accessions.annotate.pq').to_dict()), str(pd.read_parquet(f.name).to_dict()))
+            self.assertEqual(str(pd.read_parquet('{}/2_accessions.annotate.pq'.format(path_to_data)).to_dict()), str(pd.read_parquet(f.name).to_dict()))
 
     def test_feather(self):
         with tempfile.NamedTemporaryFile() as f:
