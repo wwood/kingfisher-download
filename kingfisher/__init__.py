@@ -17,7 +17,7 @@ from .sra_metadata import *
 from .md5sum import MD5
 
 DEFAULT_ASPERA_SSH_KEY = 'linux'
-DEFAULT_OUTPUT_FORMAT_POSSIBILITIES = ['fastq','fastq.gz']
+DEFAULT_OUTPUT_FORMAT_POSSIBILITIES = ['fastq', 'fastq.gz']
 DEFAULT_THREADS = 8
 DEFAULT_DOWNLOAD_THREADS = DEFAULT_THREADS
 DEFAULT_ASCP_ARGS = '-k 2'
@@ -28,13 +28,18 @@ def download_and_extract(**kwargs):
     '''
     run_identifiers = kwargs.pop('run_identifiers')
     run_identifiers_file = kwargs.pop('run_identifiers_file')
-    bioproject_accessions = kwargs.pop('bioproject_accessions')
+    bioproject_accession = kwargs.pop('bioproject_accession', None)  # kept for API stability
+    bioproject_accessions = kwargs.pop('bioproject_accessions', None)
+
+    if bioproject_accession and bioproject_accessions is None:
+        bioproject_accessions = [bioproject_accession]
+
     num_inputs = 0
     if run_identifiers is not None: num_inputs += 1
     if run_identifiers_file is not None: num_inputs += 1
     if bioproject_accessions is not None: num_inputs += 1
     if num_inputs != 1:
-        raise Exception("Must specify exactly one input type: --run-identifiers, --bioproject_accession or --run-identifiers-list")
+        raise Exception("Must specify exactly one input type: --run-identifiers, --bioproject-accessions or --run-identifiers-list")
 
     if bioproject_accessions is not None:
         run_identifiers = SraMetadata().fetch_runs_from_bioprojects(bioproject_accessions)
@@ -574,20 +579,25 @@ def gzip_test_files(gzip_files):
         logging.info("Verifying gzip file {} ..".format(f))
         extern.run("pigz -t '{}'".format(f))
 
+
 def annotate(**kwargs):
     run_identifiers = kwargs.pop('run_identifiers')
     run_identifiers_file = kwargs.pop('run_identifiers_file')
-    bioproject_accessions = kwargs.pop('bioproject_accessions')
+    bioproject_accessions = kwargs.pop('bioproject_accessions', None)  # kept for API stability
+    bioproject_accession = kwargs.pop('bioproject_accession', None)
     output_file = kwargs.pop('output_file')
     output_format = kwargs.pop('output_format')
     all_columns = kwargs.pop('all_columns')
+
+    if bioproject_accession and bioproject_accessions is None:
+        bioproject_accessions = [bioproject_accession]
 
     num_inputs = 0
     if run_identifiers is not None: num_inputs += 1
     if run_identifiers_file is not None: num_inputs += 1
     if bioproject_accessions is not None: num_inputs += 1
     if num_inputs != 1:
-        raise Exception("Must specify exactly one input type: --run-identifiers, --bioproject_accession or --run-identifiers-list")
+        raise Exception("Must specify exactly one input type: --run-identifiers, --bioproject-accessions or --run-identifiers-list")
     
     if bioproject_accessions is not None:
         run_identifiers = SraMetadata().fetch_runs_from_bioprojects(bioproject_accessions)

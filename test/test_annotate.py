@@ -32,6 +32,8 @@ import pandas as pd
 import tempfile
 from io import StringIO
 
+from bird_tool_utils import in_tempdir
+
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')]+sys.path
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','..')]+sys.path
 kingfisher = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','bin','kingfisher')
@@ -119,6 +121,22 @@ SRR11703788 | PRJNA621514 | 21.045 | WGS              | RANDOM            | Illu
 """
         stdout = extern.run('{} annotate --bioprojects PRJNA621515 PRJNA621514'.format(kingfisher))
         self.assertEqual(stdout, expected)
+
+    def test_api_stability(self):
+        from kingfisher import annotate
+        with in_tempdir():
+            # https://github.com/NIAID-Data-Ecosystem/nde-crawlers/blob/c67c77d0c547466cc2d2264f8e53e0c809b9dfd0/ncbi_sra/files/ncbi_sra.py#L34
+            annotate(
+                run_identifiers=None,
+                run_identifiers_file=None,
+                bioproject_accession='PRJNA621515',
+                output_file=f"PRJNA621515.json",
+                output_format="json",
+                all_columns=True,
+            )
+            with open('PRJNA621515.json') as f:
+                j = json.load(f)
+            self.assertEqual('SRR11703773', j[0]['run'])
 
 
 if __name__ == "__main__":

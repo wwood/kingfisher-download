@@ -282,8 +282,20 @@ class Tests(unittest.TestCase):
             with open('kingfisher_stderr') as f:
                 stderr = f.read()
                 self.assertTrue('MD5sum OK for SRR600121.sra' in stderr)
-
-
+    
+    def test_api_stability(self):
+        from kingfisher import download_and_extract
+        with in_tempdir():
+            # This is the annotate version of the usage, but testing along the same lines
+            # https://github.com/NIAID-Data-Ecosystem/nde-crawlers/blob/c67c77d0c547466cc2d2264f8e53e0c809b9dfd0/ncbi_sra/files/ncbi_sra.py#L34
+            download_and_extract(
+                run_identifiers=None,
+                bioproject_accession='PRJNA177893',
+                run_identifiers_file=None,
+                download_methods=['aws-http'],
+                output_format_possibilities=['sra'],
+            )
+            self.assertEqual(os.path.getsize('SRR616044.sra'), 1468505)
 
     # def test_noqual(self):
     #     with in_tempdir():
