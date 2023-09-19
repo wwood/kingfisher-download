@@ -28,7 +28,7 @@ jobs:
         env:
           NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
         run: |
-            # ascp does not work in bare conda env, so don't run tests
+            # ascp does not work in bare conda env, so don't run those tests. AWS cp also fails here (because it has not been setup, I think).
             echo key is $NCBI_API_KEY && \
             rm test/test_ena.py && \
-            pytest -v --timeout=600
+            pytest -v --timeout=600 -m 'not aws_cp'

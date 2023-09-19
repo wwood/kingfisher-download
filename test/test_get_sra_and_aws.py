@@ -25,6 +25,7 @@ import unittest
 import os.path
 import sys
 import subprocess
+import pytest
 
 import extern
 
@@ -71,6 +72,7 @@ class Tests(unittest.TestCase):
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)
 
+    @pytest.mark.aws_cp
     def test_aws_cp_covid(self):
         with in_tempdir():
             extern.run('{} get -r ERR6167542 --force -f sra -m aws-cp'.format(kingfisher))
@@ -244,6 +246,7 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.exists('SRR12118864.sra'))
             self.assertTrue(os.path.exists('SRR12118866.sra'))
 
+    @pytest.mark.aws_cp
     def test_aws_cp(self):
         with in_tempdir():
             extern.run('{} get -r SRR12118866 --force -f sra -m aws-cp'.format(kingfisher))
