@@ -121,7 +121,9 @@ class Tests(unittest.TestCase):
         if os.path.exists('SRR12118866_2.fasta.gz'):
             os.remove('SRR12118866_2.fasta.gz')
 
-        extern.run('{} extract --sra {} --output-format-possibilities fasta.gz --unsorted'.format(kingfisher, sra))
+        cmd = '{} extract --sra {} --output-format-possibilities fasta.gz --unsorted'.format(kingfisher, sra)
+        # For reasons I don't understand, running this via extern hangs when running this test specifically on b2
+        subprocess.check_call(cmd.split(' ')) 
         self.assertEqual('fb284c28aac4513249b196ec75dc3c8d  -\n', extern.run('pigz -cd SRR12118866_1.fasta.gz |md5sum'))
         self.assertEqual('311f8898bd6d575ae3ec6a7188b08836  -\n', extern.run('pigz -cd SRR12118866_2.fasta.gz |md5sum'))
         self.assertFalse(os.path.exists('SRR12118866.fasta.gz'))
