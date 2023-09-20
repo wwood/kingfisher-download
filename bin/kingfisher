@@ -73,8 +73,18 @@ def main():
                 Example(
                     'Extract an SRA file to FASTQ.GZ format using 16 threads (default is 8)',
                     'kingfisher extract --sra ERR1739691.sra -t 16 -f fastq.gz'
-                    )]
-                })
+                    )],
+            'annotate': [
+                Example(
+                    'Annotate the metadata of a run',
+                    'kingfisher annotate -r ERR1739691'),
+                Example(
+                    'Output metadata of all runs in a BioProject to a CSV file',
+                    'kingfisher annotate --bioprojects PRJNA177893 -o PRJNA177893.csv -f csv'),
+                Example(
+                    'Output the full set of metadata from a run',
+                    'kingfisher annotate -r ERR1739691 -a'),
+                ]})
 
     get_description = 'Download and extract sequence data from SRA or ENA'
     get_parser = bird_argparser.new_subparser('get', get_description)
@@ -189,7 +199,7 @@ def main():
         default=kingfisher.DEFAULT_THREADS,
     )
 
-    extract_description = 'extract .sra format files'
+    extract_description = 'Extract .sra format files into FASTQ or FASTA format, compressed or uncompressed.'
     extract_parser = bird_argparser.new_subparser('extract', extract_description)
     extract_parser_extraction_group = extract_parser.add_argument_group(title='extraction options')
 
@@ -205,7 +215,7 @@ def main():
             kingfisher.DEFAULT_THREADS),
         default=kingfisher.DEFAULT_THREADS)
 
-    annotate_description = 'annotate runs by their metadata'
+    annotate_description = 'Annotate runs by their metadata e.g. number of sequenced bases, BioSample attributes, etc.'
     annotate_parser = bird_argparser.new_subparser('annotate', annotate_description)
 
     annotate_parser.add_argument(
@@ -226,7 +236,7 @@ def main():
     )
     annotate_parser.add_argument(
         '-f','--output-format','--output_format',
-        help='Output format',
+        help='Output format [default human]',
         default='human',
         choices=['human','csv','tsv','json','feather','parquet']
     )

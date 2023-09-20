@@ -5,7 +5,8 @@ title: Kingfisher annotate
 
 # DESCRIPTION
 
-annotate runs by their metadata
+Annotate runs by their metadata e.g. number of sequenced bases,
+BioSample attributes, etc.
 
 # OPTIONS
 
@@ -18,7 +19,7 @@ annotate runs by their metadata
   Text file containing a newline-separated list of run identifiers
     i.e. a 1 column CSV file.
 
-**-p**, **\--bioproject** *BIOPROJECT*
+**-p**, **\--bioprojects** *BIOPROJECTS* [*BIOPROJECTS* \...]
 
   BioProject IDs number(s) to download/extract from e.g. PRJNA621514
     or SRP260223
@@ -29,7 +30,7 @@ annotate runs by their metadata
 
 **-f**, **\--output-format** {human,csv,tsv,json,feather,parquet}
 
-  Output format
+  Output format [default human]
 
 **-a**, **\--all-columns**
 
@@ -60,3 +61,18 @@ annotate runs by their metadata
 # AUTHOR
 
 >     Ben J. Woodcroft, Centre for Microbiome Research, School of Biomedical Sciences, Faculty of Health, Queensland University of Technology <benjwoodcroft near gmail.com>
+
+# EXAMPLES
+
+Annotate the metadata of a run
+
+  **\$ kingfisher annotate -r ERR1739691**
+
+Output metadata of all runs in a BioProject to a CSV file
+
+  **\$ kingfisher annotate \--bioprojects PRJNA177893 -o
+    PRJNA177893.csv -f csv**
+
+Output the full set of metadata from a run
+
+  **\$ kingfisher annotate -r ERR1739691 -a**

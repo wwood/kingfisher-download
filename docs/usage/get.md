@@ -20,7 +20,7 @@ Download and extract sequence data from SRA or ENA
   Text file containing a newline-separated list of run identifiers
     i.e. a 1 column CSV file.
 
-**-p**, **\--bioproject** *BIOPROJECT*
+**-p**, **\--bioprojects** *BIOPROJECTS* [*BIOPROJECTS* \...]
 
   BioProject IDs number(s) to download/extract from e.g. PRJNA621514
     or SRP260223
@@ -182,16 +182,16 @@ Currently requires download from NCBI rather than ENA.
 
 # EXAMPLES
 
-that, download an .sra file from the Amazon AWA Open Data Program and then
+Download .fastq.gz files of the run ERR1739691 from the ENA, or failing that, download an .sra file from the Amazon AWA Open Data Program and then convert to FASTQ (not FASTQ.GZ), or failing that use NCBI prefetch to download and convert that to FASTQ. Output files are put into the current working directory.
 
-  convert to FASTQ (not FASTQ.GZ), or failing that use NCBI prefetch
-    to download and convert that to FASTQ. Output files are put into the
-    current working directory. \\fB\$ kingfisher get -r ERR1739691 -m
-    ena-ascp aws-http prefetch\\fR
+  **\$ kingfisher get -r ERR1739691 -m ena-ascp aws-http prefetch**
 
-Payment is required. \\fB\$ kingfisher get -r ERR1739691 -m gcp-cp -f sra \--gcp-
+Download a .sra from GCP using a service account key with \"gcp cp\". Payment is required.
 
-  user-key-file sa-private-key.json \--allow-paid\\fR .TP Download a
-    .sra from the free AWS open data program using 8 threads for
-    download and extraction, coverting to FASTA. \\fB\$ kingfisher get
-    -r ERR1739691 -m aws-http -f fasta \--download-threads 8\\fR
+  **\$ kingfisher get -r ERR1739691 -m gcp-cp -f sra
+    \--gcp-user-key-file sa-private-key.json \--allow-paid**
+
+Download a .sra from the free AWS open data program using 8 threads for download and extraction, coverting to FASTA.
+
+  **\$ kingfisher get -r ERR1739691 -m aws-http -f fasta
+    \--download-threads 8**

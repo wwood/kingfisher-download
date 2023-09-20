@@ -1,10 +1,16 @@
 Welcome.
 
 Kingfisher is a fast and flexible program for procurement of sequence files (and
-their annotations) from public data sources, including the European Nucleotide
+their metadata annotations) from public data sources, including the European Nucleotide
 Archive (ENA), NCBI SRA, Amazon AWS and Google Cloud. It's input is one or more
 "Run" accessions e.g. DRR001970, or a BioProject accessions e.g. PRJNA621514 or
 SRP260223.
+
+It has two main modes - the
+[get](https://wwood.github.io/kingfisher-download/usage/get) mode downloads
+sequence data and the
+[annotate](https://wwood.github.io/kingfisher-download/usage/annotate) mode
+downloads metadata.
 
 In the `get` subcommand, kingfisher downloads data from a series of redundant
 sources, which it attempts in order until one works. The downloaded data is then
@@ -25,6 +31,8 @@ Kingfisher can be installed in the usual way through conda/bioconda e.g.
 
 ```
 conda create -n kingfisher -c conda-forge -c bioconda kingfisher
+conda activate kingfisher
+kingfisher get -r SRR12118866 -m ena-ftp
 ```
 
 Optionally, to use the `ena-ascp` method, an Aspera connect client is also required.
@@ -64,7 +72,7 @@ See [https://www.ibm.com/aspera/connect/](https://www.ibm.com/aspera/connect/) o
 ## Usage
 
 For all modes, a full run-down of the functionality is available using the
-`--full-help` flag e.g. `kingfisher get --full-help`.
+`--full-help` flag e.g. `kingfisher get --full-help` or `kingfisher annotate --full-help`.
 
 ### 'get' mode: Download and optionally convert sequence data
 

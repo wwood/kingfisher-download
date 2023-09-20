@@ -5,7 +5,8 @@ title: Kingfisher extract
 
 # DESCRIPTION
 
-extract .sra format files
+Extract .sra format files into FASTQ or FASTA format, compressed or
+uncompressed.
 
 # OPTIONS
 
@@ -73,6 +74,6 @@ Currently requires download from NCBI rather than ENA.
 
 # EXAMPLES
 
-\\fB\$ kingfisher extract \--sra ERR1739691.sra -t 16 -f fastq.gz\\fR
+Extract an SRA file to FASTQ.GZ format using 16 threads (default is 8)
 
-  
+  **\$ kingfisher extract \--sra ERR1739691.sra -t 16 -f fastq.gz**
