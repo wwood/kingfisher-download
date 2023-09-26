@@ -2,7 +2,7 @@
 #!/bin/bash -eo pipefail
 
 export KINGFISHER_VERSION=`../bin/kingfisher --version`
-export KINGFISHER_DOCKER_VERSION=wwood/kingfisher:$KINGFISHER_VERSION
+export KINGFISHER_DOCKER_VERSION='wwood/kingfisher:0.0.0.dev' #$KINGFISHER_VERSION
 
 cp ../kingfisher.yml . && \
 sed 's/KINGFISHER_VERSION/'$KINGFISHER_VERSION'/g' Dockerfile.in > Dockerfile && \
