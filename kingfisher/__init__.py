@@ -6,9 +6,11 @@ import os
 import subprocess
 import sys
 import gzip
+import re
 
 import extern
 from extern import ExternCalledProcessError
+import bird_tool_utils
 
 from .ena import EnaDownloader
 from .location import Location, NcbiLocationJson
@@ -21,6 +23,24 @@ DEFAULT_OUTPUT_FORMAT_POSSIBILITIES = ['fastq', 'fastq.gz']
 DEFAULT_THREADS = 8
 DEFAULT_DOWNLOAD_THREADS = DEFAULT_THREADS
 DEFAULT_ASCP_ARGS = '-k 2'
+
+class OutputLocation:
+    def __init__(self, output_directory):
+        self.output_directory = os.path.abspath(output_directory)
+
+        # Check to make sure the directory exists, or create it if is only 1 directory to be created.
+        if not os.path.exists(self.output_directory):
+            if not os.path.exists(os.path.dirname(self.output_directory)):
+                raise Exception("The parent directory of the output directory specified '{}' does not exist. Kingfisher will create 1 directory if required, but not 2 or more. If you really want to output to that directory, you could try using 'mkdir -p '{}'".format(
+                    self.output_directory,
+                    self.output_directory))
+            else:
+                logging.info("Creating output directory {}".format(self.output_directory))
+                os.mkdir(self.output_directory)
+
+    def output_stem(self, run_identifier):
+        return os.path.join(self.output_directory, run_identifier)
+
 
 def download_and_extract(**kwargs):
     '''download an public sequence dataset and extract if necessary. kwargs
@@ -52,6 +72,7 @@ def download_and_extract(**kwargs):
         download_and_extract_one_run(run, **kwargs)
 
 def download_and_extract_one_run(run_identifier, **kwargs):
+    logging.debug("kwargs in download_and_extract_one_run: {}".format(kwargs))
     download_methods = kwargs.pop('download_methods')
     output_format_possibilities = kwargs.pop('output_format_possibilities',
         DEFAULT_OUTPUT_FORMAT_POSSIBILITIES)
@@ -73,7 +94,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
     hide_download_progress = kwargs.pop('hide_download_progress', False)
     prefetch_max_size = kwargs.pop('prefetch_max_size',None)
     check_md5sums = kwargs.pop('check_md5sums', False)
-    
+    output_directory = kwargs.pop('output_directory', '.')
 
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
@@ -104,6 +125,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
     if stdout and not unsorted:
         raise Exception("Currently --stdout must be used with --unsorted")
 
+    output_location_factory = OutputLocation(output_directory)
     output_files = []
     ncbi_locations = None
 
@@ -112,7 +134,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
         skip_download_and_extraction, output_files = False, []
     else:
         skip_download_and_extraction, output_files = _check_for_existing_files(
-            run_identifier, output_format_possibilities, force
+            output_location_factory, run_identifier, output_format_possibilities, force
         )
 
     downloaded_files = None
@@ -122,7 +144,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
         for method in download_methods:
             logging.info("Attempting download method {} for run {} ..".format(method, run_identifier))
             if method == 'prefetch':
-                output_path = '{}.sra'.format(run_identifier)
+                output_path = output_location_factory.output_stem('{}.sra'.format(run_identifier))
                 try:
                     if prefetch_max_size is None:
                         prefetch_max_size_argument = '--max-size 0G'
@@ -130,7 +152,10 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                         prefetch_max_size_argument = '--max-size {}'.format(prefetch_max_size)
                     extern.run("prefetch {} -o {} {}".format(
                         prefetch_max_size_argument, output_path, run_identifier))
-                    downloaded_files = [output_path]
+                    if os.path.exists(output_path):
+                        downloaded_files = [output_path]
+                    else:
+                        logging.warning("Method {} failed: Prefetch did not create file {}".format(method, output_path))
                 except ExternCalledProcessError as e:
                     logging.warning("Method {} failed: Error was: {}".format(method, e))
                     if os.path.exists(output_path):
@@ -139,15 +164,16 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                 
             elif method == 'aws-http':
                 def download_from_aws(odp_link, run_identifier, download_threads, method):
-                    output_path = '{}.sra'.format(run_identifier)
+                    output_path = output_location_factory.output_stem('{}.sra'.format(run_identifier))
                     try:
                         if download_threads > 1:
                             logging.info(
                                 "Downloading .SRA file from AWS Open Data Program HTTP link using aria2c ..")
                             verbosity_flag = '--quiet' if hide_download_progress else ''
-                            # Redirect aria2c stdout to stderr so all logging of kingfisher is on stderr
+                            # Redirect aria2c stdout to stderr so all logging of kingfisher is on stderr.
+                            # aria2c does not handle absolute paths properly, so we have to use a relative path.
                             cmd = "aria2c {} -x{} -o {} '{}' 1>&2".format(
-                                verbosity_flag, download_threads, output_path, odp_link)
+                                verbosity_flag, download_threads, os.path.relpath(output_path), odp_link)
                             subprocess.check_call(cmd, shell=True)
                         else:
                             logging.info(
@@ -173,7 +199,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                         logging.warning("Method {} failed when downloading from {}: Error was: {}".format(method, odp_link, e))
                         if os.path.exists(output_path):
                             logging.info("Removing file {} because download failed ..".format(output_path))
-                            os.remove(f)
+                            os.remove(output_path)
                         return None
 
                 if guess_aws_location:
@@ -216,7 +242,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                 )
 
                 # TODO: Sort so unpaid are first
-                output_path = '{}.sra'.format(run_identifier)
+                output_path = output_location_factory.output_stem('{}.sra'.format(run_identifier))
 
                 if len(s3_locations) > 0:
                     for s3_location in s3_locations:
@@ -250,7 +276,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                         os.remove(f)
 
             elif method == 'gcp-cp':
-                output_path = '{}.sra'.format(run_identifier)
+                output_path = output_location_factory.output_stem('{}.sra'.format(run_identifier))
                 if 'gcp' in allowable_sources:
                     if ncbi_locations is None:
                         ncbi_locations = Location.get_ncbi_locations(run_identifier)
@@ -339,19 +365,20 @@ def download_and_extract_one_run(run_identifier, **kwargs):
 
     # Extraction/conversion phase
     if not skip_download_and_extraction:
-        if downloaded_files == ['{}.sra'.format(run_identifier)]:
+        if downloaded_files == [output_location_factory.output_stem('{}.sra'.format(run_identifier))]:
+            sra_file = downloaded_files[0]
             if 'sra' not in output_format_possibilities:
-                sra_file = downloaded_files[0]
                 output_files = extract(
                     sra_file = sra_file,
                     output_format_possibilities = output_format_possibilities,
                     unsorted = unsorted,
                     stdout = stdout,
                     threads = extraction_threads,
+                    output_directory = output_directory,
                 )
                 os.remove(sra_file)
             else:
-                output_files.append("{}.sra".format(run_identifier))
+                output_files.append(sra_file)
         else:
             if stdout:
                 raise Exception("--stdout currently must be via download of a .sra format file, rather than a download from ENA. I imagine this will be fixed in future.")
@@ -397,6 +424,7 @@ def extract(**kwargs):
     unsorted = kwargs.pop('unsorted', False)
     stdout = kwargs.pop('stdout', False)
     threads = kwargs.pop('threads',DEFAULT_THREADS)
+    output_directory = kwargs.pop('output_directory', '.')
 
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
@@ -409,12 +437,14 @@ def extract(**kwargs):
         run_identifier = run_identifier[:-4]
     logging.debug("Using run identifier {}".format(run_identifier))
 
+    output_location_factory = OutputLocation(output_directory)
+
     # Checking for already existing files
     if stdout:
         skip_download_and_extraction, output_files = False, []
     else:
         skip_download_and_extraction, output_files = _check_for_existing_files(
-            run_identifier, output_format_possibilities, force
+            output_location_factory, run_identifier, output_format_possibilities, force
         )
     
     if unsorted and stdout:
@@ -453,12 +483,12 @@ def extract(**kwargs):
         format = output_format_possibilities[0]
         if format == 'fasta':
             logging.info("Extracting .sra file to file(s) in unsorted FASTA format ..")
-            cmd = f"sracat -o {run_identifier} {os.path.abspath(sra_file)}"
+            cmd = f"sracat -o {output_location_factory.output_stem(run_identifier)} {os.path.abspath(sra_file)}"
             run_command(cmd)
             for name in ['x_1.fna','x_2.fna','x.fna']:
-                f = name.replace('x',run_identifier)
+                f = output_location_factory.output_stem(name.replace('x',run_identifier))
                 if os.path.exists(f):
-                    new_name = f.replace('.fna','.fasta')
+                    new_name = re.sub(r'.fna$','.fasta', f)
                     os.rename(f, new_name)
                     output_files.append(new_name)
         elif format == 'fasta.gz':
@@ -476,7 +506,7 @@ def extract(**kwargs):
             pigz_commands = []
             for name in ['x_1.fna','x_2.fna','x.fna']:
                 f = name.replace('x',run_identifier)
-                output = f.replace('.fna','.fasta.gz')
+                output = output_location_factory.output_stem(re.sub('.fna$','.fasta.gz', f))
                 pigz_commands.append([f, output, spawn_pigz_it(f'{f}', f"{output}", threads)])
             run_command(cmd)
             for (fifo, output, c) in pigz_commands:
@@ -512,7 +542,8 @@ def extract(**kwargs):
                     output_files.append(f)
         elif format == 'fastq':
             logging.info("Extracting .sra file to file(s) in unsorted FASTQ format ..")
-            cmd = f"sracat --qual -o {run_identifier} {os.path.abspath(sra_file)}"
+            output_stem = output_location_factory.output_stem(run_identifier)
+            cmd = f"sracat --qual -o {output_stem} {os.path.abspath(sra_file)}"
             run_command(cmd)
             for name in ['x_1.fastq','x_2.fastq','x.fastq']:
                 f = name.replace('x',run_identifier)
@@ -520,7 +551,8 @@ def extract(**kwargs):
                     output_files.append(f)
         elif format == 'fastq.gz':
             logging.info("Extracting .sra file to file(s) in unsorted FASTQ.GZ format ..")
-            cmd = f"sracat -z --qual -o {run_identifier} {os.path.abspath(sra_file)}"
+            output_stem = output_location_factory.output_stem(run_identifier)
+            cmd = f"sracat -z --qual -o {output_stem} {os.path.abspath(sra_file)}"
             run_command(cmd)
             for name in ['x_1.fastq.gz','x_2.fastq.gz','x.fastq.gz']:
                 f = name.replace('x',run_identifier)
@@ -532,40 +564,46 @@ def extract(**kwargs):
     else:
         if not skip_download_and_extraction:
             logging.info("Extracting .sra file with fasterq-dump ..")
-            extern.run("fasterq-dump --threads {} {}".format(threads, os.path.abspath(sra_file)))
 
-            if 'fastq' not in output_format_possibilities:
-                for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
-                    f = fq.replace('x',run_identifier)
-                    if os.path.exists(f):
-                        # Do the least work, currently we have FASTQ.
-                        if 'fasta' in output_format_possibilities:
-                            logging.info("Converting {} to FASTA ..".format(f))
-                            out_here = f.replace('.fastq','.fasta')
-                            extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} >{}".format(
-                                f, out_here
-                            ))
-                            os.remove(f)
-                            output_files.append(out_here)
-                        elif 'fasta.gz' in output_format_possibilities:
-                            logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
-                            out_here = f.replace('.fastq','.fasta.gz')
-                            extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} |pigz -p {} >{}".format(
-                                f, threads, out_here
-                            ))
-                            os.remove(f)
-                            output_files.append(out_here)
-                        elif 'fastq.gz' in output_format_possibilities:
-                            logging.info("Compressing {} with pigz ..".format(f))
-                            extern.run("pigz -p {} {}".format(threads, f))
-                            output_files.append("{}.gz".format(f))
-                        else:
-                            raise Exception("Programming error")
-            else:
-                for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
-                    f = fq.replace('x',run_identifier)
-                    if os.path.exists(f):
-                        output_files.append(f)
+            # Change directory to the output directory using a "with", so that fasterq-dump outputs there, not here.
+            sra_file_abs = os.path.abspath(sra_file)
+            with bird_tool_utils.in_working_directory(output_directory):
+                extern.run("fasterq-dump --threads {} {}".format(threads, sra_file_abs))
+
+                if 'fastq' not in output_format_possibilities:
+                    for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
+                        f = output_location_factory.output_stem(fq.replace('x',run_identifier))
+                        if os.path.exists(f):
+                            # Do the least work, currently we have FASTQ.
+                            if 'fasta' in output_format_possibilities:
+                                logging.info("Converting {} to FASTA ..".format(f))
+                                out_here = output_location_factory.output_stem(re.sub('.fastq$','.fasta',f))
+                                extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} >{}".format(
+                                    f, out_here
+                                ))
+                                os.remove(f)
+                                output_files.append(out_here)
+                            elif 'fasta.gz' in output_format_possibilities:
+                                logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
+                                out_here = output_location_factory.output_stem(re.sub('.fastq$','.fasta.gz',f))
+                                extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} |pigz -p {} >{}".format(
+                                    f, threads, out_here
+                                ))
+                                os.remove(f)
+                                output_files.append(out_here)
+                            elif 'fastq.gz' in output_format_possibilities:
+                                out_here = os.path.abspath(output_location_factory.output_stem(f'{f}.gz'))
+                                logging.info("Compressing {} with pigz into {} ..".format(f, out_here))
+                                extern.run("pigz -c -p {} {} > {}".format(threads, f, out_here))
+                                os.remove(f)
+                                output_files.append(out_here)
+                            else:
+                                raise Exception("Programming error")
+                else:
+                    for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
+                        f = fq.replace('x',run_identifier)
+                        if os.path.exists(f):
+                            output_files.append(f)
 
     return output_files
 
@@ -698,21 +736,22 @@ def _printTable(output_stream, myDict, colList=None):
    myList.insert(1, ['-' * i for i in colSize]) # Seperating line
    for item in myList: print(formatStr.format(*item), file=output_stream)
 
-def _check_for_existing_files(run_identifier, output_format_possibilities, force):
+def _check_for_existing_files(output_location_factory, run_identifier, output_format_possibilities, force):
     skip_download_and_extraction = False
     output_files = []
 
     def maybe_skip_or_force(path, output_files, force):
         skip_download_and_extraction = False
-        if os.path.exists(path):
+        final_path = output_location_factory.output_stem(path)
+        if os.path.exists(final_path):
             if force:
-                logging.warn("Removing previous file {}".format(path))
-                os.remove(path)
+                logging.warn("Removing previous file {}".format(final_path))
+                os.remove(final_path)
             else:
                 skip_download_and_extraction = True
-                output_files.append(path)
+                output_files.append(final_path)
                 logging.info(
-                    "Skipping download/extraction of {} as an output file already appears to exist, as file {}".format(run_identifier, path))
+                    "Skipping download/extraction of {} as an output file already appears to exist, as file {}".format(run_identifier, final_path))
         return skip_download_and_extraction, output_files
 
     for file_type in output_format_possibilities:

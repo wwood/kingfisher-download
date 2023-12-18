@@ -46,12 +46,27 @@ class Tests(unittest.TestCase):
                 self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==21411192)
                 self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==21411192)
 
+    def test_unpaid_methods_outdir(self):
+        cmd_stub = '{} get -r SRR12118866 --output-directory outdir -m'.format(kingfisher)
+        for method in ('aws-http','prefetch'):
+            with in_tempdir():
+                extern.run("{} {}".format(cmd_stub,method))
+                self.assertTrue(os.path.getsize('outdir/SRR12118866_1.fastq')==21411192)
+                self.assertTrue(os.path.getsize('outdir/SRR12118866_2.fastq')==21411192)
+
     def test_fasta_via_sra(self):
         with in_tempdir():
             extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities fasta.gz fasta'.format(
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866_1.fasta')==10705596)
             self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10705596)
+
+    def test_fasta_via_sra_outdir(self):
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 -m aws-http --output-directory outdir --output-format-possibilities fasta.gz fasta'.format(
+                kingfisher))
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_1.fasta')==10705596)
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_2.fasta')==10705596)
 
     def test_fasta_gz_via_sra(self):
         with in_tempdir():
@@ -60,11 +75,24 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==757641)
             self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==907591)
 
+    def test_fasta_gz_via_sra_outdir(self):
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 -m aws-http --output-directory outdir --output-format-possibilities fasta.gz'.format(
+                kingfisher))
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_1.fasta.gz')==757641)
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_2.fasta.gz')==907591)
+
     def test_sra_via_aws(self):
         with in_tempdir():
             extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities sra'.format(
                 kingfisher))
             self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)
+
+    def test_sra_via_aws_outdir(self):
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 -m aws-http --output-directory outdir --output-format-possibilities sra'.format(
+                kingfisher))
+            self.assertTrue(os.path.getsize('outdir/SRR12118866.sra')==11643188)
 
     def test_aws_guess_location(self):
         with in_tempdir():
@@ -101,19 +129,22 @@ class Tests(unittest.TestCase):
             self.assertFalse(os.path.exists('SRR12118866.fasta'))
 
     def test_unsorted_extract_file_outputs_fasta_uncompressed(self):
-        sra = f"test/data/SRR12118866.sra"
+        sra = os.path.abspath(f"test/data/SRR12118866.sra")
+        
+        with in_tempdir():
+            extern.run('{} extract --sra {} --output-format-possibilities fasta --unsorted'.format(kingfisher, sra))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fasta')==10122654)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10122654)
+            self.assertFalse(os.path.exists('SRR12118866.fasta'))
 
-        if os.path.exists('SRR12118866_1.fasta'):
-            os.remove('SRR12118866_1.fasta')
-        if os.path.exists('SRR12118866_2.fasta'):
-            os.remove('SRR12118866_2.fasta')
+    def test_unsorted_extract_file_outputs_fasta_uncompressed_output_directory(self):
+        sra = os.path.abspath(f"test/data/SRR12118866.sra")
 
-        extern.run('{} extract --sra {} --output-format-possibilities fasta --unsorted'.format(kingfisher, sra))
-        self.assertTrue(os.path.getsize('SRR12118866_1.fasta')==10122654)
-        self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10122654)
-        self.assertFalse(os.path.exists('SRR12118866.fasta'))
-        os.remove('SRR12118866_1.fasta')
-        os.remove('SRR12118866_2.fasta')
+        with in_tempdir():
+            extern.run('{} extract --sra {} --output-format-possibilities fasta --unsorted --output-directory outdir'.format(kingfisher, sra))
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_1.fasta')==10122654)
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_2.fasta')==10122654)
+            self.assertFalse(os.path.exists('outdir/SRR12118866.fasta'))
 
     def test_unsorted_extract_file_outputs_fasta_gz(self):
         sra = f"test/data/SRR12118866.sra"
@@ -132,33 +163,52 @@ class Tests(unittest.TestCase):
         os.remove('SRR12118866_1.fasta.gz')
         os.remove('SRR12118866_2.fasta.gz')
 
-    def test_unsorted_extract_file_outputs_fastq_uncompressed(self):
-        sra = f"test/data/SRR12118866.sra"
+    def test_unsorted_extract_file_outputs_fasta_gz_output_directory(self):
+        sra = os.path.abspath(f"test/data/SRR12118866.sra")
 
-        if os.path.exists('SRR12118866_1.fastq'):
-            os.remove('SRR12118866_1.fastq')
-        if os.path.exists('SRR12118866_2.fastq'):
-            os.remove('SRR12118866_2.fastq')
-        extern.run('{} extract --sra {} --output-format-possibilities fastq --unsorted'.format(kingfisher, sra))
-        self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==19662366)
-        self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==19662366)
-        self.assertFalse(os.path.exists('SRR12118866.fastq'))
-        os.remove('SRR12118866_1.fastq')
-        os.remove('SRR12118866_2.fastq')
+        with in_tempdir():
+            cmd = '{} extract --sra {} --output-format-possibilities fasta.gz --unsorted --output-directory outdir'.format(kingfisher, sra)
+            # For reasons I don't understand, running this via extern hangs when running this test specifically on b2
+            subprocess.check_call(cmd.split(' ')) 
+            self.assertEqual('fb284c28aac4513249b196ec75dc3c8d  -\n', extern.run('pigz -cd outdir/SRR12118866_1.fasta.gz |md5sum'))
+            self.assertEqual('311f8898bd6d575ae3ec6a7188b08836  -\n', extern.run('pigz -cd outdir/SRR12118866_2.fasta.gz |md5sum'))
+            self.assertFalse(os.path.exists('SRR12118866.fasta.gz'))
+
+    def test_unsorted_extract_file_outputs_fastq_uncompressed(self):
+        sra = os.path.abspath(f"test/data/SRR12118866.sra")
+
+        with in_tempdir():
+            extern.run('{} extract --sra {} --output-format-possibilities fastq --unsorted'.format(kingfisher, sra))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==19662366)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==19662366)
+            self.assertFalse(os.path.exists('SRR12118866.fastq'))
+
+    def test_unsorted_extract_file_outputs_fastq_uncompressed_output_directory(self):
+        sra = os.path.abspath(f"test/data/SRR12118866.sra")
+
+        with in_tempdir():
+            extern.run('{} extract --sra {} --output-format-possibilities fastq --output-directory outdir --unsorted'.format(kingfisher, sra))
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_1.fastq')==19662366)
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_2.fastq')==19662366)
+            self.assertFalse(os.path.exists('outdir/SRR12118866.fastq'))
 
     def test_unsorted_extract_file_outputs_fastq_gz(self):
-        sra = f"test/data/SRR12118866.sra"
+        sra = os.path.abspath(f"test/data/SRR12118866.sra")
 
-        if os.path.exists('SRR12118866_1.fastq.gz'):
-            os.remove('SRR12118866_1.fasta')
-        if os.path.exists('SRR12118866_2.fastq.gz'):
-            os.remove('SRR12118866_2.fasta')
-        extern.run('{} extract --sra {} --output-format-possibilities fastq.gz --unsorted'.format(kingfisher, sra))
-        self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4009949)
-        self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4834456)
-        self.assertFalse(os.path.exists('SRR12118866.fastq.gz'))
-        os.remove('SRR12118866_1.fastq.gz')
-        os.remove('SRR12118866_2.fastq.gz')
+        with in_tempdir():
+            extern.run('{} extract --sra {} --output-format-possibilities fastq.gz --unsorted'.format(kingfisher, sra))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4009949)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4834456)
+            self.assertFalse(os.path.exists('SRR12118866.fastq.gz'))
+
+    def test_unsorted_extract_file_outputs_fastq_gz_output_directory(self):
+        sra = os.path.abspath(f"test/data/SRR12118866.sra")
+
+        with in_tempdir():
+            extern.run('{} extract --sra {} --output-format-possibilities fastq.gz --output-directory outdir --unsorted'.format(kingfisher, sra))
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_1.fastq.gz')==4009949)
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_2.fastq.gz')==4834456)
+            self.assertFalse(os.path.exists('outdir/SRR12118866.fastq.gz'))
 
     def test_extract_fastq(self):
         with in_tempdir():
@@ -168,6 +218,15 @@ class Tests(unittest.TestCase):
             ))
             self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==21411192)
             self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==21411192)
+
+    def test_extract_fastq_output_directory(self):
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 -m aws-http --output-directory outdir --output-format-possibilities sra'.format(kingfisher))
+            extern.run('{} extract --sra outdir/SRR12118866.sra --output-format-possibilities fastq --output-directory outdir'.format(
+                kingfisher
+            ))
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_1.fastq')==21411192)
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_2.fastq')==21411192)
 
     def test_extract_fastq_no_force(self):
         with in_tempdir():
@@ -193,6 +252,20 @@ class Tests(unittest.TestCase):
                 check=True)
             self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==21411192)
             self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==21411192)
+            self.assertFalse('SRR12118866 as an output file already appears to exist' in r.stderr.decode())
+
+    def test_extract_fastq_force_output_directory(self):
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities sra --output-directory outdir'.format(kingfisher))
+            # extern.run('touch SRR12118866.sra')
+            extern.run('touch outdir/SRR12118866.fastq outdir/SRR12118866_1.fastq outdir/SRR12118866_2.fastq'.format(kingfisher))
+            r = subprocess.run(['bash','-c','{} extract --sra outdir/SRR12118866.sra --output-format-possibilities fastq --force --output-directory outdir'.format(
+                kingfisher
+                )],
+                stderr=subprocess.PIPE,
+                check=True)
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_1.fastq')==21411192)
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_2.fastq')==21411192)
             self.assertFalse('SRR12118866 as an output file already appears to exist' in r.stderr.decode())
 
     def test_download_fastq_no_force(self):
@@ -232,9 +305,11 @@ class Tests(unittest.TestCase):
 
     def test_prefetch_max_size_limit(self):
         with in_tempdir():
-            with self.assertRaises(extern.ExternCalledProcessError):
-                # As of writing DRR014182 actually doesn't exist at AWS.
+            # Prefetch used to have a non-zero exit code when the file was too big, but now it doesn't. Handle both cases.
+            try:
                 extern.run('{} get -r SRR12118866 -f sra -m prefetch --prefetch-max-size 1M'.format(kingfisher))
+            except extern.ExternCalledProcessError as e:
+                pass
             self.assertFalse(os.path.exists('DRR014182.sra'))
 
     def test_get_run_identifiers_list(self):
@@ -246,12 +321,28 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.exists('SRR12118864.sra'))
             self.assertTrue(os.path.exists('SRR12118866.sra'))
 
+    def test_get_run_identifiers_list_output_directory(self):
+        with in_tempdir():
+            with open('runlist','w') as f:
+                f.write('SRR12118864\n')
+                f.write('SRR12118866\n')
+            extern.run('{} get --run-identifiers-list runlist -f sra -m prefetch --output-directory outdir'.format(kingfisher))
+            self.assertTrue(os.path.exists('outdir/SRR12118864.sra'))
+            self.assertTrue(os.path.exists('outdir/SRR12118866.sra'))
+
     @pytest.mark.aws_cp
     def test_aws_cp(self):
         with in_tempdir():
             extern.run('{} get -r SRR12118866 --force -f sra -m aws-cp'.format(kingfisher))
             self.assertTrue(os.path.exists('SRR12118866.sra'))     
             self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)
+
+    @pytest.mark.aws_cp
+    def test_aws_cp_output_directory(self):
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 --force -f sra -m aws-cp --output-directory outdir'.format(kingfisher))
+            self.assertTrue(os.path.exists('outdir/SRR12118866.sra'))     
+            self.assertTrue(os.path.getsize('outdir/SRR12118866.sra')==11643188)
 
     def test_aws_http_md5sums(self):
         with in_tempdir():
@@ -260,7 +351,16 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.getsize('SRR12118866.sra')==11643188)
             with open('kingfisher_stderr') as f:
                 stderr = f.read()
-                self.assertTrue('MD5sum OK for SRR12118866.sra' in stderr)
+                self.assertTrue(f'MD5sum OK for {os.getcwd()}/SRR12118866.sra' in stderr)
+
+    def test_aws_http_md5sums_output_directory(self):
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 --force -f sra -m aws-http --output-directory outdir --check-md5sums 2>kingfisher_stderr'.format(kingfisher))
+            self.assertTrue(os.path.exists('outdir/SRR12118866.sra'))
+            self.assertTrue(os.path.getsize('outdir/SRR12118866.sra')==11643188)
+            with open('kingfisher_stderr') as f:
+                stderr = f.read()
+                self.assertTrue(f'MD5sum OK for {os.getcwd()}/outdir/SRR12118866.sra' in stderr)
 
     def test_get_by_bioproject(self):
         with in_tempdir():
@@ -286,7 +386,33 @@ class Tests(unittest.TestCase):
 
             with open('kingfisher_stderr') as f:
                 stderr = f.read()
-                self.assertTrue('MD5sum OK for SRR600121.sra' in stderr)
+                self.assertTrue(f'MD5sum OK for {os.getcwd()}/SRR600121.sra' in stderr)
+
+    def test_get_by_bioproject_output_directory(self):
+        with in_tempdir():
+            extern.run('{} get --bioproject PRJNA177893 --force -f sra -m aws-http --output-directory outdir --check-md5sums 2>kingfisher_stderr'.format(kingfisher))
+            # -rw-rw-r-- 1 ben ben 45099009 Sep 16 08:01 SRR600121.sra
+            # -rw-rw-r-- 1 ben ben 31203681 Sep 16 08:01 SRR605326.sra
+            # -rw-rw-r-- 1 ben ben  4291189 Sep 16 08:01 SRR605331.sra
+            # -rw-rw-r-- 1 ben ben  4645669 Sep 16 08:01 SRR609442.sra
+            # -rw-rw-r-- 1 ben ben 31203681 Sep 16 08:02 SRR609443.sra
+            # -rw-rw-r-- 1 ben ben 33424541 Sep 16 08:02 SRR616039.sra
+            # -rw-rw-r-- 1 ben ben  7736661 Sep 16 08:02 SRR616042.sra
+            # -rw-rw-r-- 1 ben ben  5218613 Sep 16 08:02 SRR616043.sra
+            # -rw-rw-r-- 1 ben ben  1468505 Sep 16 08:02 SRR616044.sra
+            self.assertTrue(os.path.getsize('outdir/SRR600121.sra')==45099009)
+            self.assertTrue(os.path.getsize('outdir/SRR605326.sra')==31203681)
+            self.assertTrue(os.path.getsize('outdir/SRR605331.sra')==4291189)
+            self.assertTrue(os.path.getsize('outdir/SRR609442.sra')==4645669)
+            self.assertTrue(os.path.getsize('outdir/SRR609443.sra')==31203681)
+            self.assertTrue(os.path.getsize('outdir/SRR616039.sra')==33424541)
+            self.assertTrue(os.path.getsize('outdir/SRR616042.sra')==7736661)
+            self.assertTrue(os.path.getsize('outdir/SRR616043.sra')==5218613)
+            self.assertTrue(os.path.getsize('outdir/SRR616044.sra')==1468505)
+
+            with open('kingfisher_stderr') as f:
+                stderr = f.read()
+                self.assertTrue(f'MD5sum OK for {os.getcwd()}/outdir/SRR600121.sra' in stderr)
     
     def test_api_stability(self):
         from kingfisher import download_and_extract

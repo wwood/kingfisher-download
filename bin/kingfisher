@@ -51,6 +51,11 @@ def add_extraction_args(parser):
         help=fix('Output sequences to STDOUT. Currently requires --unsorted [default: Do not].'))
     return parser
 
+def check_get_and_extract_common_args(args):
+    if args.output_directory and args.stdout:
+        logging.error("--output-directory and --stdout are incompatible")
+        sys.exit(1)
+
 
 def main():
     bird_argparser = BirdArgparser(
@@ -115,7 +120,10 @@ def main():
             ['gcp-cp','Download .SRA file from Google Cloud gsutil, which is then extracted with fasterq-dump. Requires payment and a Google Cloud account.']
             ]),
         choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp', 'ena-ascp','ena-ftp'], required=True)
-
+    get_parser_common_options.add_argument(
+        '--output-directory', '--output_directory',
+        help=fix('Output directory to write to [default: current working directory]'))
+    
     get_parser_download_args = get_parser.add_argument_group(title='further download options')
     get_parser_download_args.add_argument(
         '--download-threads', '--download_threads',
@@ -207,6 +215,9 @@ def main():
         '--sra',
         help='Extract this SRA file [required]',
         required=True)
+    extract_parser_extraction_group.add_argument(
+        '--output-directory', '--output_directory',
+        help=fix('Output directory to write to [default: current working directory]'))
     add_extraction_args(extract_parser_extraction_group)
     extract_parser_extraction_group.add_argument(
         '-t', '--threads',
@@ -251,6 +262,7 @@ def main():
     logging.info("Kingfisher v{}".format(kingfisher.__version__))
 
     if args.subparser_name == 'get':
+        check_get_and_extract_common_args(args)
         kingfisher.download_and_extract(
             run_identifiers = args.run_identifiers,
             run_identifiers_file = args.run_identifiers_list,
@@ -275,6 +287,7 @@ def main():
             hide_download_progress = args.hide_download_progress,
             prefetch_max_size = args.prefetch_max_size,
             check_md5sums = args.check_md5sums,
+            output_directory = args.output_directory if args.output_directory is not None else '.',
         )
     elif args.subparser_name == 'extract':
         output_files = kingfisher.extract(
@@ -284,6 +297,7 @@ def main():
             unsorted = args.unsorted,
             stdout = args.stdout,
             threads = args.threads,
+            output_directory = args.output_directory if args.output_directory is not None else '.',
         )
         logging.info("Output files: {}".format(', '.join(output_files)))
     elif args.subparser_name == 'annotate':
