@@ -334,7 +334,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                     logging.warning("Not using method gcp-cp as --allow-paid was not specified")
 
             elif method == 'ena-ascp':
-                result = EnaDownloader().download_with_aspera(run_identifier, '.',
+                result = EnaDownloader().download_with_aspera(run_identifier, output_directory,
                     ascp_args=ascp_args,
                     ssh_key=ascp_ssh_key,
                     check_md5sums=check_md5sums)
@@ -346,6 +346,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                 result = EnaDownloader().download_with_curl(
                     run_identifier,
                     download_threads,
+                    output_directory,
                     check_md5sums=check_md5sums)
                 if result is not False:
                     gzip_test_files(result)
@@ -382,9 +383,11 @@ def download_and_extract_one_run(run_identifier, **kwargs):
         else:
             if stdout:
                 raise Exception("--stdout currently must be via download of a .sra format file, rather than a download from ENA. I imagine this will be fixed in future.")
-            if 'fastq.gz' not in output_format_possibilities:
+            if 'fastq.gz' in output_format_possibilities:
+                output_files = downloaded_files
+            else:
                 for fq in ['x_1.fastq.gz','x_2.fastq.gz','x.fastq.gz']:
-                    f = fq.replace('x',run_identifier)
+                    f = output_location_factory.output_stem(fq.replace('x',run_identifier))
                     if os.path.exists(f):
                         # Do the least work, currently we have FASTQ.gz
                         if 'fasta' in output_format_possibilities:
@@ -409,9 +412,9 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                             output_files.append(f.replace('.fastq.gz','.fastq'))
                         else:
                             raise Exception("Programming error")
-
-            else:
-                output_files = downloaded_files
+                
+    if len(output_files) == 0:
+        raise Exception("No output files found, something went amiss, unsure what.")
 
     logging.info("Output files: {}".format(', '.join(output_files)))
 

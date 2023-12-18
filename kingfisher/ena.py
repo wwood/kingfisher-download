@@ -3,9 +3,9 @@ import subprocess
 import logging
 import os
 import pandas as pd
-import hashlib
 
 import extern
+import bird_tool_utils
 
 from .md5sum import MD5
 
@@ -81,7 +81,6 @@ class EnaDownloader:
         logging.info("Downloading {} FTP read set(s): {}".format(
             len(ftp_urls), ", ".join(ftp_urls)))
 
-        aspera_commands = []
         output_files = []
         for url, md5 in zip(ftp_urls, md5sums):
             quiet_args = ''
@@ -112,36 +111,37 @@ class EnaDownloader:
             output_files.append(output_file)
         return output_files
 
-    def download_with_curl(self, run_id, num_threads, check_md5sums=False):
-        report = self.get_ftp_download_urls(run_id)
-        if report is False:
-            return False
-        ftp_urls = report.file_paths
-        md5sums = report.md5sums
-
-        downloaded = []
-        for url, md5 in zip(ftp_urls, md5sums):
-            logging.info("Downloading {} ..".format(url))
-            output_file = os.path.basename(url)
-            if num_threads > 1:
-                cmd = "aria2c -x{} -o {} 'ftp://{}'".format(
-                    num_threads, output_file, url)
-            else:
-                cmd = "curl -L '{}' -o {}".format(url, output_file)
-            try:
-                subprocess.check_call(cmd, shell=True)
-            except subprocess.CalledProcessError as e:
-                logging.warning("Method ena-ftp failed, error was {}".format(e))
-                self._clean_incomplete_files(downloaded+[output_file])
+    def download_with_curl(self, run_id, num_threads, output_directory, check_md5sums=False):
+        with bird_tool_utils.in_working_directory(output_directory):
+            report = self.get_ftp_download_urls(run_id)
+            if report is False:
                 return False
-            
-            if check_md5sums:
-                if MD5.check_md5sum(output_file, md5):
-                    logging.info("MD5sum OK for {}".format(output_file))
+            ftp_urls = report.file_paths
+            md5sums = report.md5sums
+
+            downloaded = []
+            for url, md5 in zip(ftp_urls, md5sums):
+                logging.info("Downloading {} ..".format(url))
+                output_file = os.path.basename(url)
+                if num_threads > 1:
+                    cmd = "aria2c -x{} -o {} 'ftp://{}'".format(
+                        num_threads, output_file, url)
                 else:
-                    logging.error("MD5sum failed for {}".format(output_file))
+                    cmd = "curl -L '{}' -o {}".format(url, output_file)
+                try:
+                    subprocess.check_call(cmd, shell=True)
+                except subprocess.CalledProcessError as e:
+                    logging.warning("Method ena-ftp failed, error was {}".format(e))
                     self._clean_incomplete_files(downloaded+[output_file])
                     return False
-            downloaded.append(output_file)
+                
+                if check_md5sums:
+                    if MD5.check_md5sum(output_file, md5):
+                        logging.info("MD5sum OK for {}".format(output_file))
+                    else:
+                        logging.error("MD5sum failed for {}".format(output_file))
+                        self._clean_incomplete_files(downloaded+[output_file])
+                        return False
+                downloaded.append(os.path.join(output_directory, output_file))
         return downloaded
 
