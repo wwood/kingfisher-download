@@ -413,7 +413,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                         else:
                             raise Exception("Programming error")
                 
-    if len(output_files) == 0:
+    if not stdout and len(output_files) == 0:
         raise Exception("No output files found, something went amiss, unsure what.")
 
     logging.info("Output files: {}".format(', '.join(output_files)))
