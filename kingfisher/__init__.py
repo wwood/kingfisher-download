@@ -160,7 +160,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                     logging.warning("Method {} failed: Error was: {}".format(method, e))
                     if os.path.exists(output_path):
                         logging.info("Removing file {} because download failed ..".format(output_path))
-                        os.remove(f)
+                        os.remove(output_path)
                 
             elif method == 'aws-http':
                 def download_from_aws(odp_link, run_identifier, download_threads, method):
@@ -268,12 +268,12 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                             ))
                             if os.path.exists(output_path):
                                 logging.info("Removing file {} because download failed ..".format(output_path))
-                                os.remove(f)
+                                os.remove(output_path)
                 else:
                     logging.warning("Method {} failed: No S3 location could be found".format(method))
                     if os.path.exists(output_path):
                         logging.info("Removing file {} because download failed ..".format(output_path))
-                        os.remove(f)
+                        os.remove(output_path)
 
             elif method == 'gcp-cp':
                 output_path = output_location_factory.output_stem('{}.sra'.format(run_identifier))
@@ -327,7 +327,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                                     ))
                                     if os.path.exists(output_path):
                                         logging.info("Removing file {} because download failed ..".format(output_path))
-                                        os.remove(f)
+                                        os.remove(output_path)
                     else:
                         logging.warning("Method {} failed: No GCP location could be found".format(method))
                 else:
