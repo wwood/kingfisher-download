@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Woodcroft
+    given-names: Ben J.
+    orcid: https://orcid.org/0000-0003-0670-7480
+  - family-names: Cunningham
+    given-names: Mitchell
+  - family-names: Gans
+    given-names: Jason D.
+  - family-names: Bolduc
+    given-names: Benjamin B.
+    orcid: https://orcid.org/0000-0003-2420-0755
+  - family-names: Hodgkins
+    given-names: Suzanne B.
+    orcid: https://orcid.org/0000-0002-0489-9207
+title: "Kingfisher: A utility for procurement of public sequencing data"
+version: 0.3.1
+date-released: 2023-09-27

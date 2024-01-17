@@ -192,6 +192,11 @@ key](https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-uti
 and then set the environment variable `NCBI_API_KEY` before running kingfisher.
 This key will then be used in all requests.
 
+## Citation
+
+Woodcroft B.J., Gans, J., Cunningham M., Hodgkins S.B., Bolduc B., Kingfisher: A
+utility for procurement of public sequencing data. 
+
 ## License
 
 Copyright Ben Woodcroft 2019-2023. Licensed under GPL3+. See LICENSE.txt.
