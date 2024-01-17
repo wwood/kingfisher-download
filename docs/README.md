@@ -194,8 +194,11 @@ This key will then be used in all requests.
 
 ## Citation
 
-Woodcroft B.J., Gans, J., Cunningham M., Hodgkins S.B., Bolduc B., Kingfisher: A
-utility for procurement of public sequencing data. 
+Woodcroft, B. J., Cunningham, M., Gans, J. D., Bolduc, B. B., & Hodgkins, S. B.
+(2023). Kingfisher: A utility for procurement of public sequencing data.
+[Computer software]. DOI: 10.5281/zenodo.10525085.
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10525086.svg)](https://doi.org/10.5281/zenodo.10525086)
 
 ## License
 
