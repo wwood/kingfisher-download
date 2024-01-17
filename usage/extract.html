@@ -1,0 +1,210 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <title>Kingfisher extract</title>
+    <meta name="description" content="Documentation for Kingfisher">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Sans+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" type="text/css" href="/kingfisher-download/assets/normalize.css?v=1705526758"
+        media="screen" />
+    <link rel="stylesheet" type="text/css" href="/kingfisher-download/assets/doctave-style.css?v=1705526758"
+        media="screen" />
+    <link rel="stylesheet" type="text/css" href="/kingfisher-download/assets/katex.css?v=1705526758" media="screen" />
+    <link rel="stylesheet" type="text/css" href="/kingfisher-download/assets/prism-ghcolors.css?v=1705526758"
+        media="screen" />
+
+    <script>
+        var DOCTAVE_TIMESTAMP = "1705526758";
+        var BASE_PATH = "/kingfisher-download/";
+        var color = localStorage.getItem('doctave-color')
+
+        if (color === 'dark') {
+            document.getElementsByTagName('html')[0].classList.remove('light');
+            document.getElementsByTagName('html')[0].classList.add('dark');
+        } else {
+            document.getElementsByTagName('html')[0].classList.remove('dark');
+            document.getElementsByTagName('html')[0].classList.add('light');
+        }
+    </script>
+
+    
+</head>
+
+<body>
+    <label for='menu-toggle-switch' class='menu-toggle-button'>
+        ☰
+    </label>
+    <input type="checkbox" id="menu-toggle-switch" value='0' />
+    <div class='page'>
+        <div class='header'>
+            <div class='logo'>
+                
+                <a href="/kingfisher-download/">
+                    <img src="/kingfisher-download/kingfisher.png" alt='Kingfisher logo'></img>
+                </a>
+                
+                <h2 class='project-name'>
+                    <a href="/kingfisher-download/">
+                        Kingfisher
+                    </a>
+                </h2>
+            </div>
+            <div class='search'>
+                <form id='search-form'>
+    <input type='text' id='search-box' autocomplete="off" placeholder="Search..."></input>
+    <span class='search-icon'>S</span>
+    <ul id='search-results'></ul>
+</form>
+
+            </div>
+            <div class='header-dummy-right'>
+            </div>
+        </div>
+        <div class='container'>
+            <div class='sidebar-left'>
+                <nav class='site-nav'>
+    <ul>
+        
+            <li><a href="/kingfisher-download/usage/get">Kingfisher get</a></li>
+            
+        
+            <li><a class="active" href="/kingfisher-download/usage/extract">Kingfisher extract</a></li>
+            
+        
+            <li><a href="/kingfisher-download/usage/annotate">Kingfisher annotate</a></li>
+            
+        
+    </ul>
+    <span id='light-dark-mode-switch'>
+        <svg xmlns="http://www.w3.org/2000/svg" id="dark-mode-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+        </svg>
+
+        <svg xmlns="http://www.w3.org/2000/svg" id="light-mode-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+        </svg>
+    </span>
+</nav>
+
+            </div>
+            <div class='doctave-content'>
+                <h1 id="kingfisher-extract">kingfisher extract</h1>
+<h1 id="description">DESCRIPTION</h1>
+<p>Extract .sra format files into FASTQ or FASTA format, compressed or
+uncompressed.</p>
+<h1 id="options">OPTIONS</h1>
+<h1 id="extraction-options">EXTRACTION OPTIONS</h1>
+<p><strong>--sra</strong> <em>SRA</em></p>
+<p>Extract this SRA file [required]</p>
+<p><strong>--output-directory</strong> <em>OUTPUT_DIRECTORY</em></p>
+<p>Output directory to write to [default: current working directory]</p>
+<p><strong>-f</strong>, <strong>--output-format-possibilities</strong> {sra,fastq,fastq.gz,fasta,fasta.gz} [{sra,fastq,fastq.gz,fasta,fasta.gz} ...]</p>
+<p>Allowable output formats. If more than one is specified, downloaded
+data will processed as little as possible [default: "fastq
+fastq.gz"]</p>
+<p><strong>--force</strong></p>
+<p>Re-download / extract files even if they already exist [default: Do
+not].</p>
+<p><strong>--unsorted</strong></p>
+<p>Output the sequences in arbitrary order, usually the order that they
+appear in the .sra file. Even pairs of reads may be in the usual
+order, but it is possible to tell which pair is which, and which is
+a forward and which is a reverse read from the name [default: Do
+not].</p>
+<p>Currently requires download from NCBI rather than ENA.</p>
+<p><strong>--stdout</strong></p>
+<p>Output sequences to STDOUT. Currently requires --unsorted
+[default: Do not].</p>
+<p><strong>-t</strong>, <strong>--threads</strong> <em>THREADS</em></p>
+<p>Number of threads to use for extraction [default: 8]</p>
+<h1 id="other-general-options">OTHER GENERAL OPTIONS</h1>
+<p><strong>--debug</strong></p>
+<p>output debug information</p>
+<p><strong>--version</strong></p>
+<p>output version information and quit</p>
+<p><strong>--quiet</strong></p>
+<p>only output errors</p>
+<p><strong>--full-help</strong></p>
+<p>print longer help message</p>
+<p><strong>--full-help-roff</strong></p>
+<p>print longer help message in ROFF (manpage) format</p>
+<h1 id="author">AUTHOR</h1>
+<blockquote>
+<pre><code>Ben J. Woodcroft, Centre for Microbiome Research, School of Biomedical Sciences, Faculty of Health, Queensland University of Technology &lt;benjwoodcroft near gmail.com&gt;
+</code></pre>
+</blockquote>
+<h1 id="examples">EXAMPLES</h1>
+<p>Extract an SRA file to FASTQ.GZ format using 16 threads (default is 8)</p>
+<p><strong>$ kingfisher extract --sra ERR1739691.sra -t 16 -f fastq.gz</strong></p>
+
+            </div>
+            <div class='sidebar-right'>
+                <div class='page-nav' id='page-nav'>
+                    <p class='page-nav-header'>On this page</p>
+                    <ul>
+                        
+                        <li class='page-nav-level-1'>
+                            <a href='#kingfisher-extract'>kingfisher extract</a>
+                        </li>
+                        
+                        <li class='page-nav-level-1'>
+                            <a href='#description'>DESCRIPTION</a>
+                        </li>
+                        
+                        <li class='page-nav-level-1'>
+                            <a href='#options'>OPTIONS</a>
+                        </li>
+                        
+                        <li class='page-nav-level-1'>
+                            <a href='#extraction-options'>EXTRACTION OPTIONS</a>
+                        </li>
+                        
+                        <li class='page-nav-level-1'>
+                            <a href='#other-general-options'>OTHER GENERAL OPTIONS</a>
+                        </li>
+                        
+                        <li class='page-nav-level-1'>
+                            <a href='#author'>AUTHOR</a>
+                        </li>
+                        
+                        <li class='page-nav-level-1'>
+                            <a href='#examples'>EXAMPLES</a>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            <div class='wave-container'>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+                    <path fill-opacity="0.35"
+                        d="M0,192L60,213.3C120,235,240,277,360,277.3C480,277,600,235,720,192C840,149,960,107,1080,122.7C1200,139,1320,213,1380,250.7L1440,288L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z">
+                    </path>
+                    <path fill-opacity="0.5"
+                        d="M0,160L60,181.3C120,203,240,245,360,229.3C480,213,600,139,720,138.7C840,139,960,213,1080,229.3C1200,245,1320,203,1380,181.3L1440,160L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z">
+                    </path>
+                    <path fill-opacity="0.2"
+                        d="M0,224L60,197.3C120,171,240,117,360,117.3C480,117,600,171,720,186.7C840,203,960,181,1080,186.7C1200,192,1320,224,1380,240L1440,256L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z">
+                    </path>
+                </svg>
+                <p>Powered by <a href='https://cli.doctave.com' target='_blank'>Doctave</a></p>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" src="/kingfisher-download/assets/katex.js?v=1705526758"></script>
+    <script type="text/javascript" src="/kingfisher-download/assets/mermaid.js?v=1705526758"></script>
+    <script type="text/javascript" src="/kingfisher-download/assets/elasticlunr.js?v=1705526758"></script>
+    <script type="text/javascript" src="/kingfisher-download/assets/prism.js?v=1705526758"></script>
+    <script type="text/javascript" src="/kingfisher-download/assets/doctave-app.js?v=1705526758"></script>
+
+    
+</body>
+
+</html>

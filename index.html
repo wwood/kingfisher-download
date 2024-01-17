@@ -1,0 +1,352 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <title>README</title>
+    <meta name="description" content="Documentation for Kingfisher">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Sans+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" type="text/css" href="/kingfisher-download/assets/normalize.css?v=1705526758"
+        media="screen" />
+    <link rel="stylesheet" type="text/css" href="/kingfisher-download/assets/doctave-style.css?v=1705526758"
+        media="screen" />
+    <link rel="stylesheet" type="text/css" href="/kingfisher-download/assets/katex.css?v=1705526758" media="screen" />
+    <link rel="stylesheet" type="text/css" href="/kingfisher-download/assets/prism-ghcolors.css?v=1705526758"
+        media="screen" />
+
+    <script>
+        var DOCTAVE_TIMESTAMP = "1705526758";
+        var BASE_PATH = "/kingfisher-download/";
+        var color = localStorage.getItem('doctave-color')
+
+        if (color === 'dark') {
+            document.getElementsByTagName('html')[0].classList.remove('light');
+            document.getElementsByTagName('html')[0].classList.add('dark');
+        } else {
+            document.getElementsByTagName('html')[0].classList.remove('dark');
+            document.getElementsByTagName('html')[0].classList.add('light');
+        }
+    </script>
+
+    
+</head>
+
+<body>
+    <label for='menu-toggle-switch' class='menu-toggle-button'>
+        ☰
+    </label>
+    <input type="checkbox" id="menu-toggle-switch" value='0' />
+    <div class='page'>
+        <div class='header'>
+            <div class='logo'>
+                
+                <a href="/kingfisher-download/">
+                    <img src="/kingfisher-download/kingfisher.png" alt='Kingfisher logo'></img>
+                </a>
+                
+                <h2 class='project-name'>
+                    <a href="/kingfisher-download/">
+                        Kingfisher
+                    </a>
+                </h2>
+            </div>
+            <div class='search'>
+                <form id='search-form'>
+    <input type='text' id='search-box' autocomplete="off" placeholder="Search..."></input>
+    <span class='search-icon'>S</span>
+    <ul id='search-results'></ul>
+</form>
+
+            </div>
+            <div class='header-dummy-right'>
+            </div>
+        </div>
+        <div class='container'>
+            <div class='sidebar-left'>
+                <nav class='site-nav'>
+    <ul>
+        
+            <li><a href="/kingfisher-download/usage/get">Kingfisher get</a></li>
+            
+        
+            <li><a href="/kingfisher-download/usage/extract">Kingfisher extract</a></li>
+            
+        
+            <li><a href="/kingfisher-download/usage/annotate">Kingfisher annotate</a></li>
+            
+        
+    </ul>
+    <span id='light-dark-mode-switch'>
+        <svg xmlns="http://www.w3.org/2000/svg" id="dark-mode-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+        </svg>
+
+        <svg xmlns="http://www.w3.org/2000/svg" id="light-mode-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+        </svg>
+    </span>
+</nav>
+
+            </div>
+            <div class='doctave-content'>
+                <p>Welcome.</p>
+<p>Kingfisher is a fast and flexible program for procurement of sequence files (and
+their metadata annotations) from public data sources, including the European Nucleotide
+Archive (ENA), NCBI SRA, Amazon AWS and Google Cloud. It's input is one or more
+"Run" accessions e.g. DRR001970, or a BioProject accessions e.g. PRJNA621514 or
+SRP260223.</p>
+<p>It has two main modes - the
+<a href="https://wwood.github.io/kingfisher-download/usage/get">get</a> mode downloads
+sequence data and the
+<a href="https://wwood.github.io/kingfisher-download/usage/annotate">annotate</a> mode
+downloads metadata.</p>
+<p>In the <code>get</code> subcommand, kingfisher downloads data from a series of redundant
+sources, which it attempts in order until one works. The downloaded data is then
+converted to an output SRA / FASTQ / FASTA / GZIP file format as required. Both
+download and extraction phases can be quicker than using the NCBI's SRA toolkit.
+In particular, downloading from ENA means that FASTQ files are downloaded
+directly, so there is no need for the extraction step.</p>
+<p>If you are looking to download GenBank/RefSeq data instead, then you might try <a href="https://www.ncbi.nlm.nih.gov/datasets">NCBI datasets</a> or <a href="https://github.com/kblin/ncbi-acc-download">ncbi-acc-download</a>.</p>
+<p>In the <code>annotation</code> subcommand, metadata about the run(s) is downloaded from NCBI and output in one of several formats e.g. human-readable, CSV, TSV, JSON, feather or parquet. By default, a small amount of metadata is downloaded - more details can be output using the <code>--all-columns</code> flag.</p>
+<h2 id="installation">Installation</h2>
+<h3 id="installation-through-bioconda">Installation through bioconda</h3>
+<p>Kingfisher can be installed in the usual way through conda/bioconda e.g.</p>
+<pre><code>conda create -n kingfisher -c conda-forge -c bioconda kingfisher
+conda activate kingfisher
+kingfisher get -r SRR12118866 -m ena-ftp
+</code></pre>
+<p>Optionally, to use the <code>ena-ascp</code> method, an Aspera connect client is also required.
+See <a href="https://www.ibm.com/aspera/connect/">https://www.ibm.com/aspera/connect/</a> or <a href="https://www.biostars.org/p/325010/">https://www.biostars.org/p/325010/</a>.</p>
+<h3 id="installation-through-dockerhub">Installation through DockerHub</h3>
+<p>A docker image generated from the conda package is available on DockerHub. After installing Docker, run the following, replacing <code>[RELEASE_TAG]</code> with a tag from <a href="https://hub.docker.com/r/wwood/kingfisher/tags">https://hub.docker.com/r/wwood/kingfisher/tags</a>:</p>
+<pre><code>docker pull wwood/kingfisher:[RELEASE_TAG]
+</code></pre>
+<p>To download data into the current directory:</p>
+<pre><code>docker run -v `pwd`:/data wwood/kingfisher:[RELEASE_TAG] get -r SRR12118866 -m ena-ftp
+</code></pre>
+<h3 id="conda-based-development-environment">Conda-based development environment</h3>
+<p>Kingfisher can be installed by installing its conda dependencies as follows.
+Then it can be run from the source directory:</p>
+<pre><code>git clone https://github.com/wwood/kingfisher-download
+cd kingfisher-download
+conda env create -n kingfisher -f kingfisher.yml
+conda activate kingfisher
+cd bin
+export PATH=$PWD:$PATH
+kingfisher -h
+</code></pre>
+<p>Optionally, to use the <code>ena-ascp</code> method, an Aspera connect client is also required.
+See <a href="https://www.ibm.com/aspera/connect/">https://www.ibm.com/aspera/connect/</a> or <a href="https://www.biostars.org/p/325010/">https://www.biostars.org/p/325010/</a>.</p>
+<p>@MakeTheBrainHappy implemented an example installation (and usage) guide in <a href="https://colab.research.google.com/drive/1k3RC-WbVAAl6h8yXtfEhwqCAvCMHspzz?usp=sharing">Google Colaboratory</a> and <a href="https://github.com/MakeTheBrainHappy/kingfisher-cloud">Jupyter Notebook</a>.</p>
+<h2 id="usage">Usage</h2>
+<p>For all modes, a full run-down of the functionality is available using the
+<code>--full-help</code> flag e.g. <code>kingfisher get --full-help</code> or <code>kingfisher annotate --full-help</code>.</p>
+<h3 id="'get'-mode:-download-and-optionally-convert-sequence-data">'get' mode: Download and optionally convert sequence data</h3>
+<pre><code>$ kingfisher get -r ERR1739691 -m ena-ascp aws-http prefetch
+</code></pre>
+<p>This will download <code>.fastq.gz</code> files of the run ERR1739691 from the ENA, or
+failing that, downloads an .sra file from the Amazon AWA Open Data Program and
+then converts to FASTQ, or failing that use NCBI prefetch to download and
+convert that to FASTQ. Kingfisher will do the least effort to convert a
+downloaded file into one of the formats specified in
+<code>--output-format-possibilities</code> which is <code>fastq fastq.gz</code> by default.</p>
+<p>Output files are put into the current working directory. There are many options
+for output formats, different download methods etc. Check 'Method details' below
+and the full help for more details.</p>
+<h3 id="'extract'-mode:-convert-sequence-data-from-.sra-format">'extract' mode: Convert sequence data from .sra format</h3>
+<pre><code>$ kingfisher extract --sra ERR1739691.sra -t 16 -f fastq.gz
+</code></pre>
+<p>This will extract the file ERR1739691.sra using 16 threads and convert it to
+fastq.gz file(s). Since this run has paired sequencing data in it, it will
+create two files <code>ERR1739691_1.fastq.gz</code> and <code>ERR1739691_2.fastq.gz</code>.</p>
+<h3 id="'annotate'-mode:-get-a-table-of-metadata">'annotate' mode: Get a table of metadata</h3>
+<pre><code>$ kingfisher annotate -r ERR1739691
+run        | bioproject | Gbp   | library_strategy | library_selection | model               | sample_name | taxon_name
+---------- | ---------- | ----- | ---------------- | ----------------- | ------------------- | ----------- | ----------
+ERR1739691 | PRJEB15706 | 2.382 | WGS              | RANDOM            | Illumina HiSeq 2500 | MM1_1       | metagenome
+</code></pre>
+<p>A fuller set of information is available with <code>--all-columns</code> and the table can
+also be output in CSV, TSV, JSON, feather or parquet formats using the <code>-f</code> flag.</p>
+<h2 id="method-details">Method details</h2>
+<p>In <code>get</code> mode, there are several ways to procure the data:</p>
+<table><thead><tr><th><strong>method</strong></th><th><strong>description</strong></th></tr></thead><tbody>
+<tr><td><code>ena-ascp</code></td><td>Download <code>.fastq.gz</code> files from ENA using Aspera, which can then be further converted. This is the fastest method since no <code>fasterq-dump</code> is required.</td></tr>
+<tr><td><code>ena-ftp</code></td><td>Download <code>.fastq.gz</code> files from ENA using <code>curl</code>, which can then be further converted. This is relatively fast since no <code>fasterq-dump</code> is required.</td></tr>
+<tr><td><code>prefetch</code></td><td>Download .SRA file using NCBI's prefetch from sra-tools, which is then extracted with <code>fasterq-dump</code>.</td></tr>
+<tr><td><code>aws-http</code></td><td>Download .SRA file from AWS Open Data Program using <code>aria2c</code> with multiple connection threads, which is then extracted with <code>fasterq-dump</code>.</td></tr>
+<tr><td><code>aws-cp</code></td><td>Download .SRA file from AWS using <code>aws s3 cp</code>, which is then extracted with fasterq-dump. Does not usually require payment or an AWS account.</td></tr>
+<tr><td><code>gcp-cp</code></td><td>Download .SRA file from Google Cloud <code>gsutil</code>, which is then extracted with fasterq-dump. Requires payment and a Google Cloud account.</td></tr>
+</tbody></table>
+<p>The <code>ena-ascp</code> method of this tool was built based on the very helpful bio-stars
+<a href="https://www.biostars.org/p/325010/">thread</a> written by @ATpoint. To find run
+identifiers to be used as input to kingfisher, you might find the <a href="https://ewels.github.io/sra-explorer/">SRA
+explorer</a> site helpful.</p>
+<h2 id="near-parity-with-ena-fast-download">Near parity with ena-fast-download</h2>
+<p>Ena-fast-download was the original name for this tool. To imitate that tool's
+functionality:</p>
+<pre><code>kingfisher get -r ERR1739691 -m ena-ascp
+</code></pre>
+<h2 id="faq">FAQ</h2>
+<h3 id="ascp:-not-found">ascp: not found</h3>
+<p>If you see this error <code>/bin/sh: 1: ascp: not found</code> as below:</p>
+<pre><code>$ kingfisher get -r ERR3357550 -m ena-ascp
+05/04/2021 05:13:45 AM INFO: Attempting download method ena-ascp ..
+05/04/2021 05:13:45 AM INFO: Using aspera ssh key file: $HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh
+05/04/2021 05:13:45 AM INFO: Querying ENA for FTP paths for ERR3357550..
+05/04/2021 05:13:49 AM INFO: Downloading 2 FTP read set(s): ftp.sra.ebi.ac.uk/vol1/fastq/ERR335/000/ERR3357550/ERR3357550_1.fastq.gz, ftp.sra.ebi.ac.uk/vol1/fastq/ERR335/000/ERR3357550/ERR3357550_2.fastq.gz
+05/04/2021 05:13:49 AM INFO: Running command: ascp -T -l 300m -P33001  -i $HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh era-fasp@fasp.sra.ebi.ac.uk:/vol1/fastq/ERR335/000/ERR3357550/ERR3357550_1.fastq.gz .
+/bin/sh: 1: ascp: not found
+05/04/2021 05:13:49 AM WARNING: Error downloading from ENA with ASCP: Command 'ascp -T -l 300m -P33001  -i $HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh era-fasp@fasp.sra.ebi.ac.uk:/vol1/fastq/ERR335/000/ERR3357550/ERR3357550_1.fastq.gz .' returned non-zero exit status 127.
+05/04/2021 05:13:49 AM WARNING: Method ena-ascp failed
+Traceback (most recent call last):
+  File "./bin/kingfisher", line 330, in &lt;module&gt;
+    raise Exception("No more specified download methods, cannot continue")
+Exception: No more specified download methods, cannot continue
+</code></pre>
+<p>then you have not installed the Aspera client correctly. See the installation section of this document.</p>
+<h3 id="failed-to-authenticate-with-ascp">Failed to authenticate with ascp</h3>
+<p>This error manifests like this</p>
+<pre><code>$ kingfisher get -r SRR5005053 -m ena-ascp
+10/26/2021 11:24:21 PM INFO: Kingfisher v0.0.1-dev
+10/26/2021 11:24:21 PM INFO: Attempting download method ena-ascp ..
+10/26/2021 11:24:21 PM INFO: Using aspera ssh key file: $HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh
+10/26/2021 11:24:21 PM INFO: Querying ENA for FTP paths for SRR5005053..
+10/26/2021 11:24:33 PM INFO: Downloading 2 FTP read set(s): ftp.sra.ebi.ac.uk/vol1/fastq/SRR500/003/SRR5005053/SRR5005053_1.fastq.gz, ftp.sra.ebi.ac.uk/vol1/fastq/SRR500/003/SRR5005053/SRR5005053_2.fastq.gz
+10/26/2021 11:24:33 PM INFO: Running command: ascp -T -l 300m -P33001 -k 2 -i $HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh era-fasp@fasp.sra.ebi.ac.uk:/vol1/fastq/SRR500/003/SRR5005053/SRR5005053_1.fastq.gz .
+10/26/2021 11:24:45 PM WARNING: Error downloading from ENA with ASCP: Command ascp -T -l 300m -P33001 -k 2 -i $HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh era-fasp@fasp.sra.ebi.ac.uk:/vol1/fastq/SRR500/003/SRR5005053/SRR5005053_1.fastq.gz . returned non-zero exit status 1.
+STDERR was: b'ascp: failed to authenticate, exiting.\n'STDOUT was: b'\r\nSession Stop  (Error: failed to authenticate)\n'
+10/26/2021 11:24:45 PM WARNING: Method ena-ascp failed
+Traceback (most recent call last):
+  File "/analysis2/software/kingfisher-download/bin/kingfisher", line 280, in &lt;module&gt;
+    main()
+  File "/analysis2/software/kingfisher-download/bin/kingfisher", line 232, in main
+    kingfisher.download_and_extract(
+  File "/analysis2/software/kingfisher-download/bin/../kingfisher/__init__.py", line 37, in download_and_extract
+    download_and_extract_one_run(run, **kwargs)
+  File "/analysis2/software/kingfisher-download/bin/../kingfisher/__init__.py", line 276, in download_and_extract_one_run
+    raise Exception("No more specified download methods, cannot continue")
+Exception: No more specified download methods, cannot continue
+</code></pre>
+<p>This could be caused by (1) your being on a network that interferes with ascp operation, or (2) a temporary downtime at ENA. You may try moving to a different network or following the instructions at the <a href="https://www.ibm.com/support/pages/error-code-19-failed-authenticate">Aspera support</a> or checking the <a href="https://www.ibm.com/support/pages/node/747513">log files</a> to see if that helps diagnose the error. See <a href="https://github.com/wwood/kingfisher-download/issues/9#issuecomment-952576784">this issue</a> for more information about a specific WLAN that was causing an issue.</p>
+<h3 id="api-rate-limit-exceeded">API rate limit exceeded</h3>
+<p>Using <code>kingfisher annotate</code> repeatedly and in parallel can mean that the default
+allowable rate of requests (3 per second) is exceeded. To get around this error,
+you can generate an <a href="https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities/">NCBI API
+key</a>
+and then set the environment variable <code>NCBI_API_KEY</code> before running kingfisher.
+This key will then be used in all requests.</p>
+<h2 id="citation">Citation</h2>
+<p>Woodcroft, B. J., Cunningham, M., Gans, J. D., Bolduc, B. B., &amp; Hodgkins, S. B.
+(2023). Kingfisher: A utility for procurement of public sequencing data.
+[Computer software]. DOI: 10.5281/zenodo.10525085.</p>
+<p><a href="https://doi.org/10.5281/zenodo.10525086"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.10525086.svg" alt="DOI"></a></p>
+<h2 id="license">License</h2>
+<p>Copyright Ben Woodcroft 2019-2023. Licensed under GPL3+. See LICENSE.txt.</p>
+<p>The source code is available at <a href="https://github.com/wwood/kingfisher-download">https://github.com/wwood/kingfisher-download</a>.</p>
+
+            </div>
+            <div class='sidebar-right'>
+                <div class='page-nav' id='page-nav'>
+                    <p class='page-nav-header'>On this page</p>
+                    <ul>
+                        
+                        <li class='page-nav-level-2'>
+                            <a href='#installation'>Installation</a>
+                        </li>
+                        
+                        <li class='page-nav-level-3'>
+                            <a href='#installation-through-bioconda'>Installation through bioconda</a>
+                        </li>
+                        
+                        <li class='page-nav-level-3'>
+                            <a href='#installation-through-dockerhub'>Installation through DockerHub</a>
+                        </li>
+                        
+                        <li class='page-nav-level-3'>
+                            <a href='#conda-based-development-environment'>Conda-based development environment</a>
+                        </li>
+                        
+                        <li class='page-nav-level-2'>
+                            <a href='#usage'>Usage</a>
+                        </li>
+                        
+                        <li class='page-nav-level-3'>
+                            <a href='#&#x27;get&#x27;-mode:-download-and-optionally-convert-sequence-data'>&#x27;get&#x27; mode: Download and optionally convert sequence data</a>
+                        </li>
+                        
+                        <li class='page-nav-level-3'>
+                            <a href='#&#x27;extract&#x27;-mode:-convert-sequence-data-from-.sra-format'>&#x27;extract&#x27; mode: Convert sequence data from .sra format</a>
+                        </li>
+                        
+                        <li class='page-nav-level-3'>
+                            <a href='#&#x27;annotate&#x27;-mode:-get-a-table-of-metadata'>&#x27;annotate&#x27; mode: Get a table of metadata</a>
+                        </li>
+                        
+                        <li class='page-nav-level-2'>
+                            <a href='#method-details'>Method details</a>
+                        </li>
+                        
+                        <li class='page-nav-level-2'>
+                            <a href='#near-parity-with-ena-fast-download'>Near parity with ena-fast-download</a>
+                        </li>
+                        
+                        <li class='page-nav-level-2'>
+                            <a href='#faq'>FAQ</a>
+                        </li>
+                        
+                        <li class='page-nav-level-3'>
+                            <a href='#ascp:-not-found'>ascp: not found</a>
+                        </li>
+                        
+                        <li class='page-nav-level-3'>
+                            <a href='#failed-to-authenticate-with-ascp'>Failed to authenticate with ascp</a>
+                        </li>
+                        
+                        <li class='page-nav-level-3'>
+                            <a href='#api-rate-limit-exceeded'>API rate limit exceeded</a>
+                        </li>
+                        
+                        <li class='page-nav-level-2'>
+                            <a href='#citation'>Citation</a>
+                        </li>
+                        
+                        <li class='page-nav-level-2'>
+                            <a href='#license'>License</a>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            <div class='wave-container'>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+                    <path fill-opacity="0.35"
+                        d="M0,192L60,213.3C120,235,240,277,360,277.3C480,277,600,235,720,192C840,149,960,107,1080,122.7C1200,139,1320,213,1380,250.7L1440,288L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z">
+                    </path>
+                    <path fill-opacity="0.5"
+                        d="M0,160L60,181.3C120,203,240,245,360,229.3C480,213,600,139,720,138.7C840,139,960,213,1080,229.3C1200,245,1320,203,1380,181.3L1440,160L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z">
+                    </path>
+                    <path fill-opacity="0.2"
+                        d="M0,224L60,197.3C120,171,240,117,360,117.3C480,117,600,171,720,186.7C840,203,960,181,1080,186.7C1200,192,1320,224,1380,240L1440,256L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z">
+                    </path>
+                </svg>
+                <p>Powered by <a href='https://cli.doctave.com' target='_blank'>Doctave</a></p>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" src="/kingfisher-download/assets/katex.js?v=1705526758"></script>
+    <script type="text/javascript" src="/kingfisher-download/assets/mermaid.js?v=1705526758"></script>
+    <script type="text/javascript" src="/kingfisher-download/assets/elasticlunr.js?v=1705526758"></script>
+    <script type="text/javascript" src="/kingfisher-download/assets/prism.js?v=1705526758"></script>
+    <script type="text/javascript" src="/kingfisher-download/assets/doctave-app.js?v=1705526758"></script>
+
+    
+</body>
+
+</html>
