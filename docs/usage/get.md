@@ -39,6 +39,10 @@ Download and extract sequence data from SRA or ENA
 | aws-cp   | Download .SRA file from AWS using aws s3 cp, which is then extracted with fasterq-dump. Does not usually require payment or an AWS account.        |
 | gcp-cp   | Download .SRA file from Google Cloud gsutil, which is then extracted with fasterq-dump. Requires payment and a Google Cloud account.               |
 
+**\--output-directory** *OUTPUT_DIRECTORY*
+
+  Output directory to write to [default: current working directory]
+
 # FURTHER DOWNLOAD OPTIONS
 
 **\--download-threads** *DOWNLOAD_THREADS*

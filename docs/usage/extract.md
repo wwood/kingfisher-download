@@ -16,6 +16,10 @@ uncompressed.
 
   Extract this SRA file [required]
 
+**\--output-directory** *OUTPUT_DIRECTORY*
+
+  Output directory to write to [default: current working directory]
+
 **-f**, **\--output-format-possibilities** {sra,fastq,fastq.gz,fasta,fasta.gz} [{sra,fastq,fastq.gz,fasta,fasta.gz} \...]
 
   Allowable output formats. If more than one is specified, downloaded

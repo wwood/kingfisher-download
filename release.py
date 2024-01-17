@@ -2,6 +2,7 @@
 
 import io
 from os.path import dirname, join
+import re
 import extern
 
 def get_version(relpath):
@@ -16,6 +17,17 @@ def get_version(relpath):
 if __name__ == "__main__":
     version = get_version('kingfisher/version.py')
     print("version is {}".format(version))
+
+    # Replace version in CITATION.cff
+    citations_lines = []
+    with open("CITATION.cff", "r") as f:
+        r = re.compile(r"( *version: )")
+        for line in f:
+            if matches := r.match(line):
+                line = matches.group(1) + version + "\n"
+            citations_lines.append(line)
+    with open("CITATION.cff", "w") as f:
+        f.writelines(citations_lines)
 
     print("building docs")
     extern.run("python3 build_docs.py")
