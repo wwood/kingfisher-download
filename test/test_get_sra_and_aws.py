@@ -364,7 +364,11 @@ class Tests(unittest.TestCase):
 
     def test_get_by_bioproject(self):
         with in_tempdir():
-            extern.run('{} get --bioproject PRJNA177893 --force -f sra -m aws-http --check-md5sums 2>kingfisher_stderr'.format(kingfisher))
+            try:
+                extern.run('{} get --bioproject PRJNA177893 --force -f sra -m aws-http --check-md5sums 2>kingfisher_stderr'.format(kingfisher))
+            except extern.ExternCalledProcessError:
+                with open('kingfisher_stderr') as f:
+                    raise Exception("kingfisher_stderr:\n" + f.read())
             # -rw-rw-r-- 1 ben ben 45099009 Sep 16 08:01 SRR600121.sra
             # -rw-rw-r-- 1 ben ben 31203681 Sep 16 08:01 SRR605326.sra
             # -rw-rw-r-- 1 ben ben  4291189 Sep 16 08:01 SRR605331.sra

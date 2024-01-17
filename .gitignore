@@ -4,3 +4,5 @@ temp_test_data
 docker/Dockerfile
 docker/kingfisher.yml
 site
+build
+kingfisher.egg-info
