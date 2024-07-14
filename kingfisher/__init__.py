@@ -786,3 +786,106 @@ def _check_for_existing_files(output_location_factory, run_identifier, output_fo
             raise Exception("Programming error")
 
     return skip_download_and_extraction, output_files
+
+def authorship(**kwargs):
+    '''Try to attribute authorship / publications of SRA runs
+    '''
+    run_identifiers = kwargs.pop('run_identifiers')
+    run_identifiers_file = kwargs.pop('run_identifiers_file')
+
+    num_inputs = 0
+    if run_identifiers is not None: num_inputs += 1
+    if run_identifiers_file is not None: num_inputs += 1
+    if num_inputs != 1:
+        raise Exception("Must specify exactly one input type: --run-identifiers or --run-identifiers-list")
+
+    if run_identifiers_file is not None:
+        with open(run_identifiers_file) as f:
+            run_identifiers = list([r.strip() for r in f.readlines()])
+
+    logging.info("Finding associated authorship / publications for {} run(s)".format(len(run_identifiers)))  
+
+    # SRR7051058 is a good example of a run with GOLD authorship info
+
+    final_result = []
+
+    for run in run_identifiers:
+        logging.debug("Looking up authorship for run {}".format(run))
+
+        # ERR1914274 has a pubmed ID associated
+        # <STUDY_LINKS>
+        # <STUDY_LINK>
+        # <XREF_LINK>
+        # <DB>PUBMED</DB>
+        # <ID>29669589</ID>
+
+        # Get the metadata for the run
+        metadata = SraMetadata().efetch_sra_from_accessions([run])
+        # TODO: Do a single esearch and don't assume a result returned
+        m = metadata.iloc[0,:].to_dict()
+        # TODO: Account for multiple IDs in the same DB - not sure of an example tho
+        
+        to_print = {
+            'Run': run,
+        }
+        if 'study_links' in m:
+            study_links_json = m['study_links']
+            study_links = json.loads(study_links_json)
+            for link in study_links:
+                if 'db' in link:
+                    db = link['db']
+                    del link['db']
+                elif 'label' in link:
+                    db = link['label']
+                    del link['label']
+                else:
+                    if 'Other study links in list' not in to_print:
+                        to_print['Other study links in list'] = []
+                    to_print['Other study links in list'].append(link)
+
+                if db == 'pubmed':
+                    to_print['PubMed ID'] = link['id']
+                elif db == 'GOLD':
+                    to_print['GOLD ID'] = link['url']
+                else:
+                    if 'Other study links' not in to_print:
+                        to_print['Other study links'] = {}
+                    content_name = list(link.keys())[0]
+                    to_print['Other study links'][db] = link[content_name]
+
+        # Search PubMed for a title the same as the project name
+        # e.g. Characterisation of a sponge microbiome using an integrative genome-centric approach
+        # SRR9841429
+        study_title = m['study_title']
+        logging.debug("Searching PubMed for title '{}'".format(study_title))
+        pubmeds_from_title = SraMetadata().fetch_pubmed_ids_from_term(study_title)
+        if pubmeds_from_title:
+            to_print['PubMed IDs from title'] = ','.join(pubmeds_from_title)
+
+        logging.debug("Searching EuropePMC for title '{}'".format(study_title))
+        # TODO: The search for 'Characterisation of a sponge microbiome using an
+        # integrative genome-centric approach' gives poor results - better at
+        # PubMed. However, searching for 'sponge microbiome using an integrative
+        # genome-centric approach' does work. So maybe need to filter out common
+        # words?
+        citations_from_europe_pmc_title = SraMetadata().fetch_citations_from_query_title(study_title)
+        # TODO: Account for papers without a DOI?
+        dois = [c['doi'] for c in citations_from_europe_pmc_title]
+        if len(dois) > 0:
+            to_print['DOIs from EuropePMC title search'] = ','.join(dois)
+        
+        final_result.append(to_print)
+
+        # Search by bioproject accession e.g. for PRJEB22302 / ERR2108709
+        bioproject = m['bioproject']
+        logging.debug("Searching EuropePMC for bioproject accession '{}'".format(bioproject))
+        citations_from_europe_pmc_bioproject = SraMetadata().fetch_citations_from_query_bioproject(bioproject)
+        dois = [c['doi'] for c in citations_from_europe_pmc_bioproject]
+        if len(dois) > 0:
+            to_print['DOIs from EuropePMC bioproject search'] = ','.join(dois)
+
+
+    # Write out table as CSV
+    final = pd.DataFrame(final_result)
+    final.to_csv(sys.stdout, index=False)
+

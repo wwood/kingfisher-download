@@ -257,6 +257,19 @@ def main():
         action='store_true',
     )
 
+    authorship_description = 'Find publication / authorship of SRA accessions'
+    authorship_parser = bird_argparser.new_subparser('authorship', authorship_description)
+    authorship_parser.add_argument(
+        '-r','--run-identifiers','--run_identifiers',
+        help='Run number to download/extract e.g. ERR1914274',
+        nargs='+',
+    )
+    # list
+    authorship_parser.add_argument(
+        '--run-identifiers-list','--run_identifiers_list','--run-accession-list','--run_accession_list','--run-identifiers-list','--run_identifiers_list',
+        help='Text file containing a newline-separated list of run identifiers i.e. a 1 column CSV file.',
+    )
+
     args = bird_argparser.parse_the_args()
 
     logging.info("Kingfisher v{}".format(kingfisher.__version__))
@@ -311,6 +324,11 @@ def main():
             output_file = args.output_file,
             output_format = args.output_format,
             all_columns = args.all_columns,
+        )
+    elif args.subparser_name == 'authorship':
+        kingfisher.authorship(
+            run_identifiers = args.run_identifiers,
+            run_identifiers_file = args.run_identifiers_list,
         )
     else:
         raise Exception("Programming error")

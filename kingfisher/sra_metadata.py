@@ -319,3 +319,67 @@ class SraMetadata:
         metadata.sort_values([STUDY_ACCESSION_KEY,RUN_ACCESSION_KEY], inplace=True)
 
         return metadata
+    
+    def fetch_pubmed_ids_from_term(self, term):
+        retmax = 10000
+        res = requests.get(
+            url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+            params=self.add_api_key({
+                "db": "pubmed",
+                "term": term,
+                "tool": "kingfisher",
+                "email": "kingfisher@github.com",
+                "retmax": retmax,
+                "usehistory": "y",
+                }),
+            )
+        if not res.ok:
+            raise Exception("HTTP Failure when requesting search from term: {}: {}".format(res, res.text))
+        root = ET.fromstring(res.text)
+        logging.debug("Root of response: {}".format(ET.tostring(root)))
+        pubmed_ids = list([c.text for c in root.find('IdList')])
+        if len(pubmed_ids) == retmax:
+            logging.warning("Unexpectedly found the maximum number of results for this query, possibly some results will be missing")
+        return pubmed_ids
+
+    def fetch_citations_from_query_title(self, title):
+        # https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=Genome-centric%20view%20of%20carbon%20processing%20in%20thawing%20permafrost&format=json
+
+        # Search for the title using the ENA rest API. Found it to be superior to the NCBI esearch e.g. the query 'Metagenomics of Urban Sewage Identifies an Extensively Shared Antibiotic Resistome in China' hits on the PubMed website, but not in the NCBI esearch - unsure why. Worked out of the box with the ENA rest API.
+
+        res = requests.get(
+            url="https://www.ebi.ac.uk/europepmc/webservices/rest/search",
+            params={
+                "query": title,
+                "format": "json",
+                },
+            )
+        if not res.ok:
+            raise Exception("HTTP Failure when requesting search from term: {}: {}".format(res, res.text))
+        root = res.json()
+        logging.debug("Root of response: {}".format(root))
+
+        # Return only those that have an exact title match
+        citations = []
+        for result in root['resultList']['result']:
+            logging.debug("Title: {}".format(result['title']))
+            if result['title'].lower() == title.lower() or result['title'].lower() == title.lower() + '.':
+                citations.append(result)
+        return citations
+
+    def fetch_citations_from_query_bioproject(self, bioproject):
+
+        res = requests.get(
+            url="https://www.ebi.ac.uk/europepmc/webservices/rest/search",
+            params={
+                "query": bioproject,
+                "format": "json",
+                },
+            )
+        if not res.ok:
+            raise Exception("HTTP Failure when requesting search from term: {}: {}".format(res, res.text))
+        root = res.json()
+        logging.debug("Root of response: {}".format(root))
+
+        # Return all hits
+        return root['resultList']['result']
