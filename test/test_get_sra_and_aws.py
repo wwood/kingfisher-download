@@ -394,16 +394,8 @@ class Tests(unittest.TestCase):
 
     def test_get_by_bioproject_output_directory(self):
         with in_tempdir():
-            extern.run('{} get --bioproject PRJNA177893 --guess-aws-location --force -f sra -m aws-http --output-directory outdir --check-md5sums 2>kingfisher_stderr'.format(kingfisher))
-            # -rw-rw-r-- 1 ben ben 45099009 Sep 16 08:01 SRR600121.sra
-            # -rw-rw-r-- 1 ben ben 31203681 Sep 16 08:01 SRR605326.sra
-            # -rw-rw-r-- 1 ben ben  4291189 Sep 16 08:01 SRR605331.sra
-            # -rw-rw-r-- 1 ben ben  4645669 Sep 16 08:01 SRR609442.sra
-            # -rw-rw-r-- 1 ben ben 31203681 Sep 16 08:02 SRR609443.sra
-            # -rw-rw-r-- 1 ben ben 33424541 Sep 16 08:02 SRR616039.sra
-            # -rw-rw-r-- 1 ben ben  7736661 Sep 16 08:02 SRR616042.sra
-            # -rw-rw-r-- 1 ben ben  5218613 Sep 16 08:02 SRR616043.sra
-            # -rw-rw-r-- 1 ben ben  1468505 Sep 16 08:02 SRR616044.sra
+            # We cannot use --guess-aws-location here because it is not compatible with checking md5sums
+            extern.run('{} get --bioproject PRJNA177893 --force -f sra -m aws-http --output-directory outdir --check-md5sums 2>kingfisher_stderr'.format(kingfisher))
             self.assertTrue(os.path.getsize('outdir/SRR600121.sra')==45099009)
             self.assertTrue(os.path.getsize('outdir/SRR605326.sra')==31203681)
             self.assertTrue(os.path.getsize('outdir/SRR605331.sra')==4291189)
