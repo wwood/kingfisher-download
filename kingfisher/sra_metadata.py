@@ -43,6 +43,7 @@ class SraMetadata:
         
         for i in range(num_retries):
             try:
+                logging.debug("Attempting to {} (attempt {} of {})".format(description, i+1, num_retries))
                 this_res = func()
                 if not this_res.ok:
                     logging.warning("Request not OK when {}: {}: {}".format(description, this_res, this_res.text))
@@ -55,6 +56,7 @@ class SraMetadata:
                 logging.warning("Exception raised when {}: {}".format(description, e))
                 logging.warning("Sleeping for {} seconds before retrying".format(sleep_time))
                 time.sleep(60)
+                logging.debug("Finished sleeping, potentially retrying")
                 retrying(i)
         raise Exception("Failed to {} after {} attempts".format(description, num_retries))
 
