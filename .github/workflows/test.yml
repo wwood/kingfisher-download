@@ -9,17 +9,17 @@ jobs:
       run:
         shell: bash -l {0}
     strategy:
-        matrix:
-            os: ["ubuntu-latest"]
+      matrix:
+        os: ["ubuntu-latest"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: test
           environment-file: kingfisher.yml
           python-version: 3.9
           auto-activate-base: false
-          mamba-version: "*"
+          use-mamba: false
           channels: conda-forge,defaults,bioconda,masonite
       - run: |
           conda info
@@ -28,7 +28,7 @@ jobs:
         env:
           NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
         run: |
-            # ascp does not work in bare conda env, so don't run those tests. AWS cp also fails here (because it has not been setup, I think).
-            echo key is $NCBI_API_KEY && \
-            rm test/test_ena.py && \
-            pytest -v --timeout=600 -m 'not aws_cp'
+          # ascp does not work in bare conda env, so don't run those tests. AWS cp also fails here (because it has not been setup, I think).
+          echo key is $NCBI_API_KEY && \
+          rm test/test_ena.py && \
+          pytest -v --timeout=600 -m 'not aws_cp'
