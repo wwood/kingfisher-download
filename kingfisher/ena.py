@@ -124,6 +124,9 @@ class EnaDownloader:
                 logging.info("Downloading {} ..".format(url))
                 output_file = os.path.basename(url)
                 if num_threads > 1:
+                    if num_threads > 16:
+                        logging.warn("Limited the number of download threads to 16, the max for aria2c")
+                        num_threads = 16
                     cmd = "aria2c -x{} -o {} 'ftp://{}'".format(
                         num_threads, output_file, url)
                 else:
