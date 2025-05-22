@@ -1,0 +1,38 @@
+[workspace]
+authors = ["Ben Woodcroft <benjwoodcroft@gmail.com>"]
+channels = ["conda-forge","bioconda"]
+name = "kingfisher"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+pigz = ">=2.8,<3"
+extern = ">=0.4.1,<0.5"
+curl = ">=8.13.0,<9"
+sra-tools = ">=3.2.1,<4"
+pandas = ">=2.2.3,<3"
+requests = ">=2.32.3,<3"
+aria2 = ">=1.37.0,<2"
+sracat = ">=0.2,<0.3"
+bird_tool_utils_python = ">=0.4.1,<0.5"
+awscli = ">=2.27.20,<3"
+pyarrow = ">=20.0.0,<21"
+tqdm = ">=4.67.1,<5"
+
+[pypi-dependencies]
+kingfisher = {path = ".", editable = true}
+
+[feature.dev.dependencies]
+# Dev/test dependencies only
+pytest = "*"
+ipython = "*"
+pytest-timeout = "*"
+pandoc = "*"
+toml = "*"
+python-build = "*"
+setuptools-scm = "*"
+
+[environments]
+dev = ["dev"]

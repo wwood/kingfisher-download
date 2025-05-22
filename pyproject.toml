@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=64", "wheel", "setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kingfisher"
+description = "Download/extract biological FASTA/Q read data and metadata"
+readme = "README.md"
+requires-python = ">=3.7"
+license = "GPL-3.0-or-later"
+authors = [{ name = "Ben Woodcroft" }]
+keywords = ["metagenomics", "bioinformatics"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Programming Language :: Python :: 3"
+]
+dynamic = ["version", "dependencies"]
+
+[project.urls]
+Homepage = "https://github.com/wwood/kingfisher"
+
+[project.scripts]
+kingfisher = "kingfisher.main:main"
+
+[tool.setuptools]
+packages = ["kingfisher"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+kingfisher = ["data/asperaweb_id_dsa.openssh"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["admin/requirements.txt"] }
+
+[tool.setuptools_scm]
+version_file = "kingfisher/version.py"
+# Otherwise the push to pypi will fail on GitHub actions, because the version is malformed.
+version_scheme = "only-version"
+local_scheme = "no-local-version"
+
+[tool.setuptools.data-files]
+"." = ["README.md", "LICENCE.txt"]
