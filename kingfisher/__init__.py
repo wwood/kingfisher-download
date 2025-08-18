@@ -878,12 +878,27 @@ def authorship(**kwargs):
 
         # Search by bioproject accession e.g. for PRJEB22302 / ERR2108709
         bioproject = m['bioproject']
-        logging.debug("Searching EuropePMC for bioproject accession '{}'".format(bioproject))
-        citations_from_europe_pmc_bioproject = SraMetadata().fetch_citations_from_query_bioproject(bioproject)
-        dois = [c['doi'] for c in citations_from_europe_pmc_bioproject]
-        if len(dois) > 0:
-            to_print['DOIs from EuropePMC bioproject search'] = ','.join(dois)
+        if bioproject == '': # For some old old samples e.g. SRR371318
+            logging.info("No bioproject accession found for run {}".format(run))
+        else:
+            logging.debug("Searching EuropePMC for bioproject accession '{}'".format(bioproject))
+            citations_from_europe_pmc_bioproject = SraMetadata().fetch_citations_from_query_bioproject(bioproject)
+            dois = [c['doi'] for c in citations_from_europe_pmc_bioproject]
+            if len(dois) > 0:
+                to_print['DOIs from EuropePMC bioproject search'] = ','.join(dois)
 
+    # TODO: Prioritise the results, so that a best guess becomes possible. E.g.
+    # for SRR6339470 the best guess because it is the first one where the
+    # bioproject matches. Also because the corresponding depositing institution
+    # matches that of the paper.
+
+    # TODO: SRR14932662 gives the wrong result, because the original paper isn't
+    # linked to the run on NCBI and the article is closed source. It gives a
+    # wrong answer because there are papers that cite it, which come up as hits.
+    # Need a fulltext search of non-open-access articles? But how? Right answer
+    # is https://www.nature.com/articles/s41564-019-0426-5#data-availability Of
+    # the tested search engines, only google scholar and science.gov gave the
+    # correct answer.
 
     # Write out table as CSV
     final = pd.DataFrame(final_result)

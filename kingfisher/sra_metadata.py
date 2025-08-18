@@ -370,18 +370,18 @@ class SraMetadata:
         return citations
 
     def fetch_citations_from_query_bioproject(self, bioproject):
-
-        res = requests.get(
-            url="https://www.ebi.ac.uk/europepmc/webservices/rest/search",
-            params={
-                "query": bioproject,
-                "format": "json",
-                },
-            )
-        if not res.ok:
-            raise Exception("HTTP Failure when requesting search from term: {}: {}".format(res, res.text))
+        res = self._retry_request(
+            'fetch_citations_from_query_bioproject',
+            lambda: requests.get(
+                url="https://www.ebi.ac.uk/europepmc/webservices/rest/search",
+                params={
+                    "query": bioproject,
+                    "format": "json",
+                    },
+                ))
         root = res.json()
         logging.debug("Root of response: {}".format(root))
 
         # Return all hits
+        # if 'resultList' not in root:# This should be picked up by the calling function instead, for better logging.
         return root['resultList']['result']
