@@ -35,8 +35,7 @@ conda activate kingfisher
 kingfisher get -r SRR12118866 -m ena-ftp
 ```
 
-Optionally, to use the `ena-ascp` method, an Aspera connect client is also required.
-See [https://www.ibm.com/aspera/connect/](https://www.ibm.com/aspera/connect/) or [https://www.biostars.org/p/325010/](https://www.biostars.org/p/325010/).
+Optionally, to use the `ena-ascp` method, an Aspera connect client is also required. For this, you can run `ascli config ascp install` after installing kingfisher, which will download and install the Aspera connect client for you. Alternatively, you can install the Aspera connect client yourself.
 
 ### Installation through DockerHub
 
@@ -56,13 +55,11 @@ Kingfisher can be installed through [pixi](pixi.sh), to setup a development envi
 ```
 git clone https://github.com/wwood/kingfisher-download
 cd kingfisher-download
+pixi run ascli config ascp install # optional, to install ascp for the ena-ascp method
 pixi run kingfisher -h
 ```
 
-Optionally, to use the `ena-ascp` method, an Aspera connect client is also required.
-See [https://www.ibm.com/aspera/connect/](https://www.ibm.com/aspera/connect/) or [https://www.biostars.org/p/325010/](https://www.biostars.org/p/325010/).
-
-@MakeTheBrainHappy implemented an example installation (and usage) guide in [Google Colaboratory](https://colab.research.google.com/drive/1k3RC-WbVAAl6h8yXtfEhwqCAvCMHspzz?usp=sharing) and [Jupyter Notebook](https://github.com/MakeTheBrainHappy/kingfisher-cloud).
+[currently outdated]: @MakeTheBrainHappy implemented an example installation (and usage) guide in [Google Colaboratory](https://colab.research.google.com/drive/1k3RC-WbVAAl6h8yXtfEhwqCAvCMHspzz?usp=sharing) and [Jupyter Notebook](https://github.com/MakeTheBrainHappy/kingfisher-cloud).
 
 ## Usage
 
@@ -111,7 +108,7 @@ In `get` mode, there are several ways to procure the data:
 
 |__method__ |__description__ |
 | --- | --- |
-|`ena-ascp`|Download `.fastq.gz` files from ENA using Aspera, which can then be further converted. This is the fastest method since no `fasterq-dump` is required.|
+|`ena-ascp`|Download `.fastq.gz` files from ENA using Aspera, which can then be further converted. This can be the fastest method since no `fasterq-dump` is required.|
 |`ena-ftp`|Download `.fastq.gz` files from ENA using `curl`, which can then be further converted. This is relatively fast since no `fasterq-dump` is required.|
 |`prefetch`|Download .SRA file using NCBI's prefetch from sra-tools, which is then extracted with `fasterq-dump`.|
 |`aws-http`|Download .SRA file from AWS Open Data Program using `aria2c` with multiple connection threads, which is then extracted with `fasterq-dump`.|
@@ -135,22 +132,11 @@ kingfisher get -r ERR1739691 -m ena-ascp
 ## FAQ
 
 ### ascp: not found
-If you see this error `/bin/sh: 1: ascp: not found` as below:
+If you see an error like
 ```
-$ kingfisher get -r ERR3357550 -m ena-ascp
-05/04/2021 05:13:45 AM INFO: Attempting download method ena-ascp ..
-05/04/2021 05:13:45 AM INFO: Using aspera ssh key file: $HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh
-05/04/2021 05:13:45 AM INFO: Querying ENA for FTP paths for ERR3357550..
-05/04/2021 05:13:49 AM INFO: Downloading 2 FTP read set(s): ftp.sra.ebi.ac.uk/vol1/fastq/ERR335/000/ERR3357550/ERR3357550_1.fastq.gz, ftp.sra.ebi.ac.uk/vol1/fastq/ERR335/000/ERR3357550/ERR3357550_2.fastq.gz
-05/04/2021 05:13:49 AM INFO: Running command: ascp -T -l 300m -P33001  -i $HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh era-fasp@fasp.sra.ebi.ac.uk:/vol1/fastq/ERR335/000/ERR3357550/ERR3357550_1.fastq.gz .
-/bin/sh: 1: ascp: not found
-05/04/2021 05:13:49 AM WARNING: Error downloading from ENA with ASCP: Command 'ascp -T -l 300m -P33001  -i $HOME/.aspera/connect/etc/asperaweb_id_dsa.openssh era-fasp@fasp.sra.ebi.ac.uk:/vol1/fastq/ERR335/000/ERR3357550/ERR3357550_1.fastq.gz .' returned non-zero exit status 127.
-05/04/2021 05:13:49 AM WARNING: Method ena-ascp failed
-Traceback (most recent call last):
-  File "./bin/kingfisher", line 330, in <module>
-    raise Exception("No more specified download methods, cannot continue")
-Exception: No more specified download methods, cannot continue
+Exception: ascp not found in PATH or at /home/woodcrob/.aspera/ascli/sdk/ascp
 ```
+
 then you have not installed the Aspera client correctly. See the installation section of this document.
 
 ### Failed to authenticate with ascp
