@@ -6,3 +6,6 @@ docker/kingfisher.yml
 site
 build
 kingfisher.egg-info
+# pixi environments
+.pixi/*
+!.pixi/config.toml

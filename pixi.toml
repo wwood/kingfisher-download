@@ -1,0 +1,44 @@
+[workspace]
+authors = ["Ben Woodcroft <benjwoodcroft@gmail.com>"]
+channels = ["conda-forge", "bioconda"]
+name = "kingfisher"
+platforms = ["linux-64"]
+
+[feature.main.dependencies]
+python = ">=3.9"
+pigz = "*"
+extern = "*"
+curl = "*"
+# sra-tools 3.1.1 was causing segfault in many tests
+sra-tools = "==3.1.0" #">=3.0.5"  # 2.9.6 is known to fail e.g. prefetch of SRR12113418
+pandas = "*"
+requests = "*"
+aria2 = ">=1.36.0"
+sracat = "*"
+bird_tool_utils_python = ">=0.4.1"
+awscli = "*"
+pyarrow = "*"
+tqdm = "*"
+
+[feature.main.pypi-dependencies]
+kingfisher = {path = ".", editable = true}
+
+[feature.dev.dependencies]
+pytest = "*"
+pytest-timeout = "*"
+pandoc = "*"
+
+[feature.dev.pypi-dependencies]
+kingfisher = {path = ".", editable = true}
+
+[environments]
+default = ["main"]
+dev = ["dev", "main"]
+
+[tasks]
+test-base = "pytest test"
+
+[tasks.test]
+depends-on = [
+    {task = "test-base", environment = "dev"},
+]

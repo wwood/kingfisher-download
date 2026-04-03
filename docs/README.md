@@ -51,17 +51,12 @@ docker run -v `pwd`:/data wwood/kingfisher:[RELEASE_TAG] get -r SRR12118866 -m e
 
 ### Conda-based development environment
 
-Kingfisher can be installed by installing its conda dependencies as follows.
-Then it can be run from the source directory:
+Kingfisher can be installed through [pixi](pixi.sh), to setup a development environment, as below:
 
 ```
 git clone https://github.com/wwood/kingfisher-download
 cd kingfisher-download
-conda env create -n kingfisher -f kingfisher.yml
-conda activate kingfisher
-cd bin
-export PATH=$PWD:$PATH
-kingfisher -h
+pixi run kingfisher -h
 ```
 
 Optionally, to use the `ena-ascp` method, an Aspera connect client is also required.
