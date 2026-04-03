@@ -1,5 +1,6 @@
 from io import StringIO
 import subprocess
+import shutil
 import logging
 import os
 import pandas as pd
@@ -10,11 +11,21 @@ import bird_tool_utils
 from .md5sum import MD5
 
 DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION = os.path.join(os.path.dirname(os.path.realpath(__file__)),'data','asperaweb_id_dsa.openssh')
+FALLBACK_ASCP_PATH = os.path.expanduser('~/.aspera/ascli/sdk/ascp')
 
 class EnaFileReport:
     def __init__(self, file_paths, md5sums):
         self.file_paths = file_paths
         self.md5sums = md5sums
+
+def _resolve_ascp():
+    if shutil.which('ascp') is not None:
+        return 'ascp'
+    if os.path.exists(FALLBACK_ASCP_PATH):
+        logging.warning("ascp not found in PATH; using {}".format(FALLBACK_ASCP_PATH))
+        return FALLBACK_ASCP_PATH
+    raise Exception("ascp not found in PATH or at {}".format(FALLBACK_ASCP_PATH))
+
 
 class EnaDownloader:
     def get_ftp_download_urls(self, run_id):
@@ -88,7 +99,9 @@ class EnaDownloader:
                 quiet_args = ' -Q'
             output_file = os.path.join(output_directory, os.path.basename(url))
             logging.debug("Getting output file {}".format(output_file))
-            cmd = "ascp{} -T -l 300m -P33001 {} -i {} era-fasp@fasp.sra.ebi.ac.uk:{} {}".format(
+            ascp_bin = _resolve_ascp()
+            cmd = "{}{} -T -l 300m -P33001 {} -i {} era-fasp@fasp.sra.ebi.ac.uk:{} {}".format(
+                ascp_bin,
                 quiet_args,
                 ascp_args,
                 ssh_key_file,

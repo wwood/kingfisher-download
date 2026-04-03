@@ -26,6 +26,10 @@ jobs:
           pixi run -e dev --frozen pixi info
           pixi run -e dev --frozen pixi list
 
+      - name: Install ascp
+        run: |
+          pixi run -e dev --frozen ascli config ascp install
+
       - name: Run tests with Pixi
         run: |
           pixi run -e dev --frozen pytest test -v
@@ -58,6 +62,10 @@ jobs:
       - name: Show environment info
         run: |
           pixi run -e dev pixi list
+
+      - name: Install ascp
+        run: |
+          pixi run -e dev ascli config ascp install
 
       - name: Run tests with Pixi
         run: |

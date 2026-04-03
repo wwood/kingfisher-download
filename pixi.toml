@@ -19,6 +19,7 @@ bird_tool_utils_python = ">=0.4.1"
 awscli = "*"
 pyarrow = "*"
 tqdm = "*"
+aspera-cli = "*" # for bootstrapping ascp installation
 
 [feature.main.pypi-dependencies]
 kingfisher = {path = ".", editable = true}
