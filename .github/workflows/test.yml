@@ -1,34 +1,64 @@
-name: Test Kingfisher with Setup-Miniconda From Marketplace
-on: [push, pull_request]
+name: Current Build
+on:
+  push:
+    branches:
+      - main
+  pull_request:
 
 jobs:
-  miniconda:
-    name: Miniconda ${{ matrix.os }}
+  pixi_test_dependencies_locked:
+    name: Pixi test_dependencies_locked ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash -l {0}
+    timeout-minutes: 60
     strategy:
       matrix:
         os: ["ubuntu-latest"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: test
-          environment-file: kingfisher.yml
-          python-version: 3.9
-          auto-activate-base: false
-          use-mamba: false
-          channels: conda-forge,defaults,bioconda,masonite
-      - run: |
-          conda info
-          conda list
-      - name: Run tests
-        env:
-          NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
+      - uses: actions/checkout@v3
+
+      - name: Install Pixi
         run: |
-          # ascp does not work in bare conda env, so don't run those tests. AWS cp also fails here (because it has not been setup, I think).
-          echo key is $NCBI_API_KEY && \
-          rm test/test_ena.py && \
-          pytest -v --timeout=600 -m 'not aws_cp'
+          curl -fsSL https://pixi.sh/install.sh | bash
+          echo "$HOME/.pixi/bin" >> $GITHUB_PATH
+
+      - name: Show environment info
+        run: |
+          pixi run -e dev --frozen pixi info
+          pixi run -e dev --frozen pixi list
+
+      - name: Run tests with Pixi
+        run: |
+          pixi run -e dev --frozen pytest test -v
+
+  # Run after removing lock file so dependences are unlocked
+  pixi_test_dependencies_optimistic:
+    name: Pixi test_dependencies_optimistic ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        os: ["ubuntu-latest"]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Pixi
+        run: |
+          curl -fsSL https://pixi.sh/install.sh | bash
+          echo "$HOME/.pixi/bin" >> $GITHUB_PATH
+
+      - name: Remove lock file
+        run: |
+          rm -fv pixi.lock admin/requirements.txt admin/environment.yml
+          touch admin/requirements.txt
+
+      - name: Create dev environment
+        run: |
+          pixi run -e dev pixi info
+
+      - name: Show environment info
+        run: |
+          pixi run -e dev pixi list
+
+      - name: Run tests with Pixi
+        run: |
+          pixi run -e dev pytest test -v
