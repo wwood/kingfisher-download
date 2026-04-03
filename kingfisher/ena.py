@@ -51,7 +51,18 @@ class EnaDownloader:
         header = True
         logging.debug("Found text from ENA API: {}".format(text))
 
-        df = pd.read_csv(StringIO(text), sep='\t', header=0, index_col=False)
+        try:
+            df = pd.read_csv(StringIO(text), sep='\t', header=0, index_col=False)
+        except (pd.errors.ParserError, pd.errors.EmptyDataError) as e:
+            logging.error("Unexpected ENA API response for accession {}: {}".format(run_id, e))
+            return False
+
+        required_columns = ['fastq_ftp', 'fastq_md5']
+        if any(column not in df.columns for column in required_columns):
+            logging.error(
+                "Unexpected ENA API response for accession {}: missing one or more required columns ({})".format(
+                    run_id, ', '.join(required_columns)))
+            return False
 
         # Expect just 1 row
         if len(df) == 0:
@@ -66,8 +77,11 @@ class EnaDownloader:
 
         for _, row in df.iterrows():
             # e.g. ERR1346134 at time of writing. See https://github.com/wwood/kingfisher-download/issues/25
-            if isinstance(float("nan"), type(row['fastq_ftp'])):
+            if pd.isna(row['fastq_ftp']) or row['fastq_ftp'] == '':
                 logging.error("No ENA FTP download URLs found for run {}, cannot continue".format(run_id))
+                return False
+            if pd.isna(row['fastq_md5']) or row['fastq_md5'] == '':
+                logging.error("No ENA FTP MD5 checksums found for run {}, cannot continue".format(run_id))
                 return False
             ftp_urls = row['fastq_ftp'].split(';')
             md5sums = row['fastq_md5'].split(';')
@@ -170,4 +184,3 @@ class EnaDownloader:
                         return False
                 downloaded.append(os.path.join(output_directory, output_file))
         return downloaded
-
