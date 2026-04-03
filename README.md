@@ -1,4 +1,4 @@
-Welcome
+Welcome.
 
 Kingfisher is a fast and flexible program for procurement of sequence files (and
 their annotations) from public data sources, including the European Nucleotide
