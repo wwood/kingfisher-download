@@ -69,6 +69,9 @@ def download_and_extract(**kwargs):
         with open(run_identifiers_file) as f:
             run_identifiers = list([r.strip() for r in f.readlines()])
 
+    if any(r.startswith('CRR') for r in run_identifiers):
+        logging.warning("Support for NGDC/GSA CRR accessions is experimental")
+
     for run in run_identifiers:
         download_and_extract_one_run(run, **kwargs)
 
@@ -683,6 +686,8 @@ def annotate(**kwargs):
 
     # Split accessions into NGDC (CRR) and SRA types
     ngdc_accessions = [r for r in run_identifiers if r.startswith('CRR')]
+    if ngdc_accessions:
+        logging.warning("Support for NGDC/GSA CRR accessions is experimental")
     sra_accessions = [r for r in run_identifiers if not r.startswith('CRR')]
 
     metadata_parts = []
