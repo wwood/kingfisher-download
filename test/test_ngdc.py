@@ -24,8 +24,10 @@
 import unittest
 import os.path
 import sys
+from io import StringIO
 
 import extern
+import pandas as pd
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')]+sys.path
 kingfisher = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','bin','kingfisher')
@@ -49,6 +51,15 @@ class NgdcTests(unittest.TestCase):
             extern.run('{} get -r {} -m ngdc-ascp ngdc-ftp'.format(kingfisher, self.TEST_RUN))
             self.assertTrue(os.path.getsize('{}_f1.fastq.gz'.format(self.TEST_RUN)) == 6478403)
             self.assertTrue(os.path.getsize('{}_r2.fastq.gz'.format(self.TEST_RUN)) == 8310697)
+
+    def test_ngdc_annotate_csv(self):
+        stdout = extern.run('{} annotate -r {} -f csv --all-columns'.format(kingfisher, self.TEST_RUN))
+        df = pd.read_csv(StringIO(stdout))
+        self.assertEqual(len(df), 1)
+        self.assertEqual(df['run'].iloc[0], self.TEST_RUN)
+        self.assertEqual(df['cra_accession'].iloc[0], 'CRA004536')
+        self.assertIn('CRR302577_f1.fastq.gz', df['filenames'].iloc[0])
+        self.assertIn('CRR302577_r2.fastq.gz', df['filenames'].iloc[0])
 
 
 if __name__ == "__main__":
