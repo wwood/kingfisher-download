@@ -11,20 +11,30 @@ import bird_tool_utils
 from .md5sum import MD5
 
 DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION = os.path.join(os.path.dirname(os.path.realpath(__file__)),'data','asperaweb_id_dsa.openssh')
-FALLBACK_ASCP_PATH = os.path.expanduser('~/.aspera/ascli/sdk/ascp')
-
 class EnaFileReport:
     def __init__(self, file_paths, md5sums):
         self.file_paths = file_paths
         self.md5sums = md5sums
 
+def _find_ascp_in_aspera():
+    """Search ~/.aspera for an ascp binary."""
+    aspera_dir = os.path.expanduser('~/.aspera')
+    if os.path.isdir(aspera_dir):
+        for root, dirs, files in os.walk(aspera_dir):
+            if 'ascp' in files:
+                path = os.path.join(root, 'ascp')
+                if os.access(path, os.X_OK):
+                    return path
+    return None
+
 def _resolve_ascp():
     if shutil.which('ascp') is not None:
         return 'ascp'
-    if os.path.exists(FALLBACK_ASCP_PATH):
-        logging.warning("ascp not found in PATH; using {}".format(FALLBACK_ASCP_PATH))
-        return FALLBACK_ASCP_PATH
-    raise Exception("ascp not found in PATH or at {}".format(FALLBACK_ASCP_PATH))
+    found = _find_ascp_in_aspera()
+    if found is not None:
+        logging.warning("ascp not found in PATH; using {}".format(found))
+        return found
+    raise Exception("ascp not found in PATH or under ~/.aspera")
 
 
 class EnaDownloader:
