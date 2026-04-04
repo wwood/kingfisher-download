@@ -3,6 +3,7 @@ import os
 import re
 import subprocess
 import shutil
+import xml.etree.ElementTree as ET
 
 import requests
 
@@ -278,12 +279,69 @@ class NgdcDownloader:
         return output_files
 
 
+def _fetch_run_stats_xml(info):
+    """Fetch and parse the _sta.xml stats file from the download server.
+
+    Returns a dict of metadata extracted from the XML, or an empty dict on failure.
+    """
+    xml_filename = '{}_sta.xml'.format(info.crr_accession)
+    url = '{}/{}/{}/{}'.format(info.gsa_base, info.cra_accession, info.crr_accession, xml_filename)
+    logging.debug("Fetching run stats XML from {}".format(url))
+    try:
+        res = requests.get(url, timeout=30)
+        if not res.ok:
+            return {}
+        # The XML from NGDC is often malformed (e.g. <GC-Content="53.95%"/>)
+        # Fix known issues before parsing
+        xml_text = re.sub(r'<GC-Content="([^"]*)"/?>', r'<GC_Content value="\1"/>', res.text)
+        root = ET.fromstring(xml_text)
+        result = {}
+        base_count = root.attrib.get('base_count')
+        if base_count:
+            result['bases'] = int(base_count)
+        spot_count = root.attrib.get('spot_count')
+        if spot_count:
+            result['spots'] = int(spot_count)
+
+        stats = root.find('Statistics')
+        if stats is not None:
+            nreads = stats.attrib.get('nreads')
+            if nreads:
+                result['nreads'] = int(nreads)
+            for read in stats.findall('Read'):
+                idx = int(read.attrib.get('index', 0)) + 1
+                result['read{}_length_average'.format(idx)] = read.attrib.get('average')
+                result['read{}_length_stdev'.format(idx)] = read.attrib.get('stdev')
+            # Infer layout from number of reads
+            if nreads and int(nreads) == 2:
+                result['library_layout'] = 'PAIRED'
+            elif nreads and int(nreads) == 1:
+                result['library_layout'] = 'SINGLE'
+
+        gc = root.find('GC-Content')
+        if gc is not None:
+            result['gc_content'] = gc.text
+        else:
+            # Try attribute form: <GC-Content="53.95%"/>
+            # This is malformed XML but NGDC uses it; ET parses it as a tag
+            for elem in root:
+                if elem.tag.startswith('GC-Content'):
+                    # The tag itself contains the value as GC-Content="53.95%"
+                    # which ET parses with the value in the tag name
+                    pass
+
+        return result
+    except Exception as e:
+        logging.debug("Could not fetch/parse stats XML for {}: {}".format(info.crr_accession, e))
+        return {}
+
+
 def fetch_ngdc_metadata(crr_accessions):
     """Fetch metadata for a list of CRR accessions from NGDC.
 
     Returns a pandas DataFrame with metadata fields. Uses the download server
-    for CRA resolution and the NGDC web application for richer metadata when
-    available.
+    for CRA resolution and the per-run _sta.xml for sequencing stats. Falls
+    back to the NGDC web application for richer metadata when available.
     """
     import pandas as pd
 
@@ -301,11 +359,15 @@ def fetch_ngdc_metadata(crr_accessions):
                 'sample_name': acc,
             }
 
+            # Get stats from the _sta.xml file (always available on download server)
+            stats = _fetch_run_stats_xml(info)
+            record.update(stats)
+
             # Try to get richer metadata from the NGDC web application
             try:
                 run_page_url = 'https://ngdc.cncb.ac.cn/gsa/browse/{}/{}'.format(
                     info.cra_accession, acc)
-                res = requests.get(run_page_url, timeout=30)
+                res = requests.get(run_page_url, timeout=10)
                 if res.ok:
                     html = res.text
                     record['bioproject'] = _extract_field(html, r'PRJCA\d+')
@@ -316,7 +378,7 @@ def fetch_ngdc_metadata(crr_accessions):
                     record['library_strategy'] = _extract_meta(html, 'Library strategy') or _extract_meta(html, 'Strategy')
                     record['library_selection'] = None
                     record['library_source'] = _extract_meta(html, 'Source')
-                    record['library_layout'] = _extract_meta(html, 'Layout')
+                    record.setdefault('library_layout', _extract_meta(html, 'Layout'))
                     record['taxon_name'] = _extract_meta(html, 'Species') or _extract_meta(html, '物种')
                     record['sample_name'] = _extract_meta(html, 'Alias') or acc
                     record['title'] = _extract_meta(html, 'Title')

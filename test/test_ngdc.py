@@ -60,6 +60,10 @@ class NgdcTests(unittest.TestCase):
         self.assertEqual(df['cra_accession'].iloc[0], 'CRA004536')
         self.assertIn('CRR302577_f1.fastq.gz', df['filenames'].iloc[0])
         self.assertIn('CRR302577_r2.fastq.gz', df['filenames'].iloc[0])
+        # Stats from the _sta.xml file on the download server
+        self.assertEqual(df['bases'].iloc[0], 32365928)
+        self.assertEqual(df['spots'].iloc[0], 53764)
+        self.assertEqual(df['library_layout'].iloc[0], 'PAIRED')
 
 
 if __name__ == "__main__":
