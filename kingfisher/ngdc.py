@@ -181,7 +181,11 @@ def fetch_ngdc_run_info(crr_accession):
 class NgdcDownloader:
     def download_with_ftp(self, run_id, num_threads, output_directory):
         """Download files from NGDC via FTP/HTTPS using curl or aria2c."""
-        info = fetch_ngdc_run_info(run_id)
+        try:
+            info = fetch_ngdc_run_info(run_id)
+        except Exception as e:
+            logging.warning("Failed to look up run info for {} on NGDC: {}".format(run_id, e))
+            return False
 
         output_files = []
         for filename in info.filenames:
@@ -219,7 +223,11 @@ class NgdcDownloader:
 
     def download_with_aspera(self, run_id, output_directory, ascp_args='', ssh_key=None):
         """Download files from NGDC via Aspera."""
-        info = fetch_ngdc_run_info(run_id)
+        try:
+            info = fetch_ngdc_run_info(run_id)
+        except Exception as e:
+            logging.warning("Failed to look up run info for {} on NGDC: {}".format(run_id, e))
+            return False
 
         if ssh_key is None:
             # Try the bundled key first, then look for aspera's own key
