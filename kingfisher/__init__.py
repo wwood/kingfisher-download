@@ -13,6 +13,7 @@ from extern import ExternCalledProcessError
 import bird_tool_utils
 
 from .ena import EnaDownloader
+from .ngdc import NgdcDownloader, fetch_ngdc_metadata
 from .location import Location, NcbiLocationJson
 from .exception import DownloadMethodFailed
 from .sra_metadata import *
@@ -352,6 +353,24 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                     gzip_test_files(result)
                     downloaded_files = result
 
+            elif method == 'ngdc-ascp':
+                result = NgdcDownloader().download_with_aspera(
+                    run_identifier, output_directory,
+                    ascp_args=ascp_args,
+                    ssh_key=ascp_ssh_key)
+                if result is not False:
+                    gzip_test_files([f for f in result if f.endswith('.gz')])
+                    downloaded_files = result
+
+            elif method == 'ngdc-ftp':
+                result = NgdcDownloader().download_with_ftp(
+                    run_identifier,
+                    download_threads,
+                    output_directory)
+                if result is not False:
+                    gzip_test_files([f for f in result if f.endswith('.gz')])
+                    downloaded_files = result
+
             else:
                 raise Exception("Unknown method: {}".format(method))
             
@@ -386,32 +405,44 @@ def download_and_extract_one_run(run_identifier, **kwargs):
             if 'fastq.gz' in output_format_possibilities:
                 output_files = downloaded_files
             else:
+                # Check for files with standard ENA naming or NGDC naming
+                candidate_files = []
                 for fq in ['x_1.fastq.gz','x_2.fastq.gz','x.fastq.gz']:
                     f = output_location_factory.output_stem(fq.replace('x',run_identifier))
                     if os.path.exists(f):
-                        # Do the least work, currently we have FASTQ.gz
-                        if 'fasta' in output_format_possibilities:
-                            logging.info("Converting {} to FASTA ..".format(f))
-                            out_here = f.replace('.fastq.gz','.fasta')
-                            extern.run("pigz -p {} -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' >{}".format(
-                                extraction_threads, f, out_here
-                            ))
-                            os.remove(f)
-                            output_files.append(out_here)
-                        elif 'fasta.gz' in output_format_possibilities:
-                            logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
-                            out_here = f.replace('.fastq.gz','.fasta.gz')
-                            extern.run("pigz -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' |pigz -p {} >{}".format(
-                                f, extraction_threads, out_here
-                            ))
-                            os.remove(f)
-                            output_files.append(out_here)
-                        elif 'fastq' in output_format_possibilities:
-                            logging.info("Decompressing {} with pigz ..".format(f))
-                            extern.run("pigz -p {} -d {}".format(extraction_threads, f))
-                            output_files.append(f.replace('.fastq.gz','.fastq'))
-                        else:
-                            raise Exception("Programming error")
+                        candidate_files.append(f)
+                # Also check for NGDC-style naming (CRR######_f1.fastq.gz, CRR######_r2.fastq.gz)
+                for fq in ['x_f1.fastq.gz','x_r2.fastq.gz']:
+                    f = output_location_factory.output_stem(fq.replace('x',run_identifier))
+                    if os.path.exists(f):
+                        candidate_files.append(f)
+                # Fall back to whatever was downloaded if no standard names match
+                if not candidate_files:
+                    candidate_files = [f for f in downloaded_files if os.path.exists(f)]
+                for f in candidate_files:
+                    # Do the least work, currently we have FASTQ.gz
+                    if 'fasta' in output_format_possibilities:
+                        logging.info("Converting {} to FASTA ..".format(f))
+                        out_here = f.replace('.fastq.gz','.fasta')
+                        extern.run("pigz -p {} -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' >{}".format(
+                            extraction_threads, f, out_here
+                        ))
+                        os.remove(f)
+                        output_files.append(out_here)
+                    elif 'fasta.gz' in output_format_possibilities:
+                        logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
+                        out_here = f.replace('.fastq.gz','.fasta.gz')
+                        extern.run("pigz -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' |pigz -p {} >{}".format(
+                            f, extraction_threads, out_here
+                        ))
+                        os.remove(f)
+                        output_files.append(out_here)
+                    elif 'fastq' in output_format_possibilities:
+                        logging.info("Decompressing {} with pigz ..".format(f))
+                        extern.run("pigz -p {} -d {}".format(extraction_threads, f))
+                        output_files.append(f.replace('.fastq.gz','.fastq'))
+                    else:
+                        raise Exception("Programming error")
                 
     if not stdout and len(output_files) == 0:
         raise Exception("No output files found, something went amiss, unsure what.")
@@ -650,10 +681,26 @@ def annotate(**kwargs):
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
 
-    metadata = SraMetadata().efetch_sra_from_accessions(run_identifiers)
-    if metadata is None:
+    # Split accessions into NGDC (CRR) and SRA types
+    ngdc_accessions = [r for r in run_identifiers if r.startswith('CRR')]
+    sra_accessions = [r for r in run_identifiers if not r.startswith('CRR')]
+
+    metadata_parts = []
+    if sra_accessions:
+        metadata = SraMetadata().efetch_sra_from_accessions(sra_accessions)
+        if metadata is not None:
+            metadata_parts.append(metadata)
+    if ngdc_accessions:
+        ngdc_metadata = fetch_ngdc_metadata(ngdc_accessions)
+        if ngdc_metadata is not None and len(ngdc_metadata) > 0:
+            metadata_parts.append(ngdc_metadata)
+
+    if not metadata_parts:
         logging.error("No runs to annotate")
         sys.exit(1)
+
+    import pandas as pd
+    metadata = pd.concat(metadata_parts, ignore_index=True)
     _output_formatted_metadata(metadata, output_file, output_format, all_columns)
 
 
@@ -670,19 +717,22 @@ def _output_formatted_metadata(metadata, output_file, output_format, all_columns
         # around this, we reset the index to a RangeIndex, which does not
         # contain duplicates.
         metadata_sorted.reset_index(drop=True, inplace=True)
-        metadata_sorted = pd.concat(
-            [
-                metadata_sorted,
-                pd.DataFrame({'Gbp': [
-                    round(bases/1e9, 3) if bases is not None else None for bases in metadata_sorted[BASES_KEY]]})
-            ],
-            axis=1)
+        if BASES_KEY in metadata_sorted.columns:
+            metadata_sorted = pd.concat(
+                [
+                    metadata_sorted,
+                    pd.DataFrame({'Gbp': [
+                        round(bases/1e9, 3) if bases is not None else None for bases in metadata_sorted[BASES_KEY]]})
+                ],
+                axis=1)
         if all_columns:
             # Re-order columns to be consistent with human format output
-            column_order = default_columns + [c for c in metadata_sorted.columns if c not in default_columns]
+            available_defaults = [c for c in default_columns if c in metadata_sorted.columns]
+            column_order = available_defaults + [c for c in metadata_sorted.columns if c not in available_defaults]
             return metadata_sorted[column_order]
         else:
-            metadata_sorted = metadata_sorted[default_columns]
+            available_defaults = [c for c in default_columns if c in metadata_sorted.columns]
+            metadata_sorted = metadata_sorted[available_defaults]
             return metadata_sorted
 
     output_path = sys.stdout if output_file is None else output_file
@@ -691,14 +741,16 @@ def _output_formatted_metadata(metadata, output_file, output_format, all_columns
         to_print = []
         for value in metadata[RUN_ACCESSION_KEY]:
             to_print.append({RUN_ACCESSION_KEY: value})
-        for i, value in enumerate(metadata[BIOPROJECT_ACCESSION_KEY]):
-            to_print[i][BIOPROJECT_ACCESSION_KEY] = value
-        for i, value in enumerate(metadata[BASES_KEY]):
-            to_print[i]['Gbp'] = "%.3f" % (value/1e9) if value is not None else None
-        # for column in ['LibraryStrategy','LibrarySelection','Model','SampleName','ScientificName']:
+        if BIOPROJECT_ACCESSION_KEY in metadata.columns:
+            for i, value in enumerate(metadata[BIOPROJECT_ACCESSION_KEY]):
+                to_print[i][BIOPROJECT_ACCESSION_KEY] = value
+        if BASES_KEY in metadata.columns:
+            for i, value in enumerate(metadata[BASES_KEY]):
+                to_print[i]['Gbp'] = "%.3f" % (value/1e9) if value is not None else None
         for column in ['library_strategy','library_selection','model',SAMPLE_NAME_KEY,'taxon_name']:
-            for i, value in enumerate(metadata[column]):
-                to_print[i][column] = value
+            if column in metadata.columns:
+                for i, value in enumerate(metadata[column]):
+                    to_print[i][column] = value
         if all_columns:
             for col in metadata.columns:
                 if col not in default_columns:
@@ -763,22 +815,22 @@ def _check_for_existing_files(output_location_factory, run_identifier, output_fo
             skip, output_files = maybe_skip_or_force(path, output_files, force)
             if skip: skip_download_and_extraction = True
         elif file_type == 'fastq':
-            possibilities = ['x.fastq','x_1.fastq','x_2.fastq']
+            possibilities = ['x.fastq','x_1.fastq','x_2.fastq','x_f1.fastq','x_r2.fastq']
             for path in possibilities:
                 skip, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
                 if skip: skip_download_and_extraction = True
         elif file_type == 'fastq.gz':
-            possibilities = ['x.fastq.gz','x_1.fastq.gz','x_2.fastq.gz']
+            possibilities = ['x.fastq.gz','x_1.fastq.gz','x_2.fastq.gz','x_f1.fastq.gz','x_r2.fastq.gz']
             for path in possibilities:
                 skip, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
                 if skip: skip_download_and_extraction = True
         elif file_type == 'fasta':
-            possibilities = ['x.fasta','x_1.fasta','x_2.fasta']
+            possibilities = ['x.fasta','x_1.fasta','x_2.fasta','x_f1.fasta','x_r2.fasta']
             for path in possibilities:
                 skip, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
                 if skip: skip_download_and_extraction = True
         elif file_type == 'fasta.gz':
-            possibilities = ['x.fasta.gz','x_1.fasta.gz','x_2.fasta.gz']
+            possibilities = ['x.fasta.gz','x_1.fasta.gz','x_2.fasta.gz','x_f1.fasta.gz','x_r2.fasta.gz']
             for path in possibilities:
                 skip, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
                 if skip: skip_download_and_extraction = True

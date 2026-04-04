@@ -117,9 +117,11 @@ def main():
             ['prefetch','Download .SRA file using NCBI prefetch from sra-tools, which is then extracted with fasterq-dump.'],
             ['aws-http','Download .SRA file from AWS Open Data Program using `aria2c` with multiple connection threads, which is then extracted with `fasterq-dump`.'],
             ['aws-cp','Download .SRA file from AWS using aws s3 cp, which is then extracted with fasterq-dump. Does not usually require payment or an AWS account.'],
-            ['gcp-cp','Download .SRA file from Google Cloud gsutil, which is then extracted with fasterq-dump. Requires payment and a Google Cloud account.']
+            ['gcp-cp','Download .SRA file from Google Cloud gsutil, which is then extracted with fasterq-dump. Requires payment and a Google Cloud account.'],
+            ['ngdc-ascp','Download .fastq.gz files from NGDC/GSA (China) using Aspera. For CRR accessions.'],
+            ['ngdc-ftp','Download .fastq.gz files from NGDC/GSA (China) using curl/aria2c. For CRR accessions.'],
             ]),
-        choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp', 'ena-ascp','ena-ftp'], required=True)
+        choices=['aws-http', 'prefetch', 'aws-cp', 'gcp-cp', 'ena-ascp','ena-ftp','ngdc-ascp','ngdc-ftp'], required=True)
     get_parser_common_options.add_argument(
         '--output-directory', '--output_directory',
         help=fix('Output directory to write to [default: current working directory]'))
