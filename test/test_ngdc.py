@@ -41,18 +41,14 @@ class NgdcTests(unittest.TestCase):
     def test_ngdc_ftp_fastq_gz(self):
         with in_tempdir():
             extern.run('{} get -r {} -m ngdc-ftp'.format(kingfisher, self.TEST_RUN))
-            self.assertTrue(os.path.exists('{}_f1.fastq.gz'.format(self.TEST_RUN)))
-            self.assertTrue(os.path.exists('{}_r2.fastq.gz'.format(self.TEST_RUN)))
-            self.assertTrue(os.path.getsize('{}_f1.fastq.gz'.format(self.TEST_RUN)) > 0)
-            self.assertTrue(os.path.getsize('{}_r2.fastq.gz'.format(self.TEST_RUN)) > 0)
+            self.assertTrue(os.path.getsize('{}_f1.fastq.gz'.format(self.TEST_RUN)) == 6478403)
+            self.assertTrue(os.path.getsize('{}_r2.fastq.gz'.format(self.TEST_RUN)) == 8310697)
 
     def test_ngdc_ascp_fastq_gz(self):
         with in_tempdir():
-            extern.run('{} get -r {} -m ngdc-ascp'.format(kingfisher, self.TEST_RUN))
-            self.assertTrue(os.path.exists('{}_f1.fastq.gz'.format(self.TEST_RUN)))
-            self.assertTrue(os.path.exists('{}_r2.fastq.gz'.format(self.TEST_RUN)))
-            self.assertTrue(os.path.getsize('{}_f1.fastq.gz'.format(self.TEST_RUN)) > 0)
-            self.assertTrue(os.path.getsize('{}_r2.fastq.gz'.format(self.TEST_RUN)) > 0)
+            extern.run('{} get -r {} -m ngdc-ascp ngdc-ftp'.format(kingfisher, self.TEST_RUN))
+            self.assertTrue(os.path.getsize('{}_f1.fastq.gz'.format(self.TEST_RUN)) == 6478403)
+            self.assertTrue(os.path.getsize('{}_r2.fastq.gz'.format(self.TEST_RUN)) == 8310697)
 
 
 if __name__ == "__main__":

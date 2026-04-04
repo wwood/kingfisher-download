@@ -3,7 +3,6 @@ import os
 import re
 import subprocess
 import shutil
-from html.parser import HTMLParser
 
 import requests
 
@@ -11,170 +10,166 @@ from .ena import _resolve_ascp, _find_ascp_in_aspera, DEFAULT_LINUX_ASPERA_SSH_K
 from .md5sum import MD5
 
 
-NGDC_SEARCH_URL = 'https://ngdc.cncb.ac.cn/gsa/search'
 NGDC_HTTPS_DOWNLOAD_BASE = 'https://download.cncb.ac.cn/gsa'
 NGDC_FTP_DOWNLOAD_BASE = 'ftp://download.big.ac.cn/gsa'
 NGDC_ASPERA_HOST = 'aspera01@download.cncb.ac.cn'
+# Some projects are under /gsa2/ instead of /gsa/
+NGDC_HTTPS_DOWNLOAD_BASES = [
+    'https://download.cncb.ac.cn/gsa',
+    'https://download.cncb.ac.cn/gsa2',
+]
 
 
 class NgdcRunInfo:
     """Parsed metadata for a single CRR run from NGDC/GSA."""
-    def __init__(self, crr_accession, cra_accession, filenames, experiment_accession=None,
-                 platform=None, library_strategy=None, library_source=None,
-                 library_layout=None, sample_accession=None, bioproject=None,
-                 species=None, alias=None, title=None):
+    def __init__(self, crr_accession, cra_accession, filenames, gsa_base=None):
         self.crr_accession = crr_accession
         self.cra_accession = cra_accession
-        self.filenames = filenames  # list of filenames e.g. ['CRR302577_f1.fastq.gz', 'CRR302577_r2.fastq.gz']
-        self.experiment_accession = experiment_accession
-        self.platform = platform
-        self.library_strategy = library_strategy
-        self.library_source = library_source
-        self.library_layout = library_layout
-        self.sample_accession = sample_accession
-        self.bioproject = bioproject
-        self.species = species
-        self.alias = alias
-        self.title = title
+        self.filenames = filenames  # e.g. ['CRR302577_f1.fastq.gz', 'CRR302577_r2.fastq.gz']
+        # Which base URL prefix to use (gsa vs gsa2)
+        self.gsa_base = gsa_base or NGDC_HTTPS_DOWNLOAD_BASES[0]
 
 
-class _NgdcSearchParser(HTMLParser):
-    """Parse the NGDC GSA search results HTML to extract run info."""
+def _find_cra_for_crr(crr_accession):
+    """Find the CRA accession for a CRR run by searching the download server
+    directory listings.
 
-    def __init__(self):
-        super().__init__()
-        self.cra_accession = None
-        self.filenames = []
-        self.experiment_accession = None
-        self.platform = None
-        self.library_strategy = None
-        self.library_source = None
-        self.library_layout = None
-        self.sample_accession = None
-        self.bioproject = None
-        self.species = None
-        self.alias = None
-        self.title = None
+    The download server at download.cncb.ac.cn has directory listings enabled.
+    CRR numbers are sequential within a CRA, and CRA numbers are sequential,
+    so we can binary search the CRA listing to find which one contains our CRR.
+    In practice, we fetch the top-level listing once and scan it.
+    """
+    for base_url in NGDC_HTTPS_DOWNLOAD_BASES:
+        logging.debug("Searching {} for {}".format(base_url, crr_accession))
+        res = requests.get(base_url + '/', timeout=60)
+        if not res.ok:
+            logging.debug("Failed to fetch directory listing from {}: {}".format(base_url, res.status_code))
+            continue
 
-        # State for tracking where we are in the HTML
-        self._current_tag = None
-        self._current_attrs = {}
-        self._capture_text = False
-        self._captured_text = ''
-        self._in_label = False
-        self._current_label = None
+        # Extract all CRA accessions from the directory listing
+        cra_accessions = re.findall(r'href="(CRA\d+)/"', res.text)
+        if not cra_accessions:
+            continue
 
-    def handle_starttag(self, tag, attrs):
-        self._current_tag = tag
-        self._current_attrs = dict(attrs)
+        # Check each CRA in reverse order (newer projects have higher CRR numbers)
+        for cra in reversed(cra_accessions):
+            cra_url = '{}/{}/'.format(base_url, cra)
+            cra_res = requests.get(cra_url, timeout=60)
+            if not cra_res.ok:
+                continue
+            if crr_accession in cra_res.text:
+                return cra, base_url
 
-        if tag == 'a':
-            href = self._current_attrs.get('href', '')
-            # Extract CRA from links like /gsa/browse/CRA006375/CRR426631
-            cra_match = re.search(r'/gsa/browse/(CRA\d+)', href)
-            if cra_match and self.cra_accession is None:
-                self.cra_accession = cra_match.group(1)
-            # Extract experiment accession from links
-            crx_match = re.search(r'/gsa/browse/CRA\d+/(CRX\d+)', href)
-            if crx_match and self.experiment_accession is None:
-                self.experiment_accession = crx_match.group(1)
-            # Extract bioproject
-            prj_match = re.search(r'/bioproject/browse/(PRJCA\d+)', href)
-            if prj_match and self.bioproject is None:
-                self.bioproject = prj_match.group(1)
-            # Extract sample accession
-            samc_match = re.search(r'/biosample/browse/(SAMC\d+)', href)
-            if samc_match and self.sample_accession is None:
-                self.sample_accession = samc_match.group(1)
-
-    def handle_data(self, data):
-        text = data.strip()
-        if not text:
-            return
-
-        # Detect filenames
-        if re.match(r'CRR\d+[_.].*\.(fastq\.gz|fq\.gz|sra|bam)$', text):
-            self.filenames.append(text)
-
-        # Detect species
-        if self._current_tag == 'i' or self._current_tag == 'em':
-            # Species names are often in italic
-            pass
-
-    def handle_endtag(self, tag):
-        pass
+    return None, None
 
 
-def _fetch_ngdc_search_page(crr_accession):
-    """Fetch the NGDC search page for a CRR accession and return the HTML."""
-    url = '{}?searchTerm={}'.format(NGDC_SEARCH_URL, crr_accession)
-    logging.debug("Fetching NGDC search page: {}".format(url))
+def _find_cra_for_crr_smart(crr_accession):
+    """Find the CRA accession for a CRR run using a narrowed search.
+
+    CRR numbers are roughly sequential within CRA projects, and CRA projects
+    are listed in order. We use binary search to narrow down which CRA
+    contains the target CRR.
+    """
+    for base_url in NGDC_HTTPS_DOWNLOAD_BASES:
+        logging.debug("Searching {} for {}".format(base_url, crr_accession))
+        res = requests.get(base_url + '/', timeout=60)
+        if not res.ok:
+            continue
+
+        cra_accessions = re.findall(r'href="(CRA\d+)/"', res.text)
+        if not cra_accessions:
+            continue
+
+        # Binary search: for each candidate CRA, check if it contains CRR
+        # numbers in the right range. We check the first CRR in each CRA
+        # directory to narrow down.
+        target_num = int(re.search(r'\d+', crr_accession).group())
+
+        lo, hi = 0, len(cra_accessions) - 1
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            cra = cra_accessions[mid]
+            cra_url = '{}/{}/'.format(base_url, cra)
+            cra_res = requests.get(cra_url, timeout=60)
+            if not cra_res.ok:
+                # Can't read this CRA, try linear from here
+                break
+
+            crr_nums = [int(x) for x in re.findall(r'href="CRR(\d+)/"', cra_res.text)]
+            if not crr_nums:
+                break
+
+            min_crr = min(crr_nums)
+            max_crr = max(crr_nums)
+
+            if min_crr <= target_num <= max_crr:
+                # Found it - verify the exact CRR is present
+                if crr_accession in cra_res.text:
+                    return cra, base_url
+                else:
+                    break
+            elif target_num < min_crr:
+                hi = mid - 1
+            else:
+                lo = mid + 1
+
+        # Binary search didn't find it exactly, check neighbors
+        for offset in range(-2, 3):
+            idx = (lo + hi) // 2 + offset
+            if 0 <= idx < len(cra_accessions):
+                cra = cra_accessions[idx]
+                cra_url = '{}/{}/'.format(base_url, cra)
+                cra_res = requests.get(cra_url, timeout=60)
+                if cra_res.ok and crr_accession in cra_res.text:
+                    return cra, base_url
+
+    return None, None
+
+
+def _get_filenames_from_download_server(crr_accession, cra_accession, base_url):
+    """Get the list of data files for a CRR run from the download server."""
+    url = '{}/{}/{}/'.format(base_url, cra_accession, crr_accession)
+    logging.debug("Fetching file listing from {}".format(url))
     res = requests.get(url, timeout=60)
     if not res.ok:
-        raise Exception("Failed to fetch NGDC search page for {}: {} {}".format(
-            crr_accession, res.status_code, res.text[:200]))
-    return res.text
+        return []
 
-
-def _parse_ngdc_run_page(crr_accession, cra_accession):
-    """Fetch the NGDC run detail page and extract file listing."""
-    url = 'https://ngdc.cncb.ac.cn/gsa/browse/{}/{}'.format(cra_accession, crr_accession)
-    logging.debug("Fetching NGDC run page: {}".format(url))
-    res = requests.get(url, timeout=60)
-    if not res.ok:
-        raise Exception("Failed to fetch NGDC run page for {}: {} {}".format(
-            crr_accession, res.status_code, res.text[:200]))
-
+    # Match data files (fastq.gz, fq.gz, sra, bam) but not .xml or other metadata
     filenames = re.findall(
-        r'({}[_.][^\s<"\']+\.(?:fastq\.gz|fq\.gz|sra|bam))'.format(re.escape(crr_accession)),
+        r'href="({}[^\s"]*\.(?:fastq\.gz|fq\.gz|sra|bam))"'.format(re.escape(crr_accession)),
         res.text
     )
-    # Deduplicate while preserving order
-    seen = set()
-    unique = []
-    for f in filenames:
-        if f not in seen:
-            seen.add(f)
-            unique.append(f)
-    return unique
+    return filenames
 
 
 def fetch_ngdc_run_info(crr_accession):
-    """Look up a CRR accession on NGDC and return an NgdcRunInfo."""
+    """Look up a CRR accession on NGDC and return an NgdcRunInfo.
+
+    Uses the download server (download.cncb.ac.cn) directory listings to
+    resolve the CRA accession and file listing, which is more reliable than
+    the NGDC web application.
+    """
     if not re.match(r'^CRR\d+$', crr_accession):
         raise Exception("Invalid NGDC run accession: {}".format(crr_accession))
 
-    html = _fetch_ngdc_search_page(crr_accession)
+    logging.info("Looking up CRA accession for {} on NGDC download server ..".format(crr_accession))
+    cra_accession, base_url = _find_cra_for_crr_smart(crr_accession)
 
-    parser = _NgdcSearchParser()
-    parser.feed(html)
+    if cra_accession is None:
+        raise Exception("Could not find CRA accession for {} on NGDC download server".format(crr_accession))
 
-    if parser.cra_accession is None:
-        raise Exception("Could not find CRA accession for {} on NGDC".format(crr_accession))
+    logging.info("Found {} in {}".format(crr_accession, cra_accession))
 
-    # Get the file listing from the run detail page
-    filenames = _parse_ngdc_run_page(crr_accession, parser.cra_accession)
+    filenames = _get_filenames_from_download_server(crr_accession, cra_accession, base_url)
     if not filenames:
-        # Fall back to common patterns
-        logging.warning("Could not find file listing for {} on NGDC run page, "
-                        "trying common filename patterns".format(crr_accession))
-        filenames = ['{}_f1.fastq.gz'.format(crr_accession),
-                     '{}_r2.fastq.gz'.format(crr_accession)]
+        raise Exception("No data files found for {} in {}/{} on NGDC download server".format(
+            crr_accession, cra_accession, crr_accession))
 
     return NgdcRunInfo(
         crr_accession=crr_accession,
-        cra_accession=parser.cra_accession,
+        cra_accession=cra_accession,
         filenames=filenames,
-        experiment_accession=parser.experiment_accession,
-        platform=parser.platform,
-        library_strategy=parser.library_strategy,
-        library_source=parser.library_source,
-        library_layout=parser.library_layout,
-        sample_accession=parser.sample_accession,
-        bioproject=parser.bioproject,
-        species=parser.species,
-        alias=parser.alias,
-        title=parser.title,
+        gsa_base=base_url,
     )
 
 
@@ -190,7 +185,7 @@ class NgdcDownloader:
         output_files = []
         for filename in info.filenames:
             url = '{}/{}/{}/{}'.format(
-                NGDC_HTTPS_DOWNLOAD_BASE, info.cra_accession, run_id, filename)
+                info.gsa_base, info.cra_accession, run_id, filename)
             output_path = os.path.join(output_directory, filename)
 
             logging.info("Downloading {} from NGDC ..".format(url))
@@ -251,11 +246,18 @@ class NgdcDownloader:
             ssh_key_file = ssh_key
         logging.info("Using aspera ssh key file: {}".format(ssh_key_file))
 
-        ascp_bin = _resolve_ascp()
+        try:
+            ascp_bin = _resolve_ascp()
+        except Exception as e:
+            logging.warning("Method ngdc-ascp failed: {}".format(e))
+            return False
+
+        # Determine the aspera path prefix (gsa or gsa2)
+        gsa_path = info.gsa_base.split('/')[-1]  # 'gsa' or 'gsa2'
 
         output_files = []
         for filename in info.filenames:
-            remote_path = '/gsa/{}/{}/{}'.format(info.cra_accession, run_id, filename)
+            remote_path = '/{}/{}/{}/{}'.format(gsa_path, info.cra_accession, run_id, filename)
             output_path = os.path.join(output_directory, filename)
 
             cmd = "{} -P33001 -T -l 300m {} -i {} {}:{} {}".format(
@@ -279,8 +281,9 @@ class NgdcDownloader:
 def fetch_ngdc_metadata(crr_accessions):
     """Fetch metadata for a list of CRR accessions from NGDC.
 
-    Returns a list of dicts with metadata fields, suitable for conversion to a
-    pandas DataFrame.
+    Returns a pandas DataFrame with metadata fields. Uses the download server
+    for CRA resolution and the NGDC web application for richer metadata when
+    available.
     """
     import pandas as pd
 
@@ -288,35 +291,37 @@ def fetch_ngdc_metadata(crr_accessions):
     for acc in crr_accessions:
         logging.info("Fetching NGDC metadata for {} ..".format(acc))
         try:
-            # Fetch the run detail page for richer metadata
             info = fetch_ngdc_run_info(acc)
-            run_page_url = 'https://ngdc.cncb.ac.cn/gsa/browse/{}/{}'.format(
-                info.cra_accession, acc)
-            res = requests.get(run_page_url, timeout=60)
-            html = res.text if res.ok else ''
-
-            platform = info.platform or _extract_meta(html, 'Platform') or _extract_meta(html, '测序平台')
-            species = info.species or _extract_meta(html, 'Species') or _extract_meta(html, '物种')
-            alias = info.alias or _extract_meta(html, 'Alias')
 
             record = {
                 'run': acc,
-                'bioproject': info.bioproject or _extract_field(html, r'PRJCA\d+'),
-                'experiment_accession': info.experiment_accession,
-                'sample_accession': info.sample_accession or _extract_field(html, r'SAMC\d+'),
                 'cra_accession': info.cra_accession,
                 'filenames': ';'.join(info.filenames),
                 'bases': None,
-                'library_strategy': info.library_strategy or _extract_meta(html, 'Library strategy') or _extract_meta(html, 'Strategy'),
-                'library_selection': None,
-                'library_source': info.library_source or _extract_meta(html, 'Source'),
-                'library_layout': info.library_layout or _extract_meta(html, 'Layout'),
-                'model': platform,
-                'sample_name': alias or acc,
-                'taxon_name': species,
-                'platform': platform,
-                'title': info.title or _extract_meta(html, 'Title'),
+                'sample_name': acc,
             }
+
+            # Try to get richer metadata from the NGDC web application
+            try:
+                run_page_url = 'https://ngdc.cncb.ac.cn/gsa/browse/{}/{}'.format(
+                    info.cra_accession, acc)
+                res = requests.get(run_page_url, timeout=30)
+                if res.ok:
+                    html = res.text
+                    record['bioproject'] = _extract_field(html, r'PRJCA\d+')
+                    record['experiment_accession'] = _extract_field(html, r'CRX\d+')
+                    record['sample_accession'] = _extract_field(html, r'SAMC\d+')
+                    record['platform'] = _extract_meta(html, 'Platform') or _extract_meta(html, '测序平台')
+                    record['model'] = record.get('platform')
+                    record['library_strategy'] = _extract_meta(html, 'Library strategy') or _extract_meta(html, 'Strategy')
+                    record['library_selection'] = None
+                    record['library_source'] = _extract_meta(html, 'Source')
+                    record['library_layout'] = _extract_meta(html, 'Layout')
+                    record['taxon_name'] = _extract_meta(html, 'Species') or _extract_meta(html, '物种')
+                    record['sample_name'] = _extract_meta(html, 'Alias') or acc
+                    record['title'] = _extract_meta(html, 'Title')
+            except Exception as e:
+                logging.debug("Could not fetch rich metadata from NGDC web for {}: {}".format(acc, e))
 
             records.append(record)
         except Exception as e:
@@ -333,12 +338,7 @@ def _extract_field(html, pattern):
 
 
 def _extract_meta(html, label):
-    """Try to extract a metadata value following a label in HTML.
-
-    Looks for patterns like:
-        <th>Label</th><td>Value</td>
-        <label>Label</label>...value...
-    """
+    """Try to extract a metadata value following a label in HTML."""
     # Try th/td pattern
     pattern = r'(?:<th[^>]*>|<label[^>]*>)\s*{}\s*(?:</th>|</label>)\s*(?:<td[^>]*>)\s*([^<]+)'.format(
         re.escape(label))
@@ -346,7 +346,7 @@ def _extract_meta(html, label):
     if m:
         return m.group(1).strip()
 
-    # Try a more general pattern: label followed by a colon or value in next tag
+    # Try label: value pattern
     pattern = r'{}[：:]\s*</?\w[^>]*>\s*([^<]+)'.format(re.escape(label))
     m = re.search(pattern, html, re.IGNORECASE)
     if m:
