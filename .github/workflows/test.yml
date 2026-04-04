@@ -29,6 +29,8 @@ jobs:
       - name: Install ascp
         run: |
           pixi run -e dev --frozen ascli config ascp install
+          echo "Checking ascp installation"
+          find ~/.aspera -name ascp
 
       - name: Run tests with Pixi
         run: |
