@@ -15,7 +15,7 @@ import bird_tool_utils
 from .ena import EnaDownloader
 from .ngdc import NgdcDownloader, fetch_ngdc_metadata
 from .location import Location, NcbiLocationJson
-from .exception import DownloadMethodFailed
+from .exception import DownloadMethodFailed, KingfisherException
 from .sra_metadata import *
 from .md5sum import MD5
 
@@ -655,7 +655,9 @@ def gzip_test_files(gzip_files):
         try:
             extern.run("pigz -t '{}'".format(f))
         except ExternCalledProcessError as e:
-            raise Exception("Download verification failed for '{}': pigz -t returned non-zero exit status".format(f)) from e
+            raise KingfisherException(
+                "Download verification failed for '{}': pigz -t returned non-zero exit status".format(f),
+                inner=e)
 
 
 def annotate(**kwargs):

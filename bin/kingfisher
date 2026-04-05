@@ -18,6 +18,7 @@ from bird_tool_utils.people import *
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 import kingfisher
+from kingfisher.exception import KingfisherException
 
 def fix(help_string):
     multispace_re = re.compile('  *')
@@ -335,6 +336,13 @@ def main():
             )
         else:
             raise Exception("Programming error")
+    except KingfisherException as e:
+        if args.debug and e.inner is not None:
+            raise e.inner from e
+        elif args.debug:
+            raise
+        logging.error(e.error_description)
+        sys.exit(1)
     except Exception as e:
         if args.debug:
             raise
