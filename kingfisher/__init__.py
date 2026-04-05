@@ -424,28 +424,32 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                     candidate_files = [f for f in downloaded_files if os.path.exists(f)]
                 for f in candidate_files:
                     # Do the least work, currently we have FASTQ.gz
-                    if 'fasta' in output_format_possibilities:
-                        logging.info("Converting {} to FASTA ..".format(f))
-                        out_here = f.replace('.fastq.gz','.fasta')
-                        extern.run("pigz -p {} -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' >{}".format(
-                            extraction_threads, f, out_here
-                        ))
-                        os.remove(f)
-                        output_files.append(out_here)
-                    elif 'fasta.gz' in output_format_possibilities:
-                        logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
-                        out_here = f.replace('.fastq.gz','.fasta.gz')
-                        extern.run("pigz -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' |pigz -p {} >{}".format(
-                            f, extraction_threads, out_here
-                        ))
-                        os.remove(f)
-                        output_files.append(out_here)
-                    elif 'fastq' in output_format_possibilities:
-                        logging.info("Decompressing {} with pigz ..".format(f))
-                        extern.run("pigz -p {} -d {}".format(extraction_threads, f))
-                        output_files.append(f.replace('.fastq.gz','.fastq'))
-                    else:
-                        raise Exception("Programming error")
+                    try:
+                        if 'fasta' in output_format_possibilities:
+                            logging.info("Converting {} to FASTA ..".format(f))
+                            out_here = f.replace('.fastq.gz','.fasta')
+                            extern.run("pigz -p {} -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' >{}".format(
+                                extraction_threads, f, out_here
+                            ))
+                            os.remove(f)
+                            output_files.append(out_here)
+                        elif 'fasta.gz' in output_format_possibilities:
+                            logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
+                            out_here = f.replace('.fastq.gz','.fasta.gz')
+                            extern.run("pigz -cd {} |awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' |pigz -p {} >{}".format(
+                                f, extraction_threads, out_here
+                            ))
+                            os.remove(f)
+                            output_files.append(out_here)
+                        elif 'fastq' in output_format_possibilities:
+                            logging.info("Decompressing {} with pigz ..".format(f))
+                            extern.run("pigz -p {} -d {}".format(extraction_threads, f))
+                            output_files.append(f.replace('.fastq.gz','.fastq'))
+                        else:
+                            raise Exception("Programming error")
+                    except ExternCalledProcessError as e:
+                        raise KingfisherException(
+                            "Format conversion failed for '{}'".format(f), inner=e)
                 
     if not stdout and len(output_files) == 0:
         raise Exception("No output files found, something went amiss, unsure what.")
@@ -504,9 +508,9 @@ def extract(**kwargs):
         try:
             subprocess.check_call(cmd, shell=True, stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
-            raise Exception("Extraction of .sra to fasta format failed. Command run was '{}'. STDERR was '{}'".format(
-                cmd, e.stderr
-            ))
+            raise KingfisherException(
+                "Extraction of .sra file failed. Command run was '{}'. STDERR was '{}'".format(cmd, e.stderr),
+                inner=e)
             
     elif unsorted and not stdout:
         def run_command(cmd):
@@ -514,7 +518,9 @@ def extract(**kwargs):
             try:
                 subprocess.check_call(cmd, shell=True, stderr=subprocess.PIPE)
             except subprocess.CalledProcessError as e:
-                raise Exception(f"Extraction of .sra to format unsorted {format} failed. Command run was '{cmd}'. STDERR was '{e.stderr}'")
+                raise KingfisherException(
+                    f"Extraction of .sra to format unsorted {format} failed. Command run was '{cmd}'. STDERR was '{e.stderr}'",
+                    inner=e)
 
         # By default, we want separate outputs for forward and reverse.
         format = output_format_possibilities[0]
@@ -558,7 +564,7 @@ def extract(**kwargs):
                 
                 ret = c.wait()
                 if ret != 0:
-                    raise subprocess.SubprocessError(f"Command {c.args} returned with non-zero exitstatus {ret}")
+                    raise KingfisherException(f"Compression command {c.args} returned with non-zero exit status {ret}")
                 logging.debug("Process finished")
                 os.remove(fifo)
 
@@ -605,37 +611,45 @@ def extract(**kwargs):
             # Change directory to the output directory using a "with", so that fasterq-dump outputs there, not here.
             sra_file_abs = os.path.abspath(sra_file)
             with bird_tool_utils.in_working_directory(output_directory):
-                extern.run("fasterq-dump --threads {} {}".format(threads, sra_file_abs))
+                try:
+                    extern.run("fasterq-dump --threads {} {}".format(threads, sra_file_abs))
+                except ExternCalledProcessError as e:
+                    raise KingfisherException(
+                        "Extraction of .sra file with fasterq-dump failed for '{}'".format(sra_file), inner=e)
 
                 if 'fastq' not in output_format_possibilities:
                     for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
                         f = output_location_factory.output_stem(fq.replace('x',run_identifier))
                         if os.path.exists(f):
-                            # Do the least work, currently we have FASTQ.
-                            if 'fasta' in output_format_possibilities:
-                                logging.info("Converting {} to FASTA ..".format(f))
-                                out_here = output_location_factory.output_stem(re.sub('.fastq$','.fasta',f))
-                                extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} >{}".format(
-                                    f, out_here
-                                ))
-                                os.remove(f)
-                                output_files.append(out_here)
-                            elif 'fasta.gz' in output_format_possibilities:
-                                logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
-                                out_here = output_location_factory.output_stem(re.sub('.fastq$','.fasta.gz',f))
-                                extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} |pigz -p {} >{}".format(
-                                    f, threads, out_here
-                                ))
-                                os.remove(f)
-                                output_files.append(out_here)
-                            elif 'fastq.gz' in output_format_possibilities:
-                                out_here = os.path.abspath(output_location_factory.output_stem(f'{f}.gz'))
-                                logging.info("Compressing {} with pigz into {} ..".format(f, out_here))
-                                extern.run("pigz -c -p {} {} > {}".format(threads, f, out_here))
-                                os.remove(f)
-                                output_files.append(out_here)
-                            else:
-                                raise Exception("Programming error")
+                            try:
+                                # Do the least work, currently we have FASTQ.
+                                if 'fasta' in output_format_possibilities:
+                                    logging.info("Converting {} to FASTA ..".format(f))
+                                    out_here = output_location_factory.output_stem(re.sub('.fastq$','.fasta',f))
+                                    extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} >{}".format(
+                                        f, out_here
+                                    ))
+                                    os.remove(f)
+                                    output_files.append(out_here)
+                                elif 'fasta.gz' in output_format_possibilities:
+                                    logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
+                                    out_here = output_location_factory.output_stem(re.sub('.fastq$','.fasta.gz',f))
+                                    extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} |pigz -p {} >{}".format(
+                                        f, threads, out_here
+                                    ))
+                                    os.remove(f)
+                                    output_files.append(out_here)
+                                elif 'fastq.gz' in output_format_possibilities:
+                                    out_here = os.path.abspath(output_location_factory.output_stem(f'{f}.gz'))
+                                    logging.info("Compressing {} with pigz into {} ..".format(f, out_here))
+                                    extern.run("pigz -c -p {} {} > {}".format(threads, f, out_here))
+                                    os.remove(f)
+                                    output_files.append(out_here)
+                                else:
+                                    raise Exception("Programming error")
+                            except ExternCalledProcessError as e:
+                                raise KingfisherException(
+                                    "Format conversion failed for '{}'".format(f), inner=e)
                 else:
                     for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
                         f = fq.replace('x',run_identifier)
