@@ -276,64 +276,70 @@ def main():
 
     logging.info("Kingfisher v{}".format(kingfisher.__version__))
 
-    if args.subparser_name == 'get':
-        check_get_and_extract_common_args(args)
-        kingfisher.download_and_extract(
-            run_identifiers = args.run_identifiers,
-            run_identifiers_file = args.run_identifiers_list,
-            bioproject_accessions = args.bioprojects,
-            download_methods = args.download_methods,
-            output_format_possibilities = args.output_format_possibilities,
-            force = args.force,
-            unsorted = args.unsorted,
-            stdout = args.stdout,
-            gcp_project = args.gcp_project,
-            gcp_user_key_file = args.gcp_user_key_file,
-            aws_user_key_id = args.aws_user_key_id,
-            aws_user_key_secret = args.aws_user_key_secret,
-            guess_aws_location = args.guess_aws_location,
-            allow_paid = args.allow_paid,
-            allow_paid_from_gcp = args.allow_paid_from_gcp,
-            allow_paid_from_aws = args.allow_paid_from_aws,
-            ascp_ssh_key = args.ascp_ssh_key,
-            ascp_args = args.ascp_args,
-            download_threads = args.download_threads,
-            extraction_threads = args.extraction_threads,
-            hide_download_progress = args.hide_download_progress,
-            prefetch_max_size = args.prefetch_max_size,
-            check_md5sums = args.check_md5sums,
-            output_directory = args.output_directory if args.output_directory is not None else '.',
-        )
-    elif args.subparser_name == 'extract':
-        output_files = kingfisher.extract(
-            sra_file = args.sra,
-            output_format_possibilities = args.output_format_possibilities,
-            force = args.force,
-            unsorted = args.unsorted,
-            stdout = args.stdout,
-            threads = args.threads,
-            output_directory = args.output_directory if args.output_directory is not None else '.',
-        )
-        logging.info("Output files: {}".format(', '.join(output_files)))
-    elif args.subparser_name == 'annotate':
-        if args.output_format in ('feather','parquet') and not args.output_file:
-            logging.error("--output-file is required when --output-format is {}".format(args.output_format))
-            sys.exit(1)
-        kingfisher.annotate(
-            run_identifiers = args.run_identifiers,
-            run_identifiers_file = args.run_identifiers_list,
-            bioproject_accessions = args.bioprojects,
-            output_file = args.output_file,
-            output_format = args.output_format,
-            all_columns = args.all_columns,
-        )
-    elif args.subparser_name == 'authorship':
-        kingfisher.authorship(
-            run_identifiers = args.run_identifiers,
-            run_identifiers_file = args.run_identifiers_list,
-        )
-    else:
-        raise Exception("Programming error")
+    try:
+        if args.subparser_name == 'get':
+            check_get_and_extract_common_args(args)
+            kingfisher.download_and_extract(
+                run_identifiers = args.run_identifiers,
+                run_identifiers_file = args.run_identifiers_list,
+                bioproject_accessions = args.bioprojects,
+                download_methods = args.download_methods,
+                output_format_possibilities = args.output_format_possibilities,
+                force = args.force,
+                unsorted = args.unsorted,
+                stdout = args.stdout,
+                gcp_project = args.gcp_project,
+                gcp_user_key_file = args.gcp_user_key_file,
+                aws_user_key_id = args.aws_user_key_id,
+                aws_user_key_secret = args.aws_user_key_secret,
+                guess_aws_location = args.guess_aws_location,
+                allow_paid = args.allow_paid,
+                allow_paid_from_gcp = args.allow_paid_from_gcp,
+                allow_paid_from_aws = args.allow_paid_from_aws,
+                ascp_ssh_key = args.ascp_ssh_key,
+                ascp_args = args.ascp_args,
+                download_threads = args.download_threads,
+                extraction_threads = args.extraction_threads,
+                hide_download_progress = args.hide_download_progress,
+                prefetch_max_size = args.prefetch_max_size,
+                check_md5sums = args.check_md5sums,
+                output_directory = args.output_directory if args.output_directory is not None else '.',
+            )
+        elif args.subparser_name == 'extract':
+            output_files = kingfisher.extract(
+                sra_file = args.sra,
+                output_format_possibilities = args.output_format_possibilities,
+                force = args.force,
+                unsorted = args.unsorted,
+                stdout = args.stdout,
+                threads = args.threads,
+                output_directory = args.output_directory if args.output_directory is not None else '.',
+            )
+            logging.info("Output files: {}".format(', '.join(output_files)))
+        elif args.subparser_name == 'annotate':
+            if args.output_format in ('feather','parquet') and not args.output_file:
+                logging.error("--output-file is required when --output-format is {}".format(args.output_format))
+                sys.exit(1)
+            kingfisher.annotate(
+                run_identifiers = args.run_identifiers,
+                run_identifiers_file = args.run_identifiers_list,
+                bioproject_accessions = args.bioprojects,
+                output_file = args.output_file,
+                output_format = args.output_format,
+                all_columns = args.all_columns,
+            )
+        elif args.subparser_name == 'authorship':
+            kingfisher.authorship(
+                run_identifiers = args.run_identifiers,
+                run_identifiers_file = args.run_identifiers_list,
+            )
+        else:
+            raise Exception("Programming error")
+    except Exception as e:
+        if args.debug:
+            raise
+        logging.error("{}".format(e))
+        sys.exit(1)
 
     logging.info("Kingfisher done.")
 
