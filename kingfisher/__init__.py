@@ -652,7 +652,10 @@ def gzip_test_files(gzip_files):
     """
     for f in gzip_files:
         logging.info("Verifying gzip file {} ..".format(f))
-        extern.run("pigz -t '{}'".format(f))
+        try:
+            extern.run("pigz -t '{}'".format(f))
+        except ExternCalledProcessError as e:
+            raise Exception("Download verification failed for '{}': pigz -t returned non-zero exit status".format(f)) from e
 
 
 def annotate(**kwargs):
