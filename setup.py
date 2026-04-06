@@ -44,6 +44,8 @@ setup(
       'bird_tool_utils',
       'pyarrow',
     ],
-    scripts=['bin/kingfisher'],
+    entry_points={
+        'console_scripts': ['kingfisher=kingfisher.cli:main'],
+    },
     classifiers=["Topic :: Scientific/Engineering :: Bio-Informatics"],
 )

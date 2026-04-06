@@ -997,7 +997,7 @@ packages:
 - pypi: ./
   name: kingfisher
   version: 0.4.1
-  sha256: d15d9e59ac26e8dd3c3beba340eaa458264eaa5ca3903b1a4b1353db37040eb9
+  sha256: d8698883523f7c36d916cf3d086c780be9faa6593e2fde6c4a1924eb1c776027
   requires_dist:
   - extern
   - requests
