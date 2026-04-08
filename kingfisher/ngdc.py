@@ -143,15 +143,36 @@ def _get_filenames_from_download_server(crr_accession, cra_accession, base_url):
     return filenames
 
 
-def fetch_ngdc_run_info(crr_accession):
+def fetch_ngdc_run_info(crr_accession, known_cra_accession=None):
     """Look up a CRR accession on NGDC and return an NgdcRunInfo.
 
     Uses the download server (download.cncb.ac.cn) directory listings to
     resolve the CRA accession and file listing, which is more reliable than
     the NGDC web application.
+
+    If known_cra_accession is provided, the binary search is skipped.
     """
     if not re.match(r'^CRR\d+$', crr_accession):
         raise Exception("Invalid NGDC run accession: {}".format(crr_accession))
+
+    if known_cra_accession is not None:
+        logging.info("Using provided CRA accession {} for {}".format(known_cra_accession, crr_accession))
+        # Determine which base URL to use by checking both gsa volumes
+        base_url = None
+        for candidate_base in NGDC_HTTPS_DOWNLOAD_BASES:
+            filenames = _get_filenames_from_download_server(crr_accession, known_cra_accession, candidate_base)
+            if filenames:
+                base_url = candidate_base
+                break
+        if base_url is None:
+            raise Exception("Could not find files for {} in {} on NGDC download server".format(
+                crr_accession, known_cra_accession))
+        return NgdcRunInfo(
+            crr_accession=crr_accession,
+            cra_accession=known_cra_accession,
+            filenames=filenames,
+            gsa_base=base_url,
+        )
 
     logging.info("Looking up CRA accession for {} on NGDC download server ..".format(crr_accession))
     cra_accession, base_url = _find_cra_for_crr_smart(crr_accession)
@@ -175,10 +196,10 @@ def fetch_ngdc_run_info(crr_accession):
 
 
 class NgdcDownloader:
-    def download_with_ftp(self, run_id, num_threads, output_directory):
+    def download_with_ftp(self, run_id, num_threads, output_directory, known_cra_accession=None):
         """Download files from NGDC via FTP/HTTPS using curl or aria2c."""
         try:
-            info = fetch_ngdc_run_info(run_id)
+            info = fetch_ngdc_run_info(run_id, known_cra_accession=known_cra_accession)
         except Exception as e:
             logging.warning("Failed to look up run info for {} on NGDC: {}".format(run_id, e))
             return False
@@ -217,10 +238,10 @@ class NgdcDownloader:
 
         return output_files
 
-    def download_with_aspera(self, run_id, output_directory, ascp_args='', ssh_key=None):
+    def download_with_aspera(self, run_id, output_directory, ascp_args='', ssh_key=None, known_cra_accession=None):
         """Download files from NGDC via Aspera."""
         try:
-            info = fetch_ngdc_run_info(run_id)
+            info = fetch_ngdc_run_info(run_id, known_cra_accession=known_cra_accession)
         except Exception as e:
             logging.warning("Failed to look up run info for {} on NGDC: {}".format(run_id, e))
             return False

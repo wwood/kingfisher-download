@@ -125,6 +125,9 @@ def main():
     get_parser_common_options.add_argument(
         '--output-directory', '--output_directory',
         help=fix('Output directory to write to [default: current working directory]'))
+    get_parser_common_options.add_argument(
+        '--cra-accession', '--cra_accession',
+        help='CRA accession for the run (NGDC/GSA only). If specified, skips the binary search for the CRA accession [default: auto-detect]')
 
     get_parser_download_args = get_parser.add_argument_group(title='further download options')
     get_parser_download_args.add_argument(
@@ -304,6 +307,7 @@ def main():
                 prefetch_max_size = args.prefetch_max_size,
                 check_md5sums = args.check_md5sums,
                 output_directory = args.output_directory if args.output_directory is not None else '.',
+                cra_accession = args.cra_accession,
             )
         elif args.subparser_name == 'extract':
             output_files = kingfisher.extract(

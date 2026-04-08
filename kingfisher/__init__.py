@@ -99,6 +99,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
     prefetch_max_size = kwargs.pop('prefetch_max_size',None)
     check_md5sums = kwargs.pop('check_md5sums', False)
     output_directory = kwargs.pop('output_directory', '.')
+    cra_accession = kwargs.pop('cra_accession', None)
 
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
@@ -360,7 +361,8 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                 result = NgdcDownloader().download_with_aspera(
                     run_identifier, output_directory,
                     ascp_args=ascp_args,
-                    ssh_key=ascp_ssh_key)
+                    ssh_key=ascp_ssh_key,
+                    known_cra_accession=cra_accession)
                 if result is not False:
                     gzip_test_files([f for f in result if f.endswith('.gz')])
                     downloaded_files = result
@@ -369,7 +371,8 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                 result = NgdcDownloader().download_with_ftp(
                     run_identifier,
                     download_threads,
-                    output_directory)
+                    output_directory,
+                    known_cra_accession=cra_accession)
                 if result is not False:
                     gzip_test_files([f for f in result if f.endswith('.gz')])
                     downloaded_files = result
