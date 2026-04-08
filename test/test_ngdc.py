@@ -46,6 +46,12 @@ class NgdcTests(unittest.TestCase):
             self.assertTrue(os.path.getsize('{}_f1.fastq.gz'.format(self.TEST_RUN)) == 6478403)
             self.assertTrue(os.path.getsize('{}_r2.fastq.gz'.format(self.TEST_RUN)) == 8310697)
 
+    def test_ngdc_ftp_with_cra_accession(self):
+        with in_tempdir():
+            extern.run('{} get -r {} -m ngdc-ftp --cra-accession CRA004536'.format(kingfisher, self.TEST_RUN))
+            self.assertTrue(os.path.getsize('{}_f1.fastq.gz'.format(self.TEST_RUN)) == 6478403)
+            self.assertTrue(os.path.getsize('{}_r2.fastq.gz'.format(self.TEST_RUN)) == 8310697)
+
     def test_ngdc_ascp_fastq_gz(self):
         with in_tempdir():
             extern.run('{} get -r {} -m ngdc-ascp ngdc-ftp'.format(kingfisher, self.TEST_RUN))
