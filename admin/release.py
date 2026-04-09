@@ -46,9 +46,9 @@ if __name__ == "__main__":
     extern.run("pixi run python3 admin/build_docs.py")
 
     print(
-        "Checking if repo is clean. If this fails it might be because the docs have changed from the previous command here? If so you need to remove the git tag with 'git tag -d v{}'".format(version)
+        "Checking for unexpected changes. If this fails it might be because the docs have changed from the previous command here? If so you need to remove the git tag with 'git tag -d v{}'".format(version)
     )
-    extern.run('if [[ $(git diff --shortstat 2> /dev/null | tail -n1) != "" ]]; then exit 1; fi')
+    extern.run("if git diff --name-only | grep -qv -e 'kingfisher/version.py' -e 'pyproject.toml' -e 'admin/'; then echo 'Unexpected changed files:'; git diff --name-only; exit 1; fi")
 
     print("Committing the version file")
     extern.run('git commit -a -m "v{}"'.format(version))
