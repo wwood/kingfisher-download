@@ -60,7 +60,7 @@ BioSample attributes, etc.
 
 # AUTHOR
 
->     Ben J. Woodcroft, Centre for Microbiome Research, School of Biomedical Sciences, Faculty of Health, Queensland University of Technology <benjwoodcroft near gmail.com>
+> Ben J. Woodcroft, Centre for Microbiome Research, School of Biomedical Sciences, Faculty of Health, Queensland University of Technology <benjwoodcroft near gmail.com>
 
 # EXAMPLES
 
