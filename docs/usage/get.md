@@ -25,7 +25,7 @@ Download and extract sequence data from SRA or ENA
   BioProject IDs number(s) to download/extract from e.g. PRJNA621514
     or SRP260223
 
-**-m**, **\--download-methods** {aws-http,prefetch,aws-cp,gcp-cp,ena-ascp,ena-ftp,ngdc-ascp,ngdc-ftp} [{aws-http,prefetch,aws-cp,gcp-cp,ena-ascp,ena-ftp,ngdc-ascp,ngdc-ftp} \...]
+**-m**, **\--download-methods** {aws-http,prefetch,aws-cp,gcp-cp,ena-ascp,ena-ftp,ngdc-ascp,ngdc-http} [{aws-http,prefetch,aws-cp,gcp-cp,ena-ascp,ena-ftp,ngdc-ascp,ngdc-http} \...]
 
   How to download .sra file. If multiple are specified, each is tried
     in turn until one works [required].
@@ -39,7 +39,7 @@ Download and extract sequence data from SRA or ENA
 | aws-cp | Download .SRA file from AWS using aws s3 cp, which is then extracted with fasterq-dump. Does not usually require payment or an AWS account. |
 | gcp-cp | Download .SRA file from Google Cloud gsutil, which is then extracted with fasterq-dump. Requires payment and a Google Cloud account. |
 | ngdc-ascp | [Experimental] Download .fastq.gz files from NGDC/GSA (China) using Aspera. For CRR accessions. |
-| ngdc-ftp | [Experimental] Download .fastq.gz files from NGDC/GSA (China) using curl/aria2c. For CRR accessions. |
+| ngdc-http | [Experimental] Download .fastq.gz files from NGDC/GSA (China) using curl/aria2c. For CRR accessions. |
 
 **\--output-directory** *OUTPUT_DIRECTORY*
 

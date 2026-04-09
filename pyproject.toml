@@ -16,7 +16,8 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Programming Language :: Python :: 3"
 ]
-dynamic = ["version", "dependencies"]
+version = "0.5.0.dev1"
+dynamic = ["dependencies"]
 
 [project.urls]
 Homepage = "https://github.com/wwood/kingfisher-download"

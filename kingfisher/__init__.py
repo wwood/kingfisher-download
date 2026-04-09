@@ -367,7 +367,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                     gzip_test_files([f for f in result if f.endswith('.gz')])
                     downloaded_files = result
 
-            elif method == 'ngdc-ftp':
+            elif method == 'ngdc-http':
                 result = NgdcDownloader().download_with_ftp(
                     run_identifier,
                     download_threads,

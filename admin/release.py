@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import extern
+import re
 import sys
 
 if __name__ == "__main__":
@@ -27,6 +28,21 @@ if __name__ == "__main__":
         "Checking if repo is clean. If this fails it might be because the docs have changed from the previous command here? If so you need to remove the git tag with 'git tag -d v{}'".format(version)
     )
     extern.run('if [[ $(git diff --shortstat 2> /dev/null | tail -n1) != "" ]]; then exit 1; fi')
+
+    # Update version in pyproject.toml
+    print("Updating version in pyproject.toml")
+    pyproject_path = 'pyproject.toml'
+    with open(pyproject_path) as f:
+        pyproject_content = f.read()
+    pyproject_content = re.sub(
+        r'^version = ".*"',
+        'version = "{}"'.format(version),
+        pyproject_content,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    with open(pyproject_path, 'w') as f:
+        f.write(pyproject_content)
 
     # Generate the version file based on the git tag
     extern.run("pixi run -e dev bash -c 'SETUPTOOLS_SCM_PRETEND_VERSION={} python -m setuptools_scm --force-write-version-files'".format(version))

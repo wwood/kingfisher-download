@@ -4,7 +4,7 @@
 
 ### New features
 
-* Added NGDC/GSA support for CRR accessions with two new download methods: `ngdc-ascp` and `ngdc-ftp` ([#e490182](https://github.com/wwood/kingfisher-download/commit/e490182))
+* Added NGDC/GSA support for CRR accessions with two new download methods: `ngdc-ascp` and `ngdc-http` ([#e490182](https://github.com/wwood/kingfisher-download/commit/e490182))
 * Added NGDC metadata support in `annotate` mode - CRR accessions are automatically routed to NGDC while other accessions use NCBI as before
 * Added `--cra-accession` option to skip NGDC binary search when the CRA accession is already known ([#7890d12](https://github.com/wwood/kingfisher-download/commit/7890d12))
 * Added `authorship` experimental mode ([#94449e8](https://github.com/wwood/kingfisher-download/commit/94449e8))
