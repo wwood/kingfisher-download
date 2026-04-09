@@ -15,19 +15,12 @@ if __name__ == "__main__":
     )
     if yes_no != "y":
         raise Exception("Please update the CHANGELOG.md file")
-    
+
     print("version is {}".format(version))
 
-    print("Building dependency definition files based on pixi.toml and pixi.lock") # TODO: Do we need to update pixi.lock first?
-    extern.run('pixi run admin/build_dep_defs_from_pixi.py')
-
-    print("building docs")
-    extern.run("pixi run python3 admin/build_docs.py")
-
-    print(
-        "Checking if repo is clean. If this fails it might be because the docs have changed from the previous command here? If so you need to remove the git tag with 'git tag -d v{}'".format(version)
-    )
-    extern.run('if [[ $(git diff --shortstat 2> /dev/null | tail -n1) != "" ]]; then exit 1; fi')
+    # Build dependency definition files from pixi.toml/pixi.lock
+    print("Building dependency definition files based on pixi.toml and pixi.lock")
+    extern.run('pixi run python3 admin/build_dep_defs_from_pixi.py')
 
     # Update version in pyproject.toml
     print("Updating version in pyproject.toml")
@@ -44,15 +37,24 @@ if __name__ == "__main__":
     with open(pyproject_path, 'w') as f:
         f.write(pyproject_content)
 
-    # Generate the version file based on the git tag
-    extern.run("pixi run -e dev bash -c 'SETUPTOOLS_SCM_PRETEND_VERSION={} python -m setuptools_scm --force-write-version-files'".format(version))
+    # Update version in kingfisher/version.py
+    print("Updating version in kingfisher/version.py")
+    with open('kingfisher/version.py', 'w') as f:
+        f.write('__version__ = "{}"\n'.format(version))
+
+    print("building docs")
+    extern.run("pixi run python3 admin/build_docs.py")
+
+    print(
+        "Checking if repo is clean. If this fails it might be because the docs have changed from the previous command here? If so you need to remove the git tag with 'git tag -d v{}'".format(version)
+    )
+    extern.run('if [[ $(git diff --shortstat 2> /dev/null | tail -n1) != "" ]]; then exit 1; fi')
 
     print("Committing the version file")
     extern.run('git commit -a -m "v{}"'.format(version))
 
     print("Tagging the release as v{}".format(version))
     extern.run('git tag v{}'.format(version))
-    
+
     print("Now run 'git push && git push --tags' and GitHub actions will build and upload to PyPI".format(version))
     print('You have to run "pixi run bash ./build.sh" from the docker directory to build the docker image, once the tag is on GitHub')
-    # print("Once pushed to BioConda, also run https://github.com/wwood/singlem-installation to verify deployment and installation instructions")

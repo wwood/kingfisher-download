@@ -29,7 +29,6 @@ pytest = "*"
 pytest-timeout = "*"
 pandoc = "*"
 python-build = "*"
-setuptools-scm = "*"
 
 [feature.dev.pypi-dependencies]
 kingfisher = {path = ".", editable = true}

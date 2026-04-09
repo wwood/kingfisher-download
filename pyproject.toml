@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "wheel", "setuptools_scm"]
+requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -16,8 +16,15 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Programming Language :: Python :: 3"
 ]
-version = "0.5.0.dev1"
-dynamic = ["dependencies"]
+version = "0.5.0"
+dependencies = [
+    "extern",
+    "requests",
+    "tqdm",
+    "pandas",
+    "bird-tool-utils",
+    "pyarrow",
+]
 
 [project.urls]
 Homepage = "https://github.com/wwood/kingfisher-download"
@@ -28,16 +35,3 @@ kingfisher = "kingfisher.cli:main"
 [tool.setuptools]
 packages = ["kingfisher"]
 include-package-data = true
-
-[tool.setuptools.dynamic]
-dependencies = { file = ["admin/requirements.txt"] }
-
-[tool.setuptools_scm]
-version_file = "kingfisher/version.py"
-# Otherwise the push to pypi will fail on GitHub actions, because the version is malformed.
-version_scheme = "only-version"
-local_scheme = "no-local-version"
-
-[tool.uv.sources]
-# Use local editable install instead of PyPI, avoiding strict pins from published package
-kingfisher = { workspace = true }
