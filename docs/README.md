@@ -50,7 +50,7 @@ docker run -v `pwd`:/data wwood/kingfisher:[RELEASE_TAG] get -r SRR12118866 -m e
 
 ### Conda-based development environment
 
-Kingfisher can be installed through [pixi](pixi.sh), to setup a development environment, as below:
+Kingfisher can be installed through [pixi](https://pixi.sh/), to setup a development environment, as below:
 
 ```
 git clone https://github.com/wwood/kingfisher-download

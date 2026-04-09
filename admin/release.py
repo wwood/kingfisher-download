@@ -21,7 +21,7 @@ if __name__ == "__main__":
     extern.run('pixi run admin/build_dep_defs_from_pixi.py')
 
     print("building docs")
-    extern.run("pixi run python3 admin/build_docs.py --version {}".format(version))
+    extern.run("pixi run python3 admin/build_docs.py")
 
     print(
         "Checking if repo is clean. If this fails it might be because the docs have changed from the previous command here? If so you need to remove the git tag with 'git tag -d v{}'".format(version)
