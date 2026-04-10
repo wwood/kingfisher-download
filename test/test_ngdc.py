@@ -28,6 +28,7 @@ from io import StringIO
 
 import extern
 import pandas as pd
+import pytest
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')]+sys.path
 kingfisher = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','bin','kingfisher')
@@ -52,9 +53,10 @@ class NgdcTests(unittest.TestCase):
             self.assertTrue(os.path.getsize('{}_f1.fastq.gz'.format(self.TEST_RUN)) == 6478403)
             self.assertTrue(os.path.getsize('{}_r2.fastq.gz'.format(self.TEST_RUN)) == 8310697)
 
+    @pytest.mark.flaky
     def test_ngdc_ascp_fastq_gz(self):
         with in_tempdir():
-            extern.run('{} get -r {} -m ngdc-ascp ngdc-http'.format(kingfisher, self.TEST_RUN))
+            extern.run('{} get -r {} -m ngdc-ascp'.format(kingfisher, self.TEST_RUN))
             self.assertTrue(os.path.getsize('{}_f1.fastq.gz'.format(self.TEST_RUN)) == 6478403)
             self.assertTrue(os.path.getsize('{}_r2.fastq.gz'.format(self.TEST_RUN)) == 8310697)
 

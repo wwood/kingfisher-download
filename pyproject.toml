@@ -32,6 +32,12 @@ Homepage = "https://github.com/wwood/kingfisher-download"
 [project.scripts]
 kingfisher = "kingfisher.cli:main"
 
+[tool.pytest.ini_options]
+markers = [
+    "flaky: marks tests as flaky (not run by default in CI)",
+    "aws_cp: marks tests requiring aws-cp",
+]
+
 [tool.setuptools]
 packages = ["kingfisher"]
 include-package-data = true

@@ -26,6 +26,7 @@ import os.path
 import sys
 
 import extern
+import pytest
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')]+sys.path
 kingfisher = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','bin','kingfisher')
@@ -35,6 +36,7 @@ from bird_tool_utils import in_tempdir
 class Tests(unittest.TestCase):
     maxDiff = None
     
+    @pytest.mark.flaky
     def test_fastq_gz(self):
         cmd_stub = '{} get -r SRR12118866 -m'.format(kingfisher)
         with in_tempdir():
@@ -42,6 +44,7 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4117481)
             self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4945891)
 
+    @pytest.mark.flaky
     def test_fastq_via_ena_ascp(self):
         with in_tempdir():
             extern.run('{} get -r SRR12118866 -m ena-ascp --output-format-possibilities fastq'.format(
@@ -49,6 +52,7 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.getsize('SRR12118866_1.fastq')==19930812)
             self.assertTrue(os.path.getsize('SRR12118866_2.fastq')==19930812)
 
+    @pytest.mark.flaky
     def test_fasta_via_ena_ascp(self):
         with in_tempdir():
             extern.run('{} get -r SRR12118866 -m ena-ascp --output-format-possibilities fasta.gz fasta'.format(
@@ -56,6 +60,7 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.getsize('SRR12118866_1.fasta')==10391100)
             self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10391100)
 
+    @pytest.mark.flaky
     def test_fasta_gz_via_ena_ascp(self):
         with in_tempdir():
             extern.run('{} get -r SRR12118866 -m ena-ascp --output-format-possibilities fasta.gz'.format(

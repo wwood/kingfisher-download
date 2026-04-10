@@ -16,6 +16,12 @@ if __name__ == "__main__":
     if yes_no != "y":
         raise Exception("Please update the CHANGELOG.md file")
 
+    yes_no = input(
+        "Have all tests been run (including flaky) using 'pixi run -e dev pytest test -m \"\"'?\n\n"
+    )
+    if yes_no != "y":
+        raise Exception("Please run all tests first")
+
     print("version is {}".format(version))
 
     # Build dependency definition files from pixi.toml/pixi.lock

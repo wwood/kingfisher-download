@@ -34,7 +34,7 @@ jobs:
 
       - name: Run tests with Pixi
         run: |
-          pixi run -e dev --frozen pytest test -v --timeout=300 --timeout-method=signal
+          pixi run -e dev --frozen pytest test -v --timeout=300 --timeout-method=signal -m "not flaky"
 
   # Run after removing lock file so dependences are unlocked
   pixi_test_dependencies_optimistic:
@@ -74,4 +74,4 @@ jobs:
 
       - name: Run tests with Pixi
         run: |
-          pixi run -e dev pytest test -v --timeout=300 --timeout-method=signal
+          pixi run -e dev pytest test -v --timeout=300 --timeout-method=signal -m "not flaky"
