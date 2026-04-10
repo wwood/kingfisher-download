@@ -128,6 +128,15 @@ def main():
     get_parser_common_options.add_argument(
         '--cra-accession', '--cra_accession',
         help='CRA accession for the run (NGDC/GSA only). If specified, skips the binary search for the CRA accession [default: auto-detect]')
+    get_parser_common_options.add_argument(
+        '--link-finding-method', '--link_finding_method',
+        help=fix('Method for finding download links for ngdc-http. \
+            "binary-search" searches the download server directory listings. \
+            "html" scrapes the NGDC web application for direct download links, \
+            which can find files on gsa3/gsa4 volumes that binary-search may miss \
+            [default: binary-search]'),
+        choices=['binary-search', 'html'],
+        default='html')
 
     get_parser_download_args = get_parser.add_argument_group(title='further download options')
     get_parser_download_args.add_argument(
@@ -308,6 +317,7 @@ def main():
                 check_md5sums = args.check_md5sums,
                 output_directory = args.output_directory if args.output_directory is not None else '.',
                 cra_accession = args.cra_accession,
+                link_finding_method = args.link_finding_method,
             )
         elif args.subparser_name == 'extract':
             output_files = kingfisher.extract(

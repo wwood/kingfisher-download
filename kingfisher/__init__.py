@@ -100,6 +100,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
     check_md5sums = kwargs.pop('check_md5sums', False)
     output_directory = kwargs.pop('output_directory', '.')
     cra_accession = kwargs.pop('cra_accession', None)
+    link_finding_method = kwargs.pop('link_finding_method', 'html')
 
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
@@ -372,7 +373,8 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                     run_identifier,
                     download_threads,
                     output_directory,
-                    known_cra_accession=cra_accession)
+                    known_cra_accession=cra_accession,
+                    link_finding_method=link_finding_method)
                 if result is not False:
                     gzip_test_files([f for f in result if f.endswith('.gz')])
                     downloaded_files = result

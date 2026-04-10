@@ -16,10 +16,14 @@ DEFAULT_NGDC_ASPERA_SSH_KEY_LOCATION = os.path.join(os.path.dirname(os.path.real
 NGDC_HTTPS_DOWNLOAD_BASE = 'https://download.cncb.ac.cn/gsa'
 NGDC_FTP_DOWNLOAD_BASE = 'ftp://download.big.ac.cn/gsa'
 NGDC_ASPERA_HOST = 'aspera01@download.cncb.ac.cn'
-# Some projects are under /gsa2/ instead of /gsa/
+# Projects may be under /gsa/, /gsa2/, ... /gsa6/
 NGDC_HTTPS_DOWNLOAD_BASES = [
     'https://download.cncb.ac.cn/gsa',
     'https://download.cncb.ac.cn/gsa2',
+    'https://download.cncb.ac.cn/gsa3',
+    'https://download.cncb.ac.cn/gsa4',
+    'https://download.cncb.ac.cn/gsa5',
+    'https://download.cncb.ac.cn/gsa6',
 ]
 
 
@@ -197,9 +201,96 @@ def fetch_ngdc_run_info(crr_accession, known_cra_accession=None):
     )
 
 
+def _fetch_run_info_via_html(crr_accession):
+    """Find download URLs for a CRR run by scraping the NGDC web application.
+
+    First searches https://ngdc.cncb.ac.cn/gsa/search?searchTerm=<CRR> to find
+    the browse page URL, then scrapes the browse page for direct HTTPS download
+    links.
+    """
+    headers = {'User-Agent': 'Mozilla/5.0 (compatible; kingfisher)'}
+    search_url = 'https://ngdc.cncb.ac.cn/gsa/search?searchTerm={}'.format(crr_accession)
+    logging.info("Searching NGDC web for {} ..".format(crr_accession))
+    res = requests.get(search_url, timeout=60, headers=headers)
+    if not res.ok:
+        raise Exception("NGDC search failed for {} ({}): HTTP {}".format(crr_accession, search_url, res.status_code))
+
+    # Find the browse page link e.g. /gsa/browse/CRA023729/CRR1678416
+    browse_match = re.search(
+        r'href="[^"]*?/gsa/browse/(CRA\d+)/{}[^"]*"'.format(re.escape(crr_accession)),
+        res.text)
+    if not browse_match:
+        # Try relative URL
+        browse_match = re.search(
+            r'browse/(CRA\d+)/{}'.format(re.escape(crr_accession)),
+            res.text)
+    if not browse_match:
+        raise Exception("Could not find browse page link for {} in NGDC search results ({})".format(crr_accession, search_url))
+
+    cra_accession = browse_match.group(1)
+    browse_url = 'https://ngdc.cncb.ac.cn/gsa/browse/{}/{}'.format(cra_accession, crr_accession)
+    logging.info("Found browse page: {}".format(browse_url))
+
+    res = requests.get(browse_url, timeout=60, headers=headers)
+    if not res.ok:
+        raise Exception("Failed to fetch NGDC browse page for {} ({}): HTTP {}".format(crr_accession, browse_url, res.status_code))
+
+    # Extract HTTPS download links from the browse page
+    # e.g. https://download.cncb.ac.cn/gsa4/CRA023729/CRR1678416/CRR1678416_r1.fq.gz
+    download_urls = re.findall(
+        r'href="(https://download\.cncb\.ac\.cn/[^"]*?/{}/{}[^"]*\.(?:fastq\.gz|fq\.gz|sra|bam))"'.format(
+            re.escape(crr_accession), re.escape(crr_accession)),
+        res.text)
+
+    if not download_urls:
+        raise Exception("No download links found on NGDC browse page for {} ({})".format(crr_accession, browse_url))
+
+    logging.info("Found {} download URL(s) for {}".format(len(download_urls), crr_accession))
+    return download_urls
+
+
 class NgdcDownloader:
-    def download_with_ftp(self, run_id, num_threads, output_directory, known_cra_accession=None):
+    def download_with_ftp(self, run_id, num_threads, output_directory, known_cra_accession=None, link_finding_method='html'):
         """Download files from NGDC via FTP/HTTPS using curl or aria2c."""
+        if link_finding_method == 'html':
+            try:
+                download_urls = _fetch_run_info_via_html(run_id)
+            except Exception as e:
+                logging.warning("Failed to find download links via HTML for {} on NGDC: {}".format(run_id, e))
+                return False
+
+            output_files = []
+            for url in download_urls:
+                filename = url.split('/')[-1]
+                output_path = os.path.join(output_directory, filename)
+                logging.info("Downloading {} from NGDC ..".format(url))
+                try:
+                    if num_threads > 1:
+                        if num_threads > 16:
+                            logging.warning("Limited the number of download threads to 16, the max for aria2c")
+                            num_threads = 16
+                        cmd = "aria2c -x{} -o {} '{}'".format(num_threads, output_path, url)
+                    else:
+                        cmd = "curl -L -o {} '{}'".format(output_path, url)
+                    subprocess.check_call(cmd, shell=True)
+                except subprocess.CalledProcessError as e:
+                    logging.warning("NGDC HTTP download failed for {}: {}".format(filename, e))
+                    for f in output_files + [output_path]:
+                        if os.path.exists(f):
+                            os.remove(f)
+                    return False
+
+                if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+                    logging.warning("Downloaded file {} is missing or empty".format(output_path))
+                    for f in output_files + [output_path]:
+                        if os.path.exists(f):
+                            os.remove(f)
+                    return False
+
+                output_files.append(output_path)
+            return output_files
+
+        # Default: binary-search method
         try:
             info = fetch_ngdc_run_info(run_id, known_cra_accession=known_cra_accession)
         except Exception as e:
