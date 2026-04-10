@@ -64,3 +64,4 @@ if __name__ == "__main__":
 
     print("Now run 'git push && git push --tags' and GitHub actions will build and upload to PyPI".format(version))
     print('You have to run "pixi run bash ./build.sh" from the docker directory to build the docker image, once the tag is on GitHub')
+    print('A release also must be manually made on GitHub')
