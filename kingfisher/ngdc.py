@@ -237,8 +237,9 @@ def _fetch_run_info_via_html(crr_accession):
 
     # Extract HTTPS download links from the browse page
     # e.g. https://download.cncb.ac.cn/gsa4/CRA023729/CRR1678416/CRR1678416_r1.fq.gz
+    # Some files use plain .gz extension (e.g. CRR467153_f1.gz)
     download_urls = re.findall(
-        r'href="(https://download\.cncb\.ac\.cn/[^"]*?/{}/{}[^"]*\.(?:fastq\.gz|fq\.gz|sra|bam))"'.format(
+        r'href="(https://download\.cncb\.ac\.cn/[^"]*?/{}/{}[^"]*\.(?:fastq\.gz|fq\.gz|gz|sra|bam))"'.format(
             re.escape(crr_accession), re.escape(crr_accession)),
         res.text)
 
