@@ -1,10 +1,10 @@
 
 #!/bin/bash -eo pipefail
 
-export KINGFISHER_VERSION=`../bin/kingfisher --version`
+export KINGFISHER_VERSION=`pixi run kingfisher --version`
 export KINGFISHER_DOCKER_VERSION=wwood/kingfisher:$KINGFISHER_VERSION
 
-cp ../kingfisher.yml . && \
+cp ../admin/environment.yml . && \
 sed 's/KINGFISHER_VERSION/'$KINGFISHER_VERSION'/g' Dockerfile.in > Dockerfile && \
 DOCKER_BUILDKIT=1 docker build -t $KINGFISHER_DOCKER_VERSION . && \
 rm -rf SRR12118866* && \

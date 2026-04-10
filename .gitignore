@@ -9,3 +9,4 @@ kingfisher.egg-info
 # pixi environments
 .pixi/*
 !.pixi/config.toml
+docker/environment.yml

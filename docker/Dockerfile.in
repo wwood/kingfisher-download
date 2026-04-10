@@ -1,4 +1,4 @@
-FROM mambaorg/micromamba:1.1.0
+FROM mambaorg/micromamba:2.5.0
 
 # This dockerfile uses cached mounts, so to build use e.g.
 # $ DOCKER_BUILDKIT=1 docker build .
@@ -11,8 +11,8 @@ USER root
 RUN apt update && apt install -y man-db
 USER $MAMBA_USER
 
-ADD kingfisher.yml /kingfisher.yml
-RUN --mount=type=cache,target=/opt/conda/pkgs micromamba install -c conda-forge -c bioconda -c defaults -n base git -f /kingfisher.yml
+ADD environment.yml /environment.yml
+RUN --mount=type=cache,target=/opt/conda/pkgs micromamba install -c conda-forge -c bioconda -c defaults -n base git -f /environment.yml
 RUN --mount=type=cache,target=/opt/conda/pkgs micromamba clean --all --yes
 # This is needed to activate the environment in the dockerfile
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
@@ -20,10 +20,16 @@ ARG MAMBA_DOCKERFILE_ACTIVATE=1
 RUN git clone https://github.com/wwood/kingfisher-download . && git checkout vKINGFISHER_VERSION
 
 # Run some tests
-RUN /kingfisher/bin/kingfisher --version
-RUN /kingfisher/bin/kingfisher get --full-help
+RUN PYTHONPATH=/kingfisher:$PYTHONPATH /kingfisher/bin/kingfisher --version
+RUN PYTHONPATH=/kingfisher:$PYTHONPATH /kingfisher/bin/kingfisher get --full-help
 
 WORKDIR /data
-ENTRYPOINT ["/usr/local/bin/_entrypoint.sh","/kingfisher/bin/kingfisher"]
+
+USER root
+ADD kingfisher.sh /kingfisher.sh
+RUN chmod +x /kingfisher.sh
+USER $MAMBA_USER
+
+ENTRYPOINT ["/usr/local/bin/_entrypoint.sh","/kingfisher.sh"]
 
 # CMD /bin/bash
