@@ -23,7 +23,7 @@ DEFAULT_ASPERA_SSH_KEY = 'linux'
 DEFAULT_OUTPUT_FORMAT_POSSIBILITIES = ['fastq', 'fastq.gz']
 DEFAULT_THREADS = 8
 DEFAULT_DOWNLOAD_THREADS = DEFAULT_THREADS
-DEFAULT_ASCP_ARGS = '-k 2'
+DEFAULT_ASCP_ARGS = '-k 0'
 
 class OutputLocation:
     def __init__(self, output_directory):

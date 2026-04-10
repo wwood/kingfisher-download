@@ -7,8 +7,10 @@ import xml.etree.ElementTree as ET
 
 import requests
 
-from .ena import _resolve_ascp, _find_ascp_in_aspera, DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION
+from .ena import _resolve_ascp, _find_ascp_in_aspera
 from .md5sum import MD5
+
+DEFAULT_NGDC_ASPERA_SSH_KEY_LOCATION = os.path.join(os.path.dirname(os.path.realpath(__file__)),'data','aspsub_rsa')
 
 
 NGDC_HTTPS_DOWNLOAD_BASE = 'https://download.cncb.ac.cn/gsa'
@@ -247,23 +249,10 @@ class NgdcDownloader:
             return False
 
         if ssh_key is None:
-            # Try the bundled key first, then look for aspera's own key
-            if os.path.exists(DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION):
-                ssh_key_file = DEFAULT_LINUX_ASPERA_SSH_KEY_LOCATION
+            if os.path.exists(DEFAULT_NGDC_ASPERA_SSH_KEY_LOCATION):
+                ssh_key_file = DEFAULT_NGDC_ASPERA_SSH_KEY_LOCATION
             else:
-                # Look for aspera's own key
-                aspera_dir = os.path.expanduser('~/.aspera')
-                ssh_key_file = None
-                if os.path.isdir(aspera_dir):
-                    for root, dirs, files in os.walk(aspera_dir):
-                        for f in files:
-                            if f.endswith('.openssh') or f == 'asperaweb_id_dsa.openssh':
-                                ssh_key_file = os.path.join(root, f)
-                                break
-                        if ssh_key_file:
-                            break
-                if ssh_key_file is None:
-                    raise Exception("Cannot find aspera ssh key file, please specify with --aspera-ssh-key")
+                raise Exception("Cannot find NGDC aspera ssh key file, please specify with --aspera-ssh-key")
         else:
             ssh_key_file = ssh_key
         logging.info("Using aspera ssh key file: {}".format(ssh_key_file))
@@ -287,7 +276,7 @@ class NgdcDownloader:
                 NGDC_ASPERA_HOST, remote_path, output_directory)
             logging.info("Running command: {}".format(cmd))
             try:
-                subprocess.check_call(cmd, shell=True)
+                subprocess.check_call(cmd, shell=True, stdin=subprocess.DEVNULL)
             except subprocess.CalledProcessError as e:
                 logging.warning("NGDC Aspera download failed for {}: {}".format(filename, e))
                 for f in output_files + [output_path]:

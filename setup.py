@@ -33,6 +33,7 @@ setup(
     packages=['kingfisher'],
     package_data={'kingfisher': [
             'data/asperaweb_id_dsa.openssh',
+            'data/aspsub_rsa',
                        ]},
     data_files=[(".", ["README.md", "LICENCE.txt"])],
     include_package_data=True,
