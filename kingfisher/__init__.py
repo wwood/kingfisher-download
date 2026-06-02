@@ -156,8 +156,9 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                         prefetch_max_size_argument = '--max-size 0G'
                     else:
                         prefetch_max_size_argument = '--max-size {}'.format(prefetch_max_size)
-                    extern.run("prefetch {} -o {} {}".format(
-                        prefetch_max_size_argument, output_path, run_identifier))
+                    # prefetch --output-file is deprecated apparently, so use --output-directory instead.
+                    extern.run("prefetch {} --output-directory {} {}".format(
+                        prefetch_max_size_argument, os.path.dirname(output_path), run_identifier))
                     if os.path.exists(output_path):
                         downloaded_files = [output_path]
                     else:
