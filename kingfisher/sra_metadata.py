@@ -189,7 +189,7 @@ class SraMetadata:
             d['taxon_name'] = try_get(lambda: pkg.find('./SAMPLE/SAMPLE_NAME/SCIENTIFIC_NAME').text)
             sample_sample_name = None
             sample_title = None
-            if pkg.find('./SAMPLE/SAMPLE_ATTRIBUTES'):
+            if pkg.find('./SAMPLE/SAMPLE_ATTRIBUTES') is not None:
                 for attr in pkg.find('./SAMPLE/SAMPLE_ATTRIBUTES'):
                     tag_el = attr.find('TAG')
                     value_el = attr.find('VALUE')
