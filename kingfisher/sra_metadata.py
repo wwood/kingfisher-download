@@ -62,9 +62,14 @@ class SraMetadata:
 
 
     def fetch_runs_from_bioprojects(self, bioproject_accessions):
-        retmax = 10000
         query_string = " OR ".join(["{}[BioProject]".format(bioproject_accession) for bioproject_accession in bioproject_accessions])
         logging.debug("Querying with string: {}".format(query_string))
+        # Use the history server (usehistory=y) so that the full result set is
+        # held server-side, and read the real number of hits from <Count>. The
+        # local <IdList> is capped (retmax) and so cannot be relied upon for
+        # large bioprojects - instead we page through the results below via
+        # efetch using the WebEnv/query_key. retmax=0 here as we do not need the
+        # IdList itself.
         res = requests.get(
             url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
             params=self.add_api_key({
@@ -72,43 +77,67 @@ class SraMetadata:
                 "term": query_string,
                 "tool": "kingfisher",
                 "email": "kingfisher@github.com",
-                "retmax": retmax,
+                "retmax": 0,
                 "usehistory": "y",
                 }),
             )
         if not res.ok:
             raise Exception("HTTP Failure when requesting search from bioproject: {}: {}".format(res, res.text))
         root = ET.fromstring(res.text)
-        sra_ids = list([c.text for c in root.find('IdList')])
-        if len(sra_ids) == retmax:
-            logging.warning("Unexpectedly found the maximum number of results for this query, possibly some results will be missing")
+        count = int(root.find('Count').text)
         webenv = root.find('WebEnv').text
+        query_key = root.find('QueryKey').text
+        logging.info("Found {} SRA record(s) for the queried bioproject(s)".format(count))
 
-        # Now convert the IDs into runs
-        metadata = self.efetch_metadata_from_ids(webenv, None, len(sra_ids))
+        # Now convert the IDs into runs, paging through the history server.
+        metadata = self.efetch_metadata_from_ids(webenv, None, count, query_key=query_key)
         return metadata[RUN_ACCESSION_KEY].to_list()
 
-    def efetch_metadata_from_ids(self, webenv, accessions, num_ids):
+    def efetch_metadata_from_ids(self, webenv, accessions, num_ids, query_key=1):
+        # Some samples such as SAMN13241871 are linked to multiple runs e.g. SRR10489833
+        accessions_set = None if accessions is None else set(accessions)
+
+        # Page through the result set held on the history server in batches,
+        # rather than fetching everything in a single request. This avoids any
+        # individual request returning a truncated set of results for large
+        # queries (e.g. bioprojects with tens of thousands of runs).
         data_frames = []
+        batch_size = 500
+        batch_starts = list(range(0, max(num_ids, 1), batch_size))
+        batch_iter = batch_starts
+        if len(batch_starts) > 1:
+            batch_iter = tqdm(batch_starts, desc="Fetching SRA metadata")
 
-        retmax = num_ids+10
-        logging.debug("Running efetch ..")
-        res = self._retry_request(
-            'efetch_from_ids',
-            lambda: requests.get(
-                url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
-                params=self.add_api_key({
-                    "db": "sra",
-                    "tool": "kingfisher",
-                    "email": "kingfisher@github.com",
-                    "webenv": webenv,
-                    "query_key": 1
-                    }),
-                ))
-        if not res.ok:
-            raise Exception("HTTP Failure when requesting efetch from IDs: {}: {}".format(res, res.text))
+        for retstart in batch_iter:
+            logging.debug("Running efetch with retstart={}, retmax={} ..".format(retstart, batch_size))
+            res = self._retry_request(
+                'efetch_from_ids',
+                lambda retstart=retstart: requests.get(
+                    url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
+                    params=self.add_api_key({
+                        "db": "sra",
+                        "tool": "kingfisher",
+                        "email": "kingfisher@github.com",
+                        "webenv": webenv,
+                        "query_key": query_key,
+                        "retstart": retstart,
+                        "retmax": batch_size,
+                        }),
+                    ))
+            if not res.ok:
+                raise Exception("HTTP Failure when requesting efetch from IDs: {}: {}".format(res, res.text))
 
-        root = ET.fromstring(res.text)
+            root = ET.fromstring(res.text)
+
+            if root.find("ERROR") is not None:
+                logging.error("Error when fetching metadata: {}".format(root.find("ERROR").text))
+
+            data_frames.extend(self._parse_efetch_packages(root, accessions_set))
+
+        return pd.DataFrame(data_frames)
+
+    def _parse_efetch_packages(self, root, accessions_set):
+        data_frames = []
 
         def try_get(func):
             try:
@@ -117,12 +146,6 @@ class SraMetadata:
                 return ''
             except KeyError:
                 return None
-
-        if root.find("ERROR") is not None:
-            logging.error("Error when fetching metadata: {}".format(root.find("ERROR").text))
-
-        # Some samples such as SAMN13241871 are linked to multiple runs e.g. SRR10489833
-        accessions_set = None if accessions is None else set(accessions)
 
         for pkg in root.findall('EXPERIMENT_PACKAGE'):
             d = collections.OrderedDict()
@@ -227,7 +250,7 @@ class SraMetadata:
                             d2['read{}_length_stdev'.format(i+1)] = r.attrib['stdev']
                     data_frames.append(d2)
 
-        return pd.DataFrame(data_frames)
+        return data_frames
 
     def _print_xml(self, element, prefix):
         if prefix is None or prefix == '':
