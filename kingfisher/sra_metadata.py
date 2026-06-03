@@ -89,9 +89,13 @@ class SraMetadata:
         query_key = root.find('QueryKey').text
         logging.info("Found {} SRA record(s) for the queried bioproject(s)".format(count))
 
-        # Now convert the IDs into runs, paging through the history server.
+        # Now convert the IDs into runs, paging through the history server. NCBI
+        # often holds redundant SRA records (e.g. INSDC mirror copies), so the
+        # number of distinct runs is typically smaller than the record count.
         metadata = self.efetch_metadata_from_ids(webenv, None, count, query_key=query_key)
-        return metadata[RUN_ACCESSION_KEY].to_list()
+        runs = metadata[RUN_ACCESSION_KEY].to_list()
+        logging.info("Found {} distinct run(s) for the queried bioproject(s)".format(len(set(runs))))
+        return runs
 
     def efetch_metadata_from_ids(self, webenv, accessions, num_ids, query_key=1):
         # Some samples such as SAMN13241871 are linked to multiple runs e.g. SRR10489833
