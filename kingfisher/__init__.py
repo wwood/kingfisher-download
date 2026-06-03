@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+import shutil
 import gzip
 import re
 
@@ -157,8 +158,17 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                     else:
                         prefetch_max_size_argument = '--max-size {}'.format(prefetch_max_size)
                     # prefetch --output-file is deprecated apparently, so use --output-directory instead.
+                    output_dir = os.path.dirname(output_path)
                     extern.run("prefetch {} --output-directory {} {}".format(
-                        prefetch_max_size_argument, os.path.dirname(output_path), run_identifier))
+                        prefetch_max_size_argument, output_dir, run_identifier))
+                    # prefetch --output-directory writes to a subdirectory named
+                    # after the run, i.e. <dir>/<run>/<run>.sra, so move the file
+                    # to the expected flat location.
+                    prefetch_output_path = os.path.join(
+                        output_dir, run_identifier, '{}.sra'.format(run_identifier))
+                    if os.path.exists(prefetch_output_path):
+                        shutil.move(prefetch_output_path, output_path)
+                        os.rmdir(os.path.join(output_dir, run_identifier))
                     if os.path.exists(output_path):
                         downloaded_files = [output_path]
                     else:
