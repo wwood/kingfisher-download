@@ -2,6 +2,6 @@
 bird_tool_utils==0.6.0
 extern==0.4.1
 pandas==3.0.2
-pyarrow==21.0.0
+pyarrow==23.0.1
 requests==2.33.1
 tqdm==4.67.3
