@@ -6,7 +6,6 @@ import os
 import subprocess
 import sys
 import shutil
-import gzip
 import re
 
 import extern
@@ -506,18 +505,21 @@ def extract(**kwargs):
     
     if unsorted and stdout:
         format = output_format_possibilities[0]
+        sra_file_abs = os.path.abspath(sra_file)
+        # sracat-rs streams interleaved pairs to stdout; route any single/orphan
+        # reads to stdout too via --single-out so single-end runs also work.
         if format == 'fasta':
             logging.info("Extracting unsorted .sra file to STDOUT in FASTA format ..")
-            cmd = "sracat {}".format(os.path.abspath(sra_file))
+            cmd = "sracat-rs --single-out /dev/stdout {}".format(sra_file_abs)
         elif format == 'fasta.gz':
             logging.info("Extracting unsorted .sra file to STDOUT in FASTA.GZ format ..")
-            cmd = "sracat {} |pigz -p {} -c".format(os.path.abspath(sra_file), threads)
+            cmd = "sracat-rs --single-out /dev/stdout {} |pigz -p {} -c".format(sra_file_abs, threads)
         elif format == 'fastq':
             logging.info("Extracting unsorted .sra file to STDOUT in FASTQ format ..")
-            cmd = "sracat --qual {}".format(os.path.abspath(sra_file))
+            cmd = "sracat-rs --qual --single-out /dev/stdout {}".format(sra_file_abs)
         elif format == 'fastq.gz':
             logging.info("Extracting unsorted .sra file to STDOUT in FASTQ.GZ format ..")
-            cmd = "sracat --qual {} |pigz -p {} -c".format(os.path.abspath(sra_file), threads)
+            cmd = "sracat-rs --qual --single-out /dev/stdout {} |pigz -p {} -c".format(sra_file_abs, threads)
         else:
             raise Exception("Cannot extract with --stdout --unsorted format {}".format(format))
         logging.debug("Running command {}".format(cmd))
@@ -538,100 +540,68 @@ def extract(**kwargs):
                     f"Extraction of .sra to format unsorted {format} failed. Command run was '{cmd}'. STDERR was '{e.stderr}'",
                     inner=e)
 
-        # By default, we want separate outputs for forward and reverse.
+        # sracat-rs writes the forward/reverse mates of each pair to separate
+        # files (-1/-2) and any single/orphan reads to --single-out, using the
+        # native .fasta/.fastq extensions. It has no built-in compression, so
+        # gzipped formats are produced by piping the extracted files through pigz.
         format = output_format_possibilities[0]
-        if format == 'fasta':
-            logging.info("Extracting .sra file to file(s) in unsorted FASTA format ..")
-            cmd = f"sracat -o {output_location_factory.output_stem(run_identifier)} {os.path.abspath(sra_file)}"
-            run_command(cmd)
-            for name in ['x_1.fna','x_2.fna','x.fna']:
-                f = output_location_factory.output_stem(name.replace('x',run_identifier))
-                if os.path.exists(f):
-                    new_name = re.sub(r'.fna$','.fasta', f)
-                    os.rename(f, new_name)
-                    output_files.append(new_name)
-        elif format == 'fasta.gz':
-            logging.info("Extracting .sra file to file(s) in unsorted FASTA.GZ format ..")
-            cmd = f"sracat -o {run_identifier} {os.path.abspath(sra_file)}"
-
-            # Make FIFOs so that we can use pigz instead of the slower built-in sracat -z.
-            logging.debug("Creating FIFOs ..")
-            os.mkfifo(f'{run_identifier}_1.fna')
-            os.mkfifo(f'{run_identifier}_2.fna')
-            os.mkfifo(f'{run_identifier}.fna')
-            # Spawn pigz to read FIFOs.
-            def spawn_pigz_it(in_name, out_name, threads):
-                return subprocess.Popen(['bash','-c',f'pigz -c -p {threads} {in_name} > {out_name}'])
-            pigz_commands = []
-            for name in ['x_1.fna','x_2.fna','x.fna']:
-                f = name.replace('x',run_identifier)
-                output = output_location_factory.output_stem(re.sub('.fna$','.fasta.gz', f))
-                pigz_commands.append([f, output, spawn_pigz_it(f'{f}', f"{output}", threads)])
-            run_command(cmd)
-            for (fifo, output, c) in pigz_commands:
-                logging.debug(f"Waiting for pigz command {c.args} ..")
-
-                # If sracat doesn't write to a fifo, then the pigz reading it
-                # never finishes. So run another echo on top so at least 1 EOF
-                # arrives to terminate the pigz process.
-                logging.debug("Running echo to make sure at least one EOF arrived on the pipe")
-                subprocess.Popen(['bash','-c',f'cat {fifo} > /dev/null'])
-                extern.run(f'echo -n >> {fifo}')
-                
-                ret = c.wait()
-                if ret != 0:
-                    raise KingfisherException(f"Compression command {c.args} returned with non-zero exit status {ret}")
-                logging.debug("Process finished")
-                os.remove(fifo)
-
-                # Open the gzip file. If there is anything inside, keep it,
-                # otherwise remove it as sracat never read it.
-                remove_it = False
-                with gzip.open(output) as f:
-                    some = f.read(10)
-                    if len(some) == 0:
-                        logging.debug(f"Compressed file {output} is empty, removing")
-                        remove_it = True
-                if remove_it:
-                    os.remove(output)
-
-            for name in ['x_1.fasta.gz','x_2.fasta.gz','x.fasta.gz']:
-                f = name.replace('x',run_identifier)
-                if os.path.exists(f):
-                    output_files.append(f)
-        elif format == 'fastq':
-            logging.info("Extracting .sra file to file(s) in unsorted FASTQ format ..")
-            output_stem = output_location_factory.output_stem(run_identifier)
-            cmd = f"sracat --qual -o {output_stem} {os.path.abspath(sra_file)}"
-            run_command(cmd)
-            for name in ['x_1.fastq','x_2.fastq','x.fastq']:
-                f = name.replace('x',run_identifier)
-                if os.path.exists(f):
-                    output_files.append(f)
-        elif format == 'fastq.gz':
-            logging.info("Extracting .sra file to file(s) in unsorted FASTQ.GZ format ..")
-            output_stem = output_location_factory.output_stem(run_identifier)
-            cmd = f"sracat -z --qual -o {output_stem} {os.path.abspath(sra_file)}"
-            run_command(cmd)
-            for name in ['x_1.fastq.gz','x_2.fastq.gz','x.fastq.gz']:
-                f = name.replace('x',run_identifier)
-                if os.path.exists(f):
-                    output_files.append(f)
+        stem = output_location_factory.output_stem(run_identifier)
+        if format in ('fastq', 'fastq.gz'):
+            qual_flag = '--qual '
+            ext = 'fastq'
+        elif format in ('fasta', 'fasta.gz'):
+            qual_flag = ''
+            ext = 'fasta'
         else:
             raise Exception("Cannot extract with --unsorted format {}".format(format))
 
+        logging.info("Extracting .sra file to file(s) in unsorted {} format ..".format(format.upper()))
+        r1 = "{}_1.{}".format(stem, ext)
+        r2 = "{}_2.{}".format(stem, ext)
+        single = "{}.{}".format(stem, ext)
+        cmd = "sracat-rs {}--threads {} -1 {} -2 {} --single-out {} {}".format(
+            qual_flag, threads, r1, r2, single, os.path.abspath(sra_file))
+        run_command(cmd)
+
+        # sracat-rs creates the -1/-2 split files eagerly, so a single-end run
+        # leaves them empty - drop empties and keep only files with content.
+        produced = []
+        for f in (r1, r2, single):
+            if os.path.exists(f):
+                if os.path.getsize(f) == 0:
+                    os.remove(f)
+                else:
+                    produced.append(f)
+
+        if format in ('fasta.gz', 'fastq.gz'):
+            for f in produced:
+                run_command("pigz -p {} {}".format(threads, f))
+                output_files.append("{}.gz".format(f))
+        else:
+            output_files.extend(produced)
+
     else:
         if not skip_download_and_extraction:
-            logging.info("Extracting .sra file with fasterq-dump ..")
+            logging.info("Extracting .sra file with sracat-rs ..")
 
-            # Change directory to the output directory using a "with", so that fasterq-dump outputs there, not here.
+            # Change directory to the output directory using a "with", so that sracat-rs outputs there, not here.
             sra_file_abs = os.path.abspath(sra_file)
             with bird_tool_utils.in_working_directory(output_directory):
+                r1 = '{}_1.fastq'.format(run_identifier)
+                r2 = '{}_2.fastq'.format(run_identifier)
+                single = '{}.fastq'.format(run_identifier)
                 try:
-                    extern.run("fasterq-dump --threads {} {}".format(threads, sra_file_abs))
+                    extern.run("sracat-rs --qual --threads {} -1 {} -2 {} --single-out {} {}".format(
+                        threads, r1, r2, single, sra_file_abs))
                 except ExternCalledProcessError as e:
                     raise KingfisherException(
-                        "Extraction of .sra file with fasterq-dump failed for '{}'".format(sra_file), inner=e)
+                        "Extraction of .sra file with sracat-rs failed for '{}'".format(sra_file), inner=e)
+
+                # sracat-rs creates the -1/-2 split files eagerly; drop any that
+                # are empty (e.g. single-end runs) before further processing.
+                for f in (r1, r2, single):
+                    if os.path.exists(f) and os.path.getsize(f) == 0:
+                        os.remove(f)
 
                 if 'fastq' not in output_format_possibilities:
                     for fq in ['x_1.fastq','x_2.fastq','x.fastq']:

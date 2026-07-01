@@ -9,11 +9,12 @@ dependencies:
 - bird_tool_utils_python=0.6.0
 - curl=8.19.0
 - extern=0.4.1
+- gawk=5.4.0
 - pandas=3.0.2
 - pigz=2.8
 - pyarrow=21.0.0
 - python=3.14.4
 - requests=2.33.1
 - sra-tools=3.1.0
-- sracat=0.2
+- sracat-rs=0.0.3
 - tqdm=4.67.3
