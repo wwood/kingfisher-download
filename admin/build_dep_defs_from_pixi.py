@@ -86,7 +86,7 @@ CONDA_TO_PIP = {
 }
 # Packages that are not Python libraries (skip for requirements.txt)
 NON_PIP_PACKAGES = {
-    "python", "pigz", "curl", "aria2", "sra-tools", "sracat", "aspera-cli", "awscli",
+    "python", "pigz", "gawk", "curl", "aria2", "sra-tools", "sracat-rs", "aspera-cli", "awscli",
 }
 
 pip_count = 0
