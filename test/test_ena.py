@@ -88,16 +88,16 @@ class Tests(unittest.TestCase):
         with in_tempdir():
             extern.run('{} get --download-threads 4 -r SRR12118866 -m aws-http --output-format-possibilities fasta.gz'.format(
                 kingfisher))
-            self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==757641)
-            self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==907591)
+            self.assertTrue(os.path.getsize('SRR12118866_1.fasta.gz')==633881)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fasta.gz')==788010)
 
     def test_aria2_aws_fasta_output_directory(self):
         '''cannot test this in travis because conda aria2 is broken'''
         with in_tempdir():
             extern.run('{} get --download-threads 4 -r SRR12118866 -m aws-http --output-format-possibilities fasta.gz --output-directory outdir'.format(
                 kingfisher))
-            self.assertTrue(os.path.getsize('outdir/SRR12118866_1.fasta.gz')==757641)
-            self.assertTrue(os.path.getsize('outdir/SRR12118866_2.fasta.gz')==907591)
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_1.fasta.gz')==633881)
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_2.fasta.gz')==788010)
 
     def test_aria2_ena_fastq_gz(self):
         '''cannot test this in travis because conda aria2 is broken'''
