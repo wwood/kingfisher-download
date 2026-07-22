@@ -554,20 +554,23 @@ def extract(**kwargs):
     if unsorted and stdout:
         format = output_format_possibilities[0]
         sra_file_abs = os.path.abspath(sra_file)
-        # sracat-rs streams interleaved pairs to stdout; route any single/orphan
-        # reads to stdout too via --single-out so single-end runs also work.
+        # --accept-singles streams pairs and any single/orphan reads to stdout as
+        # one intact stream, so single-end runs work too. (Don't route singles
+        # via --single-out /dev/stdout: sracat-rs opens that as a separate,
+        # truncating file with its own offset, corrupting output when stdout is
+        # redirected to a regular file.)
         if format == 'fasta':
             logging.info("Extracting unsorted .sra file to STDOUT in FASTA format ..")
-            cmd = "sracat-rs --single-out /dev/stdout {}".format(sra_file_abs)
+            cmd = "sracat-rs --accept-singles {}".format(sra_file_abs)
         elif format == 'fasta.gz':
             logging.info("Extracting unsorted .sra file to STDOUT in FASTA.GZ format ..")
-            cmd = "sracat-rs --single-out /dev/stdout {} |pigz -p {} -c".format(sra_file_abs, threads)
+            cmd = "sracat-rs --accept-singles {} |pigz -p {} -c".format(sra_file_abs, threads)
         elif format == 'fastq':
             logging.info("Extracting unsorted .sra file to STDOUT in FASTQ format ..")
-            cmd = "sracat-rs --qual --single-out /dev/stdout {}".format(sra_file_abs)
+            cmd = "sracat-rs --qual --accept-singles {}".format(sra_file_abs)
         elif format == 'fastq.gz':
             logging.info("Extracting unsorted .sra file to STDOUT in FASTQ.GZ format ..")
-            cmd = "sracat-rs --qual --single-out /dev/stdout {} |pigz -p {} -c".format(sra_file_abs, threads)
+            cmd = "sracat-rs --qual --accept-singles {} |pigz -p {} -c".format(sra_file_abs, threads)
         else:
             raise Exception("Cannot extract with --stdout --unsorted format {}".format(format))
         logging.debug("Running command {}".format(cmd))

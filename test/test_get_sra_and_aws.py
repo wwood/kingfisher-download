@@ -113,6 +113,16 @@ class Tests(unittest.TestCase):
                     kingfisher
                 )))
 
+    def test_stdout_unsorted_fasta_redirect_to_file(self):
+        # --stdout redirected to a regular file (not a pipe) must produce the
+        # same complete output; sracat-rs streams via --accept-singles so a
+        # separate singles sink can't truncate/overwrite the file.
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities fasta --stdout --unsorted >out.fasta'.format(
+                kingfisher))
+            self.assertEqual('effe878d8b467f2e67df3d8e7a24352e  out.fasta\n',
+                extern.run('md5sum out.fasta'))
+
     def test_extract_stdout_fasta(self):
         with in_tempdir():
             extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities sra'.format(kingfisher))

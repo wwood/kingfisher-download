@@ -11,6 +11,7 @@
 
 ### Bug fixes and improvements
 
+* Stream `--stdout --unsorted` extraction with sracat-rs `--accept-singles` instead of `--single-out /dev/stdout`, which could truncate/overwrite the output when stdout is redirected to a regular file and the run contains single/orphan reads
 * For FASTA-only output, download the smaller SRA Lite file in the `prefetch` method (`--eliminate-quals`), since base qualities are discarded anyway, falling back to a full download when no SRA Lite file is available
 * Support `.sralite` files in the `prefetch` method by renaming the downloaded `.sralite` file to `.sra`, and clean up any reference sequences prefetch downloads alongside reference-compressed runs
 * Cleaner error reporting: users now see readable error messages instead of Python stack traces; use `--debug` for full tracebacks (fixes [#45](https://github.com/wwood/kingfisher-download/issues/45))
@@ -21,6 +22,7 @@
 
 ### Internal / packaging
 
+* Require sracat-rs >=0.2.0, which fixes an intermittent double-free crash during multi-threaded (`--threads` >1) extraction
 * Migrated from conda to pixi
 * Use `entry_points` rather than `scripts` in setup.py
 * Use bioconda-packaged ascp
