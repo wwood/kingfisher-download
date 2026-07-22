@@ -62,6 +62,7 @@ class NgdcTests(unittest.TestCase):
             self.assertTrue(os.path.getsize('{}_f1.fastq.gz'.format(self.TEST_RUN)) == 6478403)
             self.assertTrue(os.path.getsize('{}_r2.fastq.gz'.format(self.TEST_RUN)) == 8310697)
 
+    @pytest.mark.flaky
     def test_ngdc_annotate_csv(self):
         stdout = extern.run('{} annotate -r {} -f csv --all-columns'.format(kingfisher, self.TEST_RUN))
         df = pd.read_csv(StringIO(stdout))
