@@ -143,6 +143,12 @@ def download_and_extract_one_run(run_identifier, **kwargs):
             output_location_factory, run_identifier, output_format_possibilities, force
         )
 
+    # If every requested output format is FASTA, base quality scores are
+    # discarded during extraction anyway, so prefetch can fetch the smaller
+    # SRA Lite file (simplified qualities) via --eliminate-quals.
+    fasta_only_output = len(output_format_possibilities) > 0 and all(
+        fmt in ('fasta', 'fasta.gz') for fmt in output_format_possibilities)
+
     downloaded_files = None
     if not skip_download_and_extraction:
         # Download phase
@@ -158,16 +164,58 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                         prefetch_max_size_argument = '--max-size {}'.format(prefetch_max_size)
                     # prefetch --output-file is deprecated apparently, so use --output-directory instead.
                     output_dir = os.path.dirname(output_path)
-                    extern.run("prefetch {} --output-directory {} {}".format(
-                        prefetch_max_size_argument, output_dir, run_identifier))
+                    # For FASTA-only output, prefer the smaller SRA Lite file via
+                    # --eliminate-quals. Not every run has an SRA Lite version
+                    # (prefetch then fails), so fall back to a normal download.
+                    prefetch_arg_variants = []
+                    if fasta_only_output:
+                        prefetch_arg_variants.append('--eliminate-quals ')
+                    prefetch_arg_variants.append('')
+                    prefetch_error = None
+                    for extra_args in prefetch_arg_variants:
+                        try:
+                            extern.run("prefetch {}{} --output-directory {} {}".format(
+                                extra_args, prefetch_max_size_argument, output_dir, run_identifier))
+                            prefetch_error = None
+                            break
+                        except ExternCalledProcessError as e:
+                            prefetch_error = e
+                            # Clean up any partial download before the next attempt.
+                            partial_run_dir = os.path.join(output_dir, run_identifier)
+                            if os.path.isdir(partial_run_dir):
+                                shutil.rmtree(partial_run_dir)
+                            if extra_args:
+                                logging.info(
+                                    "SRA Lite download (--eliminate-quals) not available for {}: {}. "
+                                    "Retrying prefetch with the full base-quality file ..".format(
+                                        run_identifier, e))
+                    if prefetch_error is not None:
+                        raise prefetch_error
                     # prefetch --output-directory writes to a subdirectory named
                     # after the run, i.e. <dir>/<run>/<run>.sra, so move the file
-                    # to the expected flat location.
+                    # to the expected flat location. When --eliminate-quals is
+                    # used (or a run is only available as SRA Lite), prefetch
+                    # instead writes <dir>/<run>/<run>.sralite; treat that the
+                    # same by renaming it to the .sra output path.
+                    prefetch_run_dir = os.path.join(output_dir, run_identifier)
                     prefetch_output_path = os.path.join(
-                        output_dir, run_identifier, '{}.sra'.format(run_identifier))
+                        prefetch_run_dir, '{}.sra'.format(run_identifier))
+                    prefetch_sralite_path = os.path.join(
+                        prefetch_run_dir, '{}.sralite'.format(run_identifier))
                     if os.path.exists(prefetch_output_path):
                         shutil.move(prefetch_output_path, output_path)
-                        os.rmdir(os.path.join(output_dir, run_identifier))
+                    elif os.path.exists(prefetch_sralite_path):
+                        logging.info(
+                            "Renaming downloaded .sralite (SRA Lite) file for {} to .sra ..".format(
+                                run_identifier))
+                        shutil.move(prefetch_sralite_path, output_path)
+                    # Remove the run subdirectory once the main file has been
+                    # moved out. For reference-compressed runs prefetch also
+                    # downloads reference sequences into this directory, so use
+                    # rmtree rather than rmdir; the references are re-fetched on
+                    # demand during extraction if needed.
+                    if os.path.isdir(prefetch_run_dir):
+                        shutil.rmtree(prefetch_run_dir)
                     if os.path.exists(output_path):
                         downloaded_files = [output_path]
                     else:

@@ -330,6 +330,22 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.exists('outdir/SRR12118864.sra'))
             self.assertTrue(os.path.exists('outdir/SRR12118866.sra'))
 
+    @pytest.mark.flaky
+    def test_prefetch_sralite(self):
+        # ERR10671898 is only available from NCBI as a .sralite file, not a
+        # .sra file. Prefetch downloads it as <run>.sralite, which kingfisher
+        # renames to <run>.sra. Marked flaky so it is not run by default, since
+        # it requires a real prefetch download: the .sralite reads are only
+        # ~24MB, but the run is reference-compressed against the human genome so
+        # prefetch also pulls ~700MB of hs37d5 reference sequences.
+        with in_tempdir():
+            extern.run('{} get -r ERR10671898 --force -f sra -m prefetch'.format(kingfisher))
+            self.assertTrue(os.path.exists('ERR10671898.sra'))
+            self.assertTrue(os.path.getsize('ERR10671898.sra') > 0)
+            # The renamed file should still be a valid NCBI sra-format file.
+            with open('ERR10671898.sra', 'rb') as f:
+                self.assertEqual(f.read(8), b'NCBI.sra')
+
     @pytest.mark.aws_cp
     def test_aws_cp(self):
         with in_tempdir():
