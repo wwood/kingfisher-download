@@ -61,6 +61,15 @@ class Tests(unittest.TestCase):
             self.assertTrue(os.path.getsize('SRR12118866_1.fasta')==10192542)
             self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10192542)
 
+    def test_spot_sorted_fasta_via_sra(self):
+        # --spot-sorted extracts via fasterq-dump (spot order) rather than
+        # sracat-rs (storage order); output uses fasterq-dump's read headers.
+        with in_tempdir():
+            extern.run('{} get -r SRR12118866 -m aws-http --output-format-possibilities fasta --spot-sorted'.format(
+                kingfisher))
+            self.assertTrue(os.path.getsize('SRR12118866_1.fasta')==10705596)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fasta')==10705596)
+
     def test_fasta_via_sra_outdir(self):
         with in_tempdir():
             extern.run('{} get -r SRR12118866 -m aws-http --output-directory outdir --output-format-possibilities fasta.gz fasta'.format(

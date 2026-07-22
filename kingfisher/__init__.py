@@ -82,6 +82,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
         DEFAULT_OUTPUT_FORMAT_POSSIBILITIES)
     force = kwargs.pop('force', False)
     unsorted = kwargs.pop('unsorted', False)
+    spot_sorted = kwargs.pop('spot_sorted', False)
     stdout = kwargs.pop('stdout', False)
     gcp_project = kwargs.pop('gcp_project', None)
     gcp_user_key_file = kwargs.pop('gcp_user_key_file', None)
@@ -128,8 +129,8 @@ def download_and_extract_one_run(run_identifier, **kwargs):
     if gcp_project and gcp_user_key_file:
         raise Exception("--gcp-project is incompatible with --gcp-user-key-file. The project specified in the key file will be used when gcp_project is not specified.")
 
-    if stdout and not unsorted:
-        raise Exception("Currently --stdout must be used with --unsorted")
+    if stdout and spot_sorted:
+        raise Exception("--stdout cannot be combined with --spot-sorted")
 
     output_location_factory = OutputLocation(output_directory)
     output_files = []
@@ -458,6 +459,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                     sra_file = sra_file,
                     output_format_possibilities = output_format_possibilities,
                     unsorted = unsorted,
+                    spot_sorted = spot_sorted,
                     stdout = stdout,
                     threads = extraction_threads,
                     output_directory = output_directory,
@@ -526,6 +528,7 @@ def extract(**kwargs):
         DEFAULT_OUTPUT_FORMAT_POSSIBILITIES)
     force = kwargs.pop('force', False)
     unsorted = kwargs.pop('unsorted', False)
+    spot_sorted = kwargs.pop('spot_sorted', False)
     stdout = kwargs.pop('stdout', False)
     threads = kwargs.pop('threads',DEFAULT_THREADS)
     output_directory = kwargs.pop('output_directory', '.')
@@ -533,8 +536,8 @@ def extract(**kwargs):
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
 
-    if stdout and not unsorted:
-        raise Exception("Currently --stdout must be used with --unsorted")
+    if stdout and spot_sorted:
+        raise Exception("--stdout cannot be combined with --spot-sorted")
 
     run_identifier = os.path.basename(sra_file)
     if sra_file.endswith(".sra"):
@@ -551,7 +554,7 @@ def extract(**kwargs):
             output_location_factory, run_identifier, output_format_possibilities, force
         )
     
-    if unsorted and stdout:
+    if stdout:
         format = output_format_possibilities[0]
         sra_file_abs = os.path.abspath(sra_file)
         # --accept-singles streams pairs and any single/orphan reads to stdout as
@@ -581,72 +584,29 @@ def extract(**kwargs):
                 "Extraction of .sra file failed. Command run was '{}'. STDERR was '{}'".format(cmd, e.stderr),
                 inner=e)
             
-    elif unsorted and not stdout:
-        def run_command(cmd):
-            logging.debug("Running command {}".format(cmd))
-            try:
-                subprocess.check_call(cmd, shell=True, stderr=subprocess.PIPE)
-            except subprocess.CalledProcessError as e:
-                raise KingfisherException(
-                    f"Extraction of .sra to format unsorted {format} failed. Command run was '{cmd}'. STDERR was '{e.stderr}'",
-                    inner=e)
-
-        # sracat-rs writes the forward/reverse mates of each pair to separate
-        # files (-1/-2) and any single/orphan reads to --single-out, using the
-        # native .fasta/.fastq extensions. It has no built-in compression, so
-        # gzipped formats are produced by piping the extracted files through pigz.
-        format = output_format_possibilities[0]
-        stem = output_location_factory.output_stem(run_identifier)
-        if format in ('fastq', 'fastq.gz'):
-            qual_flag = '--qual '
-            ext = 'fastq'
-        elif format in ('fasta', 'fasta.gz'):
-            qual_flag = ''
-            ext = 'fasta'
-        else:
-            raise Exception("Cannot extract with --unsorted format {}".format(format))
-
-        logging.info("Extracting .sra file to file(s) in unsorted {} format ..".format(format.upper()))
-        r1 = "{}_1.{}".format(stem, ext)
-        r2 = "{}_2.{}".format(stem, ext)
-        single = "{}.{}".format(stem, ext)
-        cmd = "sracat-rs {}--threads {} -1 {} -2 {} --single-out {} {}".format(
-            qual_flag, threads, r1, r2, single, os.path.abspath(sra_file))
-        run_command(cmd)
-
-        # sracat-rs creates the -1/-2 split files eagerly, so a single-end run
-        # leaves them empty - drop empties and keep only files with content.
-        produced = []
-        for f in (r1, r2, single):
-            if os.path.exists(f):
-                if os.path.getsize(f) == 0:
-                    os.remove(f)
-                else:
-                    produced.append(f)
-
-        if format in ('fasta.gz', 'fastq.gz'):
-            for f in produced:
-                run_command("pigz -p {} {}".format(threads, f))
-                output_files.append("{}.gz".format(f))
-        else:
-            output_files.extend(produced)
-
     else:
         if not skip_download_and_extraction:
-            logging.info("Extracting .sra file with sracat-rs ..")
-
-            # Change directory to the output directory using a "with", so that sracat-rs outputs there, not here.
+            # Change directory to the output directory using a "with", so that the
+            # extractor outputs there, not here.
             sra_file_abs = os.path.abspath(sra_file)
             with bird_tool_utils.in_working_directory(output_directory):
                 r1 = '{}_1.fastq'.format(run_identifier)
                 r2 = '{}_2.fastq'.format(run_identifier)
                 single = '{}.fastq'.format(run_identifier)
                 try:
-                    extern.run("sracat-rs --qual --threads {} -1 {} -2 {} --single-out {} {}".format(
-                        threads, r1, r2, single, sra_file_abs))
+                    if spot_sorted:
+                        # fasterq-dump emits reads in spot (submission) order,
+                        # writing {run}_1.fastq / {run}_2.fastq / {run}.fastq.
+                        logging.info("Extracting .sra file with fasterq-dump (spot-sorted) ..")
+                        extern.run("fasterq-dump --threads {} {}".format(threads, sra_file_abs))
+                    else:
+                        # sracat-rs emits reads in storage order (the default).
+                        logging.info("Extracting .sra file with sracat-rs ..")
+                        extern.run("sracat-rs --qual --threads {} -1 {} -2 {} --single-out {} {}".format(
+                            threads, r1, r2, single, sra_file_abs))
                 except ExternCalledProcessError as e:
                     raise KingfisherException(
-                        "Extraction of .sra file with sracat-rs failed for '{}'".format(sra_file), inner=e)
+                        "Extraction of .sra file failed for '{}'".format(sra_file), inner=e)
 
                 # sracat-rs creates the -1/-2 split files eagerly; drop any that
                 # are empty (e.g. single-end runs) before further processing.

@@ -37,18 +37,22 @@ def add_extraction_args(parser):
         action='store_true',
         help='Re-download / extract files even if they already exist [default: Do not].')
     parser.add_argument(
+        '--spot-sorted', '--spot_sorted',
+        action='store_true',
+        help=fix('Extract reads in spot (submission) order using fasterq-dump, rather than the \
+            default storage order. Slower, but matches the read order of classic fasterq-dump \
+            output [default: storage order].'))
+    parser.add_argument(
         '--unsorted',
         action='store_true',
-        # Possible to specify --unsorted with -m ena-ftp aws-http, for example, which means that the order will be unknown.
-        help=fix('Output the sequences in arbitrary order, usually the order that they appear in the .sra file. \
-            Even pairs of reads may be in the usual order, but it is possible to tell which pair \
-            is which, and which is a forward and which is a reverse read from the name \
-            [default: Do not].\n\n\
-            Currently requires download from NCBI rather than ENA.'))
+        # Deprecated: extraction is now in storage order by default, so this flag no longer
+        # changes anything. Kept so existing command lines keep working.
+        help=fix('Deprecated and has no effect: extraction is now in storage order by default. \
+            Use --spot-sorted to instead order reads by spot.'))
     parser.add_argument(
         '--stdout',
         action='store_true',
-        help=fix('Output sequences to STDOUT. Currently requires --unsorted [default: Do not].'))
+        help=fix('Output sequences to STDOUT [default: Do not].'))
     return parser
 
 def check_get_and_extract_common_args(args):
@@ -215,7 +219,7 @@ def main():
     get_parser_extraction_args.add_argument(
         '-t', '--extraction-threads',
         type=int,
-        help='Number of threads to use when extracting .sra files. Ignored when --unsorted is specified. [default: {}]'.format(
+        help='Number of threads to use when extracting .sra files. [default: {}]'.format(
             kingfisher.DEFAULT_THREADS
         ),
         default=kingfisher.DEFAULT_THREADS,
@@ -288,6 +292,11 @@ def main():
 
     logging.info("Kingfisher v{}".format(kingfisher.__version__))
 
+    if getattr(args, 'unsorted', False):
+        logging.warning(
+            "--unsorted is deprecated and has no effect: extraction is now in storage "
+            "order by default. Use --spot-sorted to instead order reads by spot.")
+
     try:
         if args.subparser_name == 'get':
             check_get_and_extract_common_args(args)
@@ -299,6 +308,7 @@ def main():
                 output_format_possibilities = args.output_format_possibilities,
                 force = args.force,
                 unsorted = args.unsorted,
+                spot_sorted = args.spot_sorted,
                 stdout = args.stdout,
                 gcp_project = args.gcp_project,
                 gcp_user_key_file = args.gcp_user_key_file,
@@ -325,6 +335,7 @@ def main():
                 output_format_possibilities = args.output_format_possibilities,
                 force = args.force,
                 unsorted = args.unsorted,
+                spot_sorted = args.spot_sorted,
                 stdout = args.stdout,
                 threads = args.threads,
                 output_directory = args.output_directory if args.output_directory is not None else '.',

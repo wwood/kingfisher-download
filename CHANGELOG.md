@@ -8,10 +8,12 @@
 * Added *experimental* NGDC metadata support in `annotate` mode - CRR accessions are automatically routed to NGDC while other accessions use NCBI as before
 * Added `--cra-accession` option to skip NGDC binary search when the CRA accession is already known ([#7890d12](https://github.com/wwood/kingfisher-download/commit/7890d12))
 * Added *experimental* `authorship` experimental mode ([#94449e8](https://github.com/wwood/kingfisher-download/commit/94449e8))
+* Added `--spot-sorted`, which extracts reads in spot (submission) order via fasterq-dump instead of the default sracat-rs storage order
 
 ### Bug fixes and improvements
 
-* Stream `--stdout --unsorted` extraction with sracat-rs `--accept-singles` instead of `--single-out /dev/stdout`, which could truncate/overwrite the output when stdout is redirected to a regular file and the run contains single/orphan reads
+* Deprecated `--unsorted`: it now has no effect, since extraction is in storage order by default. `--stdout` no longer requires `--unsorted`
+* Stream `--stdout` extraction with sracat-rs `--accept-singles` instead of `--single-out /dev/stdout`, which could truncate/overwrite the output when stdout is redirected to a regular file and the run contains single/orphan reads
 * For FASTA-only output, download the smaller SRA Lite file in the `prefetch` method (`--eliminate-quals`), since base qualities are discarded anyway, falling back to a full download when no SRA Lite file is available
 * Support `.sralite` files in the `prefetch` method by renaming the downloaded `.sralite` file to `.sra`, and clean up any reference sequences prefetch downloads alongside reference-compressed runs
 * Cleaner error reporting: users now see readable error messages instead of Python stack traces; use `--debug` for full tracebacks (fixes [#45](https://github.com/wwood/kingfisher-download/issues/45))
