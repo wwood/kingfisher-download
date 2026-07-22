@@ -1,6 +1,11 @@
 version: 7
 platforms:
 - name: linux-64
+  virtual-packages:
+  - __unix=0=0
+  - __linux=4.18
+  - __glibc=2.28
+  - __archspec=0=x86_64
 environments:
   default:
     channels:
@@ -15,7 +20,7 @@ environments:
       - conda: https://conda.anaconda.org/bioconda/linux-64/perl-alien-libxml2-0.17-pl5321h577a1d6_1.tar.bz2
       - conda: https://conda.anaconda.org/bioconda/linux-64/perl-xml-libxml-2.0210-pl5321hf886d80_0.tar.bz2
       - conda: https://conda.anaconda.org/bioconda/linux-64/sra-tools-3.1.0-h4304569_1.tar.bz2
-      - conda: https://conda.anaconda.org/bioconda/linux-64/sracat-rs-0.0.3-hfa8f182_0.conda
+      - conda: https://conda.anaconda.org/bioconda/linux-64/sracat-rs-0.2.0-hfa8f182_0.conda
       - conda: https://conda.anaconda.org/bioconda/noarch/aspera-cli-4.20.0-hdfd78af_0.tar.bz2
       - conda: https://conda.anaconda.org/bioconda/noarch/bird_tool_utils_python-0.6.0-pyh7e72e81_0.conda
       - conda: https://conda.anaconda.org/bioconda/noarch/perl-ffi-checklib-0.28-pl5321hdfd78af_0.tar.bz2
@@ -179,7 +184,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.3-pyh8f84b5b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2025c-hc9c84f9_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/urllib3-2.5.0-pyhd8ed1ab_0.conda
-      - pypi: .
+      - pypi: ./
   dev:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -193,7 +198,7 @@ environments:
       - conda: https://conda.anaconda.org/bioconda/linux-64/perl-alien-libxml2-0.17-pl5321h577a1d6_1.tar.bz2
       - conda: https://conda.anaconda.org/bioconda/linux-64/perl-xml-libxml-2.0210-pl5321hf886d80_0.tar.bz2
       - conda: https://conda.anaconda.org/bioconda/linux-64/sra-tools-3.1.0-h4304569_1.tar.bz2
-      - conda: https://conda.anaconda.org/bioconda/linux-64/sracat-rs-0.0.3-hfa8f182_0.conda
+      - conda: https://conda.anaconda.org/bioconda/linux-64/sracat-rs-0.2.0-hfa8f182_0.conda
       - conda: https://conda.anaconda.org/bioconda/noarch/aspera-cli-4.20.0-hdfd78af_0.tar.bz2
       - conda: https://conda.anaconda.org/bioconda/noarch/bird_tool_utils_python-0.6.0-pyh7e72e81_0.conda
       - conda: https://conda.anaconda.org/bioconda/noarch/perl-ffi-checklib-0.28-pl5321hdfd78af_0.tar.bz2
@@ -371,7 +376,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2025c-hc9c84f9_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/urllib3-2.5.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-3.23.0-pyhcf101f3_1.conda
-      - pypi: .
+      - pypi: ./
 packages:
 - conda: https://conda.anaconda.org/bioconda/linux-64/ncbi-vdb-3.4.1-hd63eeec_0.conda
   sha256: 1c876e74214ef7269de12286e1b9b370e3167c0825d215de3b81bf46f3956072
@@ -446,9 +451,9 @@ packages:
   purls: []
   size: 60723040
   timestamp: 1713423319671
-- conda: https://conda.anaconda.org/bioconda/linux-64/sracat-rs-0.0.3-hfa8f182_0.conda
-  sha256: a44be9595d6b3750f341fce16db2ea7ffa11da0d3cf641d6a19ed471cb17240f
-  md5: 1a2377d1fa2f6b57a92a236e1bab435f
+- conda: https://conda.anaconda.org/bioconda/linux-64/sracat-rs-0.2.0-hfa8f182_0.conda
+  sha256: f4fc3c70605c4bda747eb584b02d38b4336633ee2fd0149054a7f2616c033f48
+  md5: dbb60a9c80655a5896edd88df1bf0bac
   depends:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=14
@@ -458,8 +463,11 @@ packages:
   license: MIT
   license_family: MIT
   purls: []
-  size: 359927
-  timestamp: 1782696624842
+  run_exports:
+    weak:
+    - sracat-rs >=0.2.0,<0.3.0a0
+  size: 422059
+  timestamp: 1783928021064
 - conda: https://conda.anaconda.org/bioconda/noarch/aspera-cli-4.20.0-hdfd78af_0.tar.bz2
   sha256: 89338b9dfa8162fd2aa11a734677e593e843a97f7b5410409b68878bd7db5cb8
   md5: 18fa8529c7383cec4c4c797edfa528ba
@@ -1866,7 +1874,7 @@ packages:
   license: BSD-3-Clause
   license_family: BSD
   purls:
-  - pkg:pypi/pandas?source=compressed-mapping
+  - pkg:pypi/pandas?source=hash-mapping
   size: 15284670
   timestamp: 1774916580557
 - conda: https://conda.anaconda.org/conda-forge/linux-64/pandoc-3.9.0.2-ha770c72_0.conda
@@ -2055,7 +2063,7 @@ packages:
   license: MIT
   license_family: MIT
   purls:
-  - pkg:pypi/pyyaml?source=compressed-mapping
+  - pkg:pypi/pyyaml?source=hash-mapping
   size: 202391
   timestamp: 1770223462836
 - conda: https://conda.anaconda.org/conda-forge/linux-64/re2-2025.11.05-h5301d42_0.conda
@@ -2212,7 +2220,7 @@ packages:
   license: Apache-2.0
   license_family: Apache
   purls:
-  - pkg:pypi/botocore?source=compressed-mapping
+  - pkg:pypi/botocore?source=hash-mapping
   size: 8499940
   timestamp: 1775633160362
 - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.2.25-hbd8a1cb_0.conda
@@ -2242,7 +2250,7 @@ packages:
   license: MIT
   license_family: MIT
   purls:
-  - pkg:pypi/charset-normalizer?source=compressed-mapping
+  - pkg:pypi/charset-normalizer?source=hash-mapping
   size: 58872
   timestamp: 1775127203018
 - conda: https://conda.anaconda.org/conda-forge/noarch/colorama-0.4.6-pyhd8ed1ab_1.conda
@@ -2335,7 +2343,7 @@ packages:
   license: Apache-2.0
   license_family: APACHE
   purls:
-  - pkg:pypi/importlib-metadata?source=compressed-mapping
+  - pkg:pypi/importlib-metadata?source=hash-mapping
   size: 34387
   timestamp: 1773931568510
 - conda: https://conda.anaconda.org/conda-forge/noarch/iniconfig-2.3.0-pyhd8ed1ab_0.conda
@@ -2346,7 +2354,7 @@ packages:
   license: MIT
   license_family: MIT
   purls:
-  - pkg:pypi/iniconfig?source=compressed-mapping
+  - pkg:pypi/iniconfig?source=hash-mapping
   size: 13387
   timestamp: 1760831448842
 - conda: https://conda.anaconda.org/conda-forge/noarch/jmespath-1.1.0-pyhcf101f3_1.conda
@@ -2590,7 +2598,7 @@ packages:
   license: BSD-2-Clause
   license_family: BSD
   purls:
-  - pkg:pypi/pyasn1?source=compressed-mapping
+  - pkg:pypi/pyasn1?source=hash-mapping
   size: 66593
   timestamp: 1773729387446
 - conda: https://conda.anaconda.org/conda-forge/noarch/pycparser-2.22-pyh29332c3_1.conda
@@ -2658,7 +2666,7 @@ packages:
   license: MIT
   license_family: MIT
   purls:
-  - pkg:pypi/pytest?source=compressed-mapping
+  - pkg:pypi/pytest?source=hash-mapping
   size: 299984
   timestamp: 1775644472530
 - conda: https://conda.anaconda.org/conda-forge/noarch/pytest-timeout-2.4.0-pyhd8ed1ab_0.conda
@@ -2731,7 +2739,7 @@ packages:
   license: Apache-2.0
   license_family: APACHE
   purls:
-  - pkg:pypi/requests?source=compressed-mapping
+  - pkg:pypi/requests?source=hash-mapping
   size: 63712
   timestamp: 1774894783063
 - conda: https://conda.anaconda.org/conda-forge/noarch/rsa-4.7.2-pyh44b312d_0.tar.bz2
@@ -2840,7 +2848,7 @@ packages:
   - pkg:pypi/zipp?source=hash-mapping
   size: 24194
   timestamp: 1764460141901
-- pypi: .
+- pypi: ./
   name: kingfisher
   requires_dist:
   - extern

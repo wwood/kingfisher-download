@@ -15,7 +15,9 @@ sra-tools = "==3.1.0" #">=3.0.5"  # 2.9.6 is known to fail e.g. prefetch of SRR1
 pandas = "*"
 requests = "*"
 aria2 = ">=1.36.0"
-sracat-rs = "*"
+# >=0.2.0: 0.2.0 fixes an intermittent double-free crash under --threads >1 and
+# adds --accept-singles (used for --stdout extraction).
+sracat-rs = ">=0.2.0"
 bird_tool_utils_python = ">=0.4.1"
 awscli = "*"
 pyarrow = "*"
