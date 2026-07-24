@@ -708,6 +708,7 @@ def _extract_with_sracat(sra_file_abs, run_identifier, target_format, threads):
         fifo_dir = tempfile.mkdtemp(prefix='kingfisher_sracat_')
         fifos = [os.path.join(fifo_dir, n) for n in ('read1', 'read2', 'single')]
         pigz_procs = []
+        extraction_ok = False
         try:
             for fifo, out in zip(fifos, outputs):
                 os.mkfifo(fifo)
@@ -722,19 +723,34 @@ def _extract_with_sracat(sra_file_abs, run_identifier, target_format, threads):
             # available to report on failure.
             result = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
             if result.returncode != 0:
-                # sracat-rs may have died before opening the FIFOs, leaving the
-                # pigz readers blocked on open(); kill them so we don't deadlock.
-                for p in pigz_procs:
-                    p.kill()
-                    p.wait()
                 raise KingfisherException(
                     "Extraction of .sra file failed for '{}'. STDERR was '{}'".format(
                         sra_file_abs, result.stderr.decode()))
+            # Reap every pigz before reporting a failure, so none are left
+            # unwaited even when one of them exits non-zero.
+            pigz_failed = False
             for p in pigz_procs:
                 if p.wait() != 0:
-                    raise KingfisherException(
-                        "Compression with pigz failed during extraction of '{}'".format(sra_file_abs))
+                    pigz_failed = True
+            if pigz_failed:
+                raise KingfisherException(
+                    "Compression with pigz failed during extraction of '{}'".format(sra_file_abs))
+            extraction_ok = True
         finally:
+            if not extraction_ok:
+                # On any failure (a non-zero sracat-rs/pigz exit, or an exception
+                # such as os.mkfifo/Popen raising mid-setup) sracat-rs may never
+                # have opened the FIFOs, leaving pigz readers blocked on open().
+                # Kill and reap every pigz so none are orphaned, then remove the
+                # partial .gz files the pigz '> out' redirect created up front so
+                # a later run doesn't mistake them for completed output.
+                for p in pigz_procs:
+                    if p.poll() is None:
+                        p.kill()
+                    p.wait()
+                for out in outputs:
+                    if os.path.exists(out):
+                        os.remove(out)
             shutil.rmtree(fifo_dir, ignore_errors=True)
     else:
         cmd = "sracat-rs {}--threads {} -1 '{}' -2 '{}' --single '{}' '{}'".format(
