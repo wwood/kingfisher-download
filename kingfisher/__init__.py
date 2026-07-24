@@ -7,6 +7,8 @@ import subprocess
 import sys
 import shutil
 import re
+import tempfile
+import gzip
 
 import extern
 from extern import ExternCalledProcessError
@@ -590,70 +592,173 @@ def extract(**kwargs):
             # extractor outputs there, not here.
             sra_file_abs = os.path.abspath(sra_file)
             with bird_tool_utils.in_working_directory(output_directory):
-                r1 = '{}_1.fastq'.format(run_identifier)
-                r2 = '{}_2.fastq'.format(run_identifier)
-                single = '{}.fastq'.format(run_identifier)
-                try:
-                    if spot_sorted:
-                        # fasterq-dump emits reads in spot (submission) order,
-                        # writing {run}_1.fastq / {run}_2.fastq / {run}.fastq.
+                if spot_sorted:
+                    # fasterq-dump emits reads in spot (submission) order, writing
+                    # {run}_1.fastq / {run}_2.fastq / {run}.fastq. It only produces
+                    # uncompressed FASTQ, so convert/compress afterwards as needed.
+                    r1 = '{}_1.fastq'.format(run_identifier)
+                    r2 = '{}_2.fastq'.format(run_identifier)
+                    single = '{}.fastq'.format(run_identifier)
+                    try:
                         logging.info("Extracting .sra file with fasterq-dump (spot-sorted) ..")
                         extern.run("fasterq-dump --threads {} {}".format(threads, sra_file_abs))
+                    except ExternCalledProcessError as e:
+                        raise KingfisherException(
+                            "Extraction of .sra file failed for '{}'".format(sra_file), inner=e)
+
+                    # Drop any empty split files (e.g. single-end runs) before
+                    # further processing.
+                    for f in (r1, r2, single):
+                        if os.path.exists(f) and os.path.getsize(f) == 0:
+                            os.remove(f)
+
+                    if 'fastq' not in output_format_possibilities:
+                        for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
+                            f = output_location_factory.output_stem(fq.replace('x',run_identifier))
+                            if os.path.exists(f):
+                                try:
+                                    # Do the least work, currently we have FASTQ.
+                                    if 'fasta' in output_format_possibilities:
+                                        logging.info("Converting {} to FASTA ..".format(f))
+                                        out_here = output_location_factory.output_stem(re.sub('.fastq$','.fasta',f))
+                                        extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} >{}".format(
+                                            f, out_here
+                                        ))
+                                        os.remove(f)
+                                        output_files.append(out_here)
+                                    elif 'fasta.gz' in output_format_possibilities:
+                                        logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
+                                        out_here = output_location_factory.output_stem(re.sub('.fastq$','.fasta.gz',f))
+                                        extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} |pigz -p {} >{}".format(
+                                            f, threads, out_here
+                                        ))
+                                        os.remove(f)
+                                        output_files.append(out_here)
+                                    elif 'fastq.gz' in output_format_possibilities:
+                                        out_here = os.path.abspath(output_location_factory.output_stem(f'{f}.gz'))
+                                        logging.info("Compressing {} with pigz into {} ..".format(f, out_here))
+                                        extern.run("pigz -c -p {} {} > {}".format(threads, f, out_here))
+                                        os.remove(f)
+                                        output_files.append(out_here)
+                                    else:
+                                        raise Exception("Programming error")
+                                except ExternCalledProcessError as e:
+                                    raise KingfisherException(
+                                        "Format conversion failed for '{}'".format(f), inner=e)
                     else:
-                        # sracat-rs emits reads in storage order (the default).
-                        logging.info("Extracting .sra file with sracat-rs ..")
-                        extern.run("sracat-rs --qual --threads {} -1 {} -2 {} --single-out {} {}".format(
-                            threads, r1, r2, single, sra_file_abs))
-                except ExternCalledProcessError as e:
-                    raise KingfisherException(
-                        "Extraction of .sra file failed for '{}'".format(sra_file), inner=e)
-
-                # sracat-rs creates the -1/-2 split files eagerly; drop any that
-                # are empty (e.g. single-end runs) before further processing.
-                for f in (r1, r2, single):
-                    if os.path.exists(f) and os.path.getsize(f) == 0:
-                        os.remove(f)
-
-                if 'fastq' not in output_format_possibilities:
-                    for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
-                        f = output_location_factory.output_stem(fq.replace('x',run_identifier))
-                        if os.path.exists(f):
-                            try:
-                                # Do the least work, currently we have FASTQ.
-                                if 'fasta' in output_format_possibilities:
-                                    logging.info("Converting {} to FASTA ..".format(f))
-                                    out_here = output_location_factory.output_stem(re.sub('.fastq$','.fasta',f))
-                                    extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} >{}".format(
-                                        f, out_here
-                                    ))
-                                    os.remove(f)
-                                    output_files.append(out_here)
-                                elif 'fasta.gz' in output_format_possibilities:
-                                    logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
-                                    out_here = output_location_factory.output_stem(re.sub('.fastq$','.fasta.gz',f))
-                                    extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} |pigz -p {} >{}".format(
-                                        f, threads, out_here
-                                    ))
-                                    os.remove(f)
-                                    output_files.append(out_here)
-                                elif 'fastq.gz' in output_format_possibilities:
-                                    out_here = os.path.abspath(output_location_factory.output_stem(f'{f}.gz'))
-                                    logging.info("Compressing {} with pigz into {} ..".format(f, out_here))
-                                    extern.run("pigz -c -p {} {} > {}".format(threads, f, out_here))
-                                    os.remove(f)
-                                    output_files.append(out_here)
-                                else:
-                                    raise Exception("Programming error")
-                            except ExternCalledProcessError as e:
-                                raise KingfisherException(
-                                    "Format conversion failed for '{}'".format(f), inner=e)
+                        for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
+                            f = fq.replace('x',run_identifier)
+                            if os.path.exists(f):
+                                output_files.append(f)
                 else:
-                    for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
-                        f = fq.replace('x',run_identifier)
-                        if os.path.exists(f):
-                            output_files.append(f)
+                    # sracat-rs emits reads in storage order (the default). Extract
+                    # straight to the requested format, piping into pigz for
+                    # compressed outputs so no intermediate FASTQ/FASTA is written.
+                    # Priority mirrors the conversion order above: do the least work.
+                    if 'fastq' in output_format_possibilities:
+                        target_format = 'fastq'
+                    elif 'fasta' in output_format_possibilities:
+                        target_format = 'fasta'
+                    elif 'fasta.gz' in output_format_possibilities:
+                        target_format = 'fasta.gz'
+                    elif 'fastq.gz' in output_format_possibilities:
+                        target_format = 'fastq.gz'
+                    else:
+                        raise Exception("Programming error")
+                    output_files = _extract_with_sracat(
+                        sra_file_abs, run_identifier, target_format, threads)
 
     return output_files
+
+
+def _stream_has_no_reads(path, compressed):
+    """Return True if the extraction output at `path` contains no reads. For a
+    compressed (.gz) file that means an empty decompressed stream (pigz still
+    writes a ~20-byte gzip container even when its FIFO carries nothing); for an
+    uncompressed file it means zero bytes."""
+    if compressed:
+        with gzip.open(path, 'rb') as fh:
+            return fh.read(1) == b''
+    return os.path.getsize(path) == 0
+
+
+def _extract_with_sracat(sra_file_abs, run_identifier, target_format, threads):
+    """Extract an .sra file with sracat-rs into files named after run_identifier
+    in the current working directory, in the requested target_format ('fastq',
+    'fasta', 'fastq.gz' or 'fasta.gz'). Compressed formats are produced by piping
+    sracat-rs directly into pigz through FIFOs, avoiding an intermediate
+    uncompressed file. Returns the list of non-empty output files (absolute
+    paths). sracat-rs emits reads in storage order (the default)."""
+    qual = target_format.startswith('fastq')
+    compress = target_format.endswith('.gz')
+    sracat_qual = '--qual ' if qual else ''
+
+    out1 = os.path.abspath('{}_1.{}'.format(run_identifier, target_format))
+    out2 = os.path.abspath('{}_2.{}'.format(run_identifier, target_format))
+    outs = os.path.abspath('{}.{}'.format(run_identifier, target_format))
+    outputs = [out1, out2, outs]
+
+    logging.info("Extracting .sra file with sracat-rs ..")
+    if compress:
+        # Route each of sracat-rs's three outputs (forward, reverse, single/orphan)
+        # through its own FIFO into a dedicated pigz. --eager-open-output ensures
+        # the single/orphan FIFO always gets a writer (and thus its pigz reader a
+        # clean EOF) even for cleanly-paired runs that emit no orphans, so the
+        # reader never blocks forever on open().
+        fifo_dir = tempfile.mkdtemp(prefix='kingfisher_sracat_')
+        fifos = [os.path.join(fifo_dir, n) for n in ('read1', 'read2', 'single')]
+        pigz_procs = []
+        try:
+            for fifo, out in zip(fifos, outputs):
+                os.mkfifo(fifo)
+                pigz_procs.append(subprocess.Popen(
+                    "pigz -p {} -c < '{}' > '{}'".format(threads, fifo, out),
+                    shell=True))
+            cmd = "sracat-rs {}--threads {} --eager-open-output -1 '{}' -2 '{}' --single '{}' '{}'".format(
+                sracat_qual, threads, fifos[0], fifos[1], fifos[2], sra_file_abs)
+            logging.debug("Running command {}".format(cmd))
+            # Capture stderr (rather than letting it inherit the terminal) so
+            # sracat-rs's summary stays quiet on success and its error message is
+            # available to report on failure.
+            result = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
+            if result.returncode != 0:
+                # sracat-rs may have died before opening the FIFOs, leaving the
+                # pigz readers blocked on open(); kill them so we don't deadlock.
+                for p in pigz_procs:
+                    p.kill()
+                    p.wait()
+                raise KingfisherException(
+                    "Extraction of .sra file failed for '{}'. STDERR was '{}'".format(
+                        sra_file_abs, result.stderr.decode()))
+            for p in pigz_procs:
+                if p.wait() != 0:
+                    raise KingfisherException(
+                        "Compression with pigz failed during extraction of '{}'".format(sra_file_abs))
+        finally:
+            shutil.rmtree(fifo_dir, ignore_errors=True)
+    else:
+        cmd = "sracat-rs {}--threads {} -1 '{}' -2 '{}' --single '{}' '{}'".format(
+            sracat_qual, threads, out1, out2, outs, sra_file_abs)
+        logging.debug("Running command {}".format(cmd))
+        # extern.run captures stdout/stderr, keeping sracat-rs's summary off the
+        # terminal on success and surfacing it in the error on failure.
+        try:
+            extern.run(cmd)
+        except ExternCalledProcessError as e:
+            raise KingfisherException(
+                "Extraction of .sra file failed for '{}'".format(sra_file_abs), inner=e)
+
+    # sracat-rs (with --eager-open-output plus pigz) can leave empty split files
+    # for a single-end or cleanly-paired run; drop any that carry no reads.
+    kept = []
+    for f in outputs:
+        if not os.path.exists(f):
+            continue
+        if _stream_has_no_reads(f, compress):
+            os.remove(f)
+        else:
+            kept.append(f)
+    return kept
 
 def gzip_test_files(gzip_files):
     """
