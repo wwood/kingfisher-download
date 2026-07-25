@@ -592,7 +592,6 @@ def extract(**kwargs):
             # extractor outputs there, not here.
             sra_file_abs = os.path.abspath(sra_file)
             with bird_tool_utils.in_working_directory(output_directory):
-<<<<<<< HEAD
                 if spot_sorted:
                     # fasterq-dump emits reads in spot (submission) order, writing
                     # {run}_1.fastq / {run}_2.fastq / {run}.fastq. It only produces
@@ -606,31 +605,6 @@ def extract(**kwargs):
                     except ExternCalledProcessError as e:
                         raise KingfisherException(
                             "Extraction of .sra file failed for '{}'".format(sra_file), inner=e)
-=======
-                r1 = '{}_1.fastq'.format(run_identifier)
-                r2 = '{}_2.fastq'.format(run_identifier)
-                single = '{}.fastq'.format(run_identifier)
-                try:
-                    if spot_sorted:
-                        # fasterq-dump emits reads in spot (submission) order,
-                        # writing {run}_1.fastq / {run}_2.fastq / {run}.fastq.
-                        logging.info("Extracting .sra file with fasterq-dump (spot-sorted) ..")
-                        extern.run("fasterq-dump --threads {} {}".format(threads, sra_file_abs))
-                    else:
-                        # sracat-rs emits reads in storage order (the default).
-                        logging.info("Extracting .sra file with sracat-rs ..")
-                        extern.run("sracat-rs --qual --threads {} -1 {} -2 {} --single-out {} {}".format(
-                            threads, r1, r2, single, sra_file_abs))
-                except ExternCalledProcessError as e:
-                    raise KingfisherException(
-                        "Extraction of .sra file failed for '{}'".format(sra_file), inner=e)
-
-                # sracat-rs creates the -1/-2 split files eagerly; drop any that
-                # are empty (e.g. single-end runs) before further processing.
-                for f in (r1, r2, single):
-                    if os.path.exists(f) and os.path.getsize(f) == 0:
-                        os.remove(f)
->>>>>>> origin/main
 
                     # Drop any empty split files (e.g. single-end runs) before
                     # further processing.

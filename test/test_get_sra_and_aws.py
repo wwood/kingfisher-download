@@ -216,13 +216,8 @@ class Tests(unittest.TestCase):
 
         with in_tempdir():
             extern.run('{} extract --sra {} --output-format-possibilities fastq.gz --unsorted'.format(kingfisher, sra))
-<<<<<<< HEAD
             self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4013677)
             self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4841585)
-=======
-            self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4013697)
-            self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4841605)
->>>>>>> origin/main
             self.assertFalse(os.path.exists('SRR12118866.fastq.gz'))
 
     def test_unsorted_extract_file_outputs_fastq_gz_output_directory(self):
@@ -230,13 +225,8 @@ class Tests(unittest.TestCase):
 
         with in_tempdir():
             extern.run('{} extract --sra {} --output-format-possibilities fastq.gz --output-directory outdir --unsorted'.format(kingfisher, sra))
-<<<<<<< HEAD
             self.assertTrue(os.path.getsize('outdir/SRR12118866_1.fastq.gz')==4013677)
             self.assertTrue(os.path.getsize('outdir/SRR12118866_2.fastq.gz')==4841585)
-=======
-            self.assertTrue(os.path.getsize('outdir/SRR12118866_1.fastq.gz')==4013697)
-            self.assertTrue(os.path.getsize('outdir/SRR12118866_2.fastq.gz')==4841605)
->>>>>>> origin/main
             self.assertFalse(os.path.exists('outdir/SRR12118866.fastq.gz'))
 
     def test_unsorted_extract_single_end_compressed(self):
