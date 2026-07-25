@@ -13,7 +13,10 @@
 ### Bug fixes and improvements
 
 * Deprecated `--unsorted`: it now has no effect, since extraction is in storage order by default. `--stdout` no longer requires `--unsorted`
+<<<<<<< HEAD
 * When extracting to compressed output (`fasta.gz`/`fastq.gz`), sracat-rs now streams directly into `pigz` via FIFOs instead of writing an intermediate uncompressed FASTQ/FASTA file to disk
+=======
+>>>>>>> origin/main
 * Stream `--stdout` extraction with sracat-rs `--accept-singles` instead of `--single-out /dev/stdout`, which could truncate/overwrite the output when stdout is redirected to a regular file and the run contains single/orphan reads
 * For FASTA-only output, download the smaller SRA Lite file in the `prefetch` method (`--eliminate-quals`), since base qualities are discarded anyway, falling back to a full download when no SRA Lite file is available
 * Support `.sralite` files in the `prefetch` method by renaming the downloaded `.sralite` file to `.sra`, and clean up any reference sequences prefetch downloads alongside reference-compressed runs
