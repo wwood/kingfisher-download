@@ -216,8 +216,8 @@ class Tests(unittest.TestCase):
 
         with in_tempdir():
             extern.run('{} extract --sra {} --output-format-possibilities fastq.gz --unsorted'.format(kingfisher, sra))
-            self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4013697)
-            self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4841605)
+            self.assertTrue(os.path.getsize('SRR12118866_1.fastq.gz')==4013677)
+            self.assertTrue(os.path.getsize('SRR12118866_2.fastq.gz')==4841585)
             self.assertFalse(os.path.exists('SRR12118866.fastq.gz'))
 
     def test_unsorted_extract_file_outputs_fastq_gz_output_directory(self):
@@ -225,9 +225,56 @@ class Tests(unittest.TestCase):
 
         with in_tempdir():
             extern.run('{} extract --sra {} --output-format-possibilities fastq.gz --output-directory outdir --unsorted'.format(kingfisher, sra))
-            self.assertTrue(os.path.getsize('outdir/SRR12118866_1.fastq.gz')==4013697)
-            self.assertTrue(os.path.getsize('outdir/SRR12118866_2.fastq.gz')==4841605)
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_1.fastq.gz')==4013677)
+            self.assertTrue(os.path.getsize('outdir/SRR12118866_2.fastq.gz')==4841585)
             self.assertFalse(os.path.exists('outdir/SRR12118866.fastq.gz'))
+
+    def test_unsorted_extract_single_end_compressed(self):
+        # DRR002803 is a single-end run: every read is an orphan, so nothing is
+        # written to the -1/-2 outputs. For the compressed formats sracat-rs
+        # streams each of its -1/-2/--single outputs into a separate pigz via a
+        # FIFO. --eager-open-output is what rescues this case: it forces the
+        # single/orphan sink open up front so the pigz reader on that FIFO gets a
+        # clean EOF instead of blocking forever on open() waiting for a writer
+        # (a cleanly-paired run would otherwise never open it). The -1/-2 sinks
+        # are opened eagerly regardless, so their pigz readers finish too and the
+        # resulting empty _1/_2 .gz files are dropped, leaving only the single
+        # output. Decompressed content matches the uncompressed extraction.
+        sra = os.path.abspath("test/data/DRR002803.sra")
+
+        with in_tempdir():
+            extern.run('{} extract --sra {} --output-format-possibilities fastq.gz --unsorted'.format(kingfisher, sra))
+            self.assertEqual('14936618d3b38486f31eb4ccf54c3cd9  -\n',
+                extern.run('pigz -cd DRR002803.fastq.gz |md5sum'))
+            self.assertFalse(os.path.exists('DRR002803_1.fastq.gz'))
+            self.assertFalse(os.path.exists('DRR002803_2.fastq.gz'))
+
+        with in_tempdir():
+            extern.run('{} extract --sra {} --output-format-possibilities fasta.gz --unsorted'.format(kingfisher, sra))
+            self.assertEqual('45ce1b1a2114bef27d69f8ce6abd16c7  -\n',
+                extern.run('pigz -cd DRR002803.fasta.gz |md5sum'))
+            self.assertFalse(os.path.exists('DRR002803_1.fasta.gz'))
+            self.assertFalse(os.path.exists('DRR002803_2.fasta.gz'))
+
+    def test_unsorted_extract_single_end_uncompressed(self):
+        # As above, but the uncompressed formats sracat-rs writes to plain files:
+        # only the single output carries reads, and the empty -1/-2 files are
+        # dropped.
+        sra = os.path.abspath("test/data/DRR002803.sra")
+
+        with in_tempdir():
+            extern.run('{} extract --sra {} --output-format-possibilities fastq --unsorted'.format(kingfisher, sra))
+            self.assertEqual('14936618d3b38486f31eb4ccf54c3cd9  DRR002803.fastq\n',
+                extern.run('md5sum DRR002803.fastq'))
+            self.assertFalse(os.path.exists('DRR002803_1.fastq'))
+            self.assertFalse(os.path.exists('DRR002803_2.fastq'))
+
+        with in_tempdir():
+            extern.run('{} extract --sra {} --output-format-possibilities fasta --unsorted'.format(kingfisher, sra))
+            self.assertEqual('45ce1b1a2114bef27d69f8ce6abd16c7  DRR002803.fasta\n',
+                extern.run('md5sum DRR002803.fasta'))
+            self.assertFalse(os.path.exists('DRR002803_1.fasta'))
+            self.assertFalse(os.path.exists('DRR002803_2.fasta'))
 
     def test_extract_fastq(self):
         with in_tempdir():
