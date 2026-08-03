@@ -14,3 +14,38 @@ SRP260223.
 For more documentation, see https://wwood.github.io/kingfisher-download/
 
 <img src="images/kingfisher_logo.png" alt="Kingfisher logo" width="600"/>
+
+# Functions
+
+<details>
+<summary>Data retrieval, Sequence database search (by property)</summary>
+
+```yaml
+# biotools-function
+operation:
+- term: Data retrieval
+  uri: http://edamontology.org/operation_2422
+- term: Sequence database search (by property)
+  uri: http://edamontology.org/operation_0349
+input:
+- data:
+    term: Accession
+    uri: http://edamontology.org/data_2091
+  format: []
+output:
+- data:
+    term: Nucleic acid sequence
+    uri: http://edamontology.org/data_2977
+  format:
+  - term: SRA format
+    uri: http://edamontology.org/format_3698
+  - term: FASTQ
+    uri: http://edamontology.org/format_1930
+  - term: FASTA
+    uri: http://edamontology.org/format_1929
+cmd: kingfisher get -r ERR1739691 -m ena-ascp aws-http prefetch
+
+```
+
+</details>
+
