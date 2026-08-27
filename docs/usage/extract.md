@@ -31,6 +31,30 @@ uncompressed.
   Re-download / extract files even if they already exist [default: Do
     not].
 
+**\--include-technical**, **\--include_technical**
+
+  Include technical reads such as sample/index/barcode reads when
+    extracting SRA files [default: Do not]. Output streams remain numbered
+    in SRA read order; Kingfisher does not infer R1/I1/I2/R2 roles.
+
+**\--read-layout**, **\--read_layout** *READ_LAYOUT*
+
+  Select SRA numbering, built-in Illumina/10x/Parse layout, or custom
+    semantic read names [default: sra].
+
+**\--read-names**, **\--read_names** *READ_NAMES*
+
+  Comma-separated stream names used with `--read-layout custom`.
+
+**\--read-name-style**, **\--read_name_style** {simple,illumina}
+
+  Semantic filename style [default: simple]. Illumina style uses the
+    lane-less `<sample>_S1_<read>_001` convention.
+
+**\--sample-name**, **\--sample_name** *SAMPLE_NAME*
+
+  Sample name for semantic filenames [default: run accession].
+
 **\--unsorted**
 
   Output the sequences in arbitrary order, usually the order that they
