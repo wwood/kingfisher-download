@@ -13,6 +13,81 @@ SRP260223.
 
 For more documentation, see https://wwood.github.io/kingfisher-download/
 
+## Read layouts and technical reads
+
+`--include-technical` preserves sample indexes, barcodes, and other
+assay-specific technical reads during SRA extraction. `--read-layout` optionally
+assigns user-selected semantic filenames after extraction and format conversion.
+Kingfisher does not infer biological read roles from stream count.
+
+| Layout | Streams | Output |
+| --- | ---: | --- |
+| `sra` | any | `_1`, `_2`, ... |
+| `illumina-se` | 1 | `R1` |
+| `illumina-pe` | 2 | `R1`, `R2` |
+| `illumina-se-single-index` | 2 | `R1`, `I1` |
+| `illumina-se-dual-index` | 3 | `R1`, `I1`, `I2` |
+| `illumina-pe-single-index` | 3 | `R1`, `I1`, `R2` |
+| `illumina-pe-dual-index` | 4 | `R1`, `I1`, `I2`, `R2` |
+| `10x-gex`, `10x-vdj`, `10x-spatial` | 2/3/4 | layout-dependent |
+| `10x-atac` | 4 | `R1`, `I1`, `I2`, `R2` |
+| `10x-atac-bcl` | 4 | `R1`, `I1`, `R2`, `R3` |
+| `parse-wt-single-index` | 3 | `R1`, `I1`, `R2` |
+| `parse-wt-dual-index` | 4 | `R1`, `I1`, `I2`, `R2` |
+| `custom` | any | user supplied |
+
+Standard dual-index example:
+
+```bash
+kingfisher get \
+    -r SRRXXXX \
+    -m aws-http prefetch \
+    -f fastq.gz \
+    --include-technical \
+    --read-layout illumina-pe-dual-index
+```
+
+10x GEX with Cell Ranger-compatible lane-less names:
+
+```bash
+kingfisher get \
+    -r SRRXXXX \
+    -m aws-http prefetch \
+    -f fastq.gz \
+    --include-technical \
+    --read-layout 10x-gex \
+    --read-name-style illumina
+```
+
+Four streams become `SRRXXXX_S1_R1_001.fastq.gz`,
+`SRRXXXX_S1_I1_001.fastq.gz`, `SRRXXXX_S1_I2_001.fastq.gz`, and
+`SRRXXXX_S1_R2_001.fastq.gz`. `10x-atac-bcl` changes filename semantics only:
+its third/fourth streams become `R2`/`R3`; sequence content remains untouched.
+
+Parse dual-index WT:
+
+```bash
+kingfisher get -r SRRXXXX -m prefetch -f fastq.gz \
+    --include-technical --read-layout parse-wt-dual-index
+```
+
+Custom assay and names:
+
+```bash
+kingfisher extract --sra SRRXXXX.sra -f fastq.gz \
+    --include-technical --read-layout custom \
+    --read-names R1,BC1,BC2,R2
+```
+
+Default `--read-layout sra` preserves numbered SRA-order names. `--sample-name`
+replaces run accession in semantic filenames. `--read-name-style simple`
+produces `<sample>_<read>`; `illumina` produces
+`<sample>_S1_<read>_001` without fabricating lane number.
+
+Layouts containing index reads, plus flexible `10x-gex`, `10x-vdj`, and
+`10x-spatial`, require `--include-technical` for SRA extraction. Stream count is
+validated after extraction; mismatches fail before any rename.
+
 <img src="images/kingfisher_logo.png" alt="Kingfisher logo" width="600"/>
 
 # Functions
@@ -48,4 +123,3 @@ cmd: kingfisher get -r ERR1739691 -m ena-ascp aws-http prefetch
 ```
 
 </details>
-

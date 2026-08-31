@@ -18,6 +18,7 @@ from bird_tool_utils.people import *
 
 import kingfisher
 from kingfisher.exception import KingfisherException
+from kingfisher.read_layouts import SUPPORTED_READ_LAYOUTS
 
 def fix(help_string):
     multispace_re = re.compile('  *')
@@ -42,6 +43,27 @@ def add_extraction_args(parser):
         help=fix('Extract reads in spot (submission) order using fasterq-dump, rather than the \
             default storage order. Slower, but matches the read order of classic fasterq-dump \
             output [default: storage order].'))
+    parser.add_argument(
+        '--include-technical', '--include_technical',
+        action='store_true',
+        help=fix('Include technical reads such as sample/index/barcode reads when extracting \
+            SRA files [default: Do not].'))
+    parser.add_argument(
+        '--read-layout', '--read_layout',
+        choices=SUPPORTED_READ_LAYOUTS,
+        default='sra',
+        help='Assign semantic read names using a selected layout [default: sra].')
+    parser.add_argument(
+        '--read-names', '--read_names',
+        help='Comma-separated stream names for --read-layout custom.')
+    parser.add_argument(
+        '--read-name-style', '--read_name_style',
+        choices=['simple', 'illumina'],
+        default='simple',
+        help='Semantic filename style [default: simple].')
+    parser.add_argument(
+        '--sample-name', '--sample_name',
+        help='Sample name for semantic filenames [default: run accession].')
     parser.add_argument(
         '--unsorted',
         action='store_true',
@@ -309,6 +331,11 @@ def main():
                 force = args.force,
                 unsorted = args.unsorted,
                 spot_sorted = args.spot_sorted,
+                include_technical = args.include_technical,
+                read_layout = args.read_layout,
+                read_names = args.read_names,
+                read_name_style = args.read_name_style,
+                sample_name = args.sample_name,
                 stdout = args.stdout,
                 gcp_project = args.gcp_project,
                 gcp_user_key_file = args.gcp_user_key_file,
@@ -336,6 +363,11 @@ def main():
                 force = args.force,
                 unsorted = args.unsorted,
                 spot_sorted = args.spot_sorted,
+                include_technical = args.include_technical,
+                read_layout = args.read_layout,
+                read_names = args.read_names,
+                read_name_style = args.read_name_style,
+                sample_name = args.sample_name,
                 stdout = args.stdout,
                 threads = args.threads,
                 output_directory = args.output_directory if args.output_directory is not None else '.',

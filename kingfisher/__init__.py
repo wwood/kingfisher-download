@@ -20,6 +20,15 @@ from .location import Location, NcbiLocationJson
 from .exception import DownloadMethodFailed, KingfisherException
 from .sra_metadata import *
 from .md5sum import MD5
+from .read_layouts import (
+    apply_read_layout,
+    possible_read_names,
+    require_technical_reads_for_sra,
+    semantic_filename,
+    validate_read_layout_options,
+    validate_read_name_style,
+    validate_safe_name,
+)
 
 DEFAULT_ASPERA_SSH_KEY = 'linux'
 DEFAULT_OUTPUT_FORMAT_POSSIBILITIES = ['fastq', 'fastq.gz']
@@ -43,6 +52,20 @@ class OutputLocation:
 
     def output_stem(self, run_identifier):
         return os.path.join(self.output_directory, run_identifier)
+
+
+def find_numbered_read_files(run_identifier, extension, directory='.'):
+    """Find <run>_<N>.<extension> files, sorted by numeric read number."""
+    pattern = re.compile(r'^{}_(\d+)\.{}$'.format(
+        re.escape(run_identifier), re.escape(extension)))
+    numbered = []
+    if not os.path.isdir(directory):
+        return []
+    for filename in os.listdir(directory):
+        match = pattern.match(filename)
+        if match:
+            numbered.append((int(match.group(1)), os.path.join(directory, filename)))
+    return [path for _, path in sorted(numbered, key=lambda item: item[0])]
 
 
 def download_and_extract(**kwargs):
@@ -85,6 +108,11 @@ def download_and_extract_one_run(run_identifier, **kwargs):
     force = kwargs.pop('force', False)
     unsorted = kwargs.pop('unsorted', False)
     spot_sorted = kwargs.pop('spot_sorted', False)
+    include_technical = kwargs.pop('include_technical', False)
+    read_layout = kwargs.pop('read_layout', 'sra')
+    read_names = kwargs.pop('read_names', None)
+    read_name_style = kwargs.pop('read_name_style', 'simple')
+    sample_name = kwargs.pop('sample_name', None)
     stdout = kwargs.pop('stdout', False)
     gcp_project = kwargs.pop('gcp_project', None)
     gcp_user_key_file = kwargs.pop('gcp_user_key_file', None)
@@ -107,6 +135,11 @@ def download_and_extract_one_run(run_identifier, **kwargs):
 
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
+
+    validate_read_layout_options(read_layout, read_names, sample_name)
+    validate_read_name_style(read_name_style)
+    if read_layout != 'sra':
+        validate_safe_name(sample_name or run_identifier, 'sample name')
 
     if guess_aws_location and check_md5sums:
         logging.warning("Guessing AWS location is not compatible with checking md5sums. Not carrying out md5sum checks for downloads from AWS.")
@@ -131,8 +164,8 @@ def download_and_extract_one_run(run_identifier, **kwargs):
     if gcp_project and gcp_user_key_file:
         raise Exception("--gcp-project is incompatible with --gcp-user-key-file. The project specified in the key file will be used when gcp_project is not specified.")
 
-    if stdout and spot_sorted:
-        raise Exception("--stdout cannot be combined with --spot-sorted")
+    if stdout and (spot_sorted or include_technical):
+        raise Exception("--stdout cannot be combined with --spot-sorted or --include-technical")
 
     output_location_factory = OutputLocation(output_directory)
     output_files = []
@@ -143,7 +176,8 @@ def download_and_extract_one_run(run_identifier, **kwargs):
         skip_download_and_extraction, output_files = False, []
     else:
         skip_download_and_extraction, output_files = _check_for_existing_files(
-            output_location_factory, run_identifier, output_format_possibilities, force
+            output_location_factory, run_identifier, output_format_possibilities, force,
+            read_layout, read_names, read_name_style, sample_name
         )
 
     # If every requested output format is FASTA, base quality scores are
@@ -157,6 +191,9 @@ def download_and_extract_one_run(run_identifier, **kwargs):
         # Download phase
         worked = False
         for method in download_methods:
+            if (method in ('prefetch', 'aws-http', 'aws-cp', 'gcp-cp') and
+                    'sra' not in output_format_possibilities):
+                require_technical_reads_for_sra(read_layout, include_technical)
             logging.info("Attempting download method {} for run {} ..".format(method, run_identifier))
             if method == 'prefetch':
                 output_path = output_location_factory.output_stem('{}.sra'.format(run_identifier))
@@ -462,6 +499,11 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                     output_format_possibilities = output_format_possibilities,
                     unsorted = unsorted,
                     spot_sorted = spot_sorted,
+                    include_technical = include_technical,
+                    read_layout = read_layout,
+                    read_names = read_names,
+                    read_name_style = read_name_style,
+                    sample_name = sample_name,
                     stdout = stdout,
                     threads = extraction_threads,
                     output_directory = output_directory,
@@ -476,11 +518,11 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                 output_files = downloaded_files
             else:
                 # Check for files with standard ENA naming or NGDC naming
-                candidate_files = []
-                for fq in ['x_1.fastq.gz','x_2.fastq.gz','x.fastq.gz']:
-                    f = output_location_factory.output_stem(fq.replace('x',run_identifier))
-                    if os.path.exists(f):
-                        candidate_files.append(f)
+                candidate_files = find_numbered_read_files(
+                    run_identifier, 'fastq.gz', output_location_factory.output_directory)
+                single = output_location_factory.output_stem('{}.fastq.gz'.format(run_identifier))
+                if os.path.exists(single):
+                    candidate_files.append(single)
                 # Also check for NGDC-style naming (CRR######_f1.fastq.gz, CRR######_r2.fastq.gz)
                 for fq in ['x_f1.fastq.gz','x_r2.fastq.gz']:
                     f = output_location_factory.output_stem(fq.replace('x',run_identifier))
@@ -517,6 +559,10 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                     except ExternCalledProcessError as e:
                         raise KingfisherException(
                             "Format conversion failed for '{}'".format(f), inner=e)
+
+            output_files = apply_read_layout(
+                output_files, run_identifier, read_layout, read_names,
+                read_name_style, sample_name, force)
                 
     if not stdout and len(output_files) == 0:
         raise Exception("No output files found, something went amiss, unsure what.")
@@ -531,6 +577,11 @@ def extract(**kwargs):
     force = kwargs.pop('force', False)
     unsorted = kwargs.pop('unsorted', False)
     spot_sorted = kwargs.pop('spot_sorted', False)
+    include_technical = kwargs.pop('include_technical', False)
+    read_layout = kwargs.pop('read_layout', 'sra')
+    read_names = kwargs.pop('read_names', None)
+    read_name_style = kwargs.pop('read_name_style', 'simple')
+    sample_name = kwargs.pop('sample_name', None)
     stdout = kwargs.pop('stdout', False)
     threads = kwargs.pop('threads',DEFAULT_THREADS)
     output_directory = kwargs.pop('output_directory', '.')
@@ -538,13 +589,19 @@ def extract(**kwargs):
     if len(kwargs) > 0:
         raise Exception("Unexpected arguments detected: %s" % kwargs)
 
-    if stdout and spot_sorted:
-        raise Exception("--stdout cannot be combined with --spot-sorted")
+    validate_read_layout_options(read_layout, read_names, sample_name)
+    validate_read_name_style(read_name_style)
+    require_technical_reads_for_sra(read_layout, include_technical)
+
+    if stdout and (spot_sorted or include_technical):
+        raise Exception("--stdout cannot be combined with --spot-sorted or --include-technical")
 
     run_identifier = os.path.basename(sra_file)
     if sra_file.endswith(".sra"):
         run_identifier = run_identifier[:-4]
     logging.debug("Using run identifier {}".format(run_identifier))
+    if read_layout != 'sra':
+        validate_safe_name(sample_name or run_identifier, 'sample name')
 
     output_location_factory = OutputLocation(output_directory)
 
@@ -553,7 +610,8 @@ def extract(**kwargs):
         skip_download_and_extraction, output_files = False, []
     else:
         skip_download_and_extraction, output_files = _check_for_existing_files(
-            output_location_factory, run_identifier, output_format_possibilities, force
+            output_location_factory, run_identifier, output_format_possibilities, force,
+            read_layout, read_names, read_name_style, sample_name
         )
     
     if stdout:
@@ -592,64 +650,56 @@ def extract(**kwargs):
             # extractor outputs there, not here.
             sra_file_abs = os.path.abspath(sra_file)
             with bird_tool_utils.in_working_directory(output_directory):
-                if spot_sorted:
+                if spot_sorted or include_technical:
                     # fasterq-dump emits reads in spot (submission) order, writing
-                    # {run}_1.fastq / {run}_2.fastq / {run}.fastq. It only produces
-                    # uncompressed FASTQ, so convert/compress afterwards as needed.
-                    r1 = '{}_1.fastq'.format(run_identifier)
-                    r2 = '{}_2.fastq'.format(run_identifier)
-                    single = '{}.fastq'.format(run_identifier)
+                    # numbered split files and, where relevant, {run}.fastq. It
+                    # only produces uncompressed FASTQ, so convert/compress later.
                     try:
-                        logging.info("Extracting .sra file with fasterq-dump (spot-sorted) ..")
-                        extern.run("fasterq-dump --threads {} {}".format(threads, sra_file_abs))
+                        reason = "technical reads" if include_technical else "spot-sorted"
+                        logging.info("Extracting .sra file with fasterq-dump ({}) ..".format(reason))
+                        extra_args = "--include-technical --split-files " if include_technical else ""
+                        extern.run("fasterq-dump --threads {} {}{}".format(
+                            threads, extra_args, sra_file_abs))
                     except ExternCalledProcessError as e:
                         raise KingfisherException(
                             "Extraction of .sra file failed for '{}'".format(sra_file), inner=e)
 
-                    # Drop any empty split files (e.g. single-end runs) before
-                    # further processing.
-                    for f in (r1, r2, single):
+                    fastq_files = find_numbered_read_files(run_identifier, 'fastq')
+                    single = '{}.fastq'.format(run_identifier)
+                    if os.path.exists(single):
+                        fastq_files.append(single)
+
+                    # Drop empty split files before further processing.
+                    for f in list(fastq_files):
                         if os.path.exists(f) and os.path.getsize(f) == 0:
                             os.remove(f)
+                            fastq_files.remove(f)
 
                     if 'fastq' not in output_format_possibilities:
-                        for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
-                            f = output_location_factory.output_stem(fq.replace('x',run_identifier))
-                            if os.path.exists(f):
-                                try:
-                                    # Do the least work, currently we have FASTQ.
-                                    if 'fasta' in output_format_possibilities:
-                                        logging.info("Converting {} to FASTA ..".format(f))
-                                        out_here = output_location_factory.output_stem(re.sub('.fastq$','.fasta',f))
-                                        extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} >{}".format(
-                                            f, out_here
-                                        ))
-                                        os.remove(f)
-                                        output_files.append(out_here)
-                                    elif 'fasta.gz' in output_format_possibilities:
-                                        logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
-                                        out_here = output_location_factory.output_stem(re.sub('.fastq$','.fasta.gz',f))
-                                        extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} |pigz -p {} >{}".format(
-                                            f, threads, out_here
-                                        ))
-                                        os.remove(f)
-                                        output_files.append(out_here)
-                                    elif 'fastq.gz' in output_format_possibilities:
-                                        out_here = os.path.abspath(output_location_factory.output_stem(f'{f}.gz'))
-                                        logging.info("Compressing {} with pigz into {} ..".format(f, out_here))
-                                        extern.run("pigz -c -p {} {} > {}".format(threads, f, out_here))
-                                        os.remove(f)
-                                        output_files.append(out_here)
-                                    else:
-                                        raise Exception("Programming error")
-                                except ExternCalledProcessError as e:
-                                    raise KingfisherException(
-                                        "Format conversion failed for '{}'".format(f), inner=e)
+                        for f in fastq_files:
+                            try:
+                                # Do least work; current format is FASTQ.
+                                if 'fasta' in output_format_possibilities:
+                                    logging.info("Converting {} to FASTA ..".format(f))
+                                    out_here = os.path.abspath(re.sub(r'\.fastq$', '.fasta', f))
+                                    extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} >{}".format(f, out_here))
+                                elif 'fasta.gz' in output_format_possibilities:
+                                    logging.info("Converting {} to FASTA and compressing with pigz ..".format(f))
+                                    out_here = os.path.abspath(re.sub(r'\.fastq$', '.fasta.gz', f))
+                                    extern.run("awk '{{print \">\" substr($0,2);getline;print;getline;getline}}' {} |pigz -p {} >{}".format(f, threads, out_here))
+                                elif 'fastq.gz' in output_format_possibilities:
+                                    out_here = os.path.abspath('{}.gz'.format(f))
+                                    logging.info("Compressing {} with pigz into {} ..".format(f, out_here))
+                                    extern.run("pigz -c -p {} {} > {}".format(threads, f, out_here))
+                                else:
+                                    raise Exception("Programming error")
+                                os.remove(f)
+                                output_files.append(out_here)
+                            except ExternCalledProcessError as e:
+                                raise KingfisherException(
+                                    "Format conversion failed for '{}'".format(f), inner=e)
                     else:
-                        for fq in ['x_1.fastq','x_2.fastq','x.fastq']:
-                            f = fq.replace('x',run_identifier)
-                            if os.path.exists(f):
-                                output_files.append(f)
+                        output_files.extend(fastq_files)
                 else:
                     # sracat-rs emits reads in storage order (the default). Extract
                     # straight to the requested format, piping into pigz for
@@ -668,6 +718,10 @@ def extract(**kwargs):
                     output_files = _extract_with_sracat(
                         sra_file_abs, run_identifier, target_format, threads)
 
+    if not stdout and not skip_download_and_extraction:
+        output_files = apply_read_layout(
+            output_files, run_identifier, read_layout, read_names,
+            read_name_style, sample_name, force)
     return output_files
 
 
@@ -933,7 +987,10 @@ def _printTable(output_stream, myDict, colList=None):
    myList.insert(1, ['-' * i for i in colSize]) # Seperating line
    for item in myList: print(formatStr.format(*item), file=output_stream)
 
-def _check_for_existing_files(output_location_factory, run_identifier, output_format_possibilities, force):
+def _check_for_existing_files(output_location_factory, run_identifier,
+                              output_format_possibilities, force,
+                              read_layout='sra', read_names=None,
+                              read_name_style='simple', sample_name=None):
     skip_download_and_extraction = False
     output_files = []
 
@@ -951,30 +1008,71 @@ def _check_for_existing_files(output_location_factory, run_identifier, output_fo
                     "Skipping download/extraction of {} as an output file already appears to exist, as file {}".format(run_identifier, final_path))
         return skip_download_and_extraction, output_files
 
+    # SRA itself never receives semantic naming.
+    if 'sra' in output_format_possibilities:
+        skip, output_files = maybe_skip_or_force(
+            '{}.sra'.format(run_identifier), output_files, force)
+        if skip:
+            return True, output_files
+
+    if read_layout != 'sra':
+        sample = sample_name or run_identifier
+        partial_targets = []
+        for file_type in output_format_possibilities:
+            if file_type == 'sra':
+                continue
+            name_sets = possible_read_names(read_layout, read_names)
+            target_sets = []
+            for names in name_sets:
+                target_sets.append([
+                    output_location_factory.output_stem(
+                        semantic_filename(sample, name, file_type, read_name_style))
+                    for name in names
+                ])
+
+            existing = []
+            for targets in target_sets:
+                for target in targets:
+                    if os.path.exists(target) and target not in existing:
+                        existing.append(target)
+            if force:
+                for target in existing:
+                    logging.warning("Removing previous file {}".format(target))
+                    os.remove(target)
+                continue
+
+            # Flexible layouts are ordered largest-first. Prefer complete set
+            # with most streams when multiple mappings share names.
+            for targets in target_sets:
+                if targets and all(os.path.exists(target) for target in targets):
+                    logging.info(
+                        "Skipping download/extraction of {} as semantic output files already exist".format(
+                            run_identifier))
+                    return True, targets
+            partial_targets.extend(existing)
+
+        if partial_targets:
+            raise KingfisherException(
+                "Incomplete existing output for read layout '{}'; refusing to overwrite: {}".format(
+                    read_layout, ', '.join(partial_targets)))
+        return False, []
+
     for file_type in output_format_possibilities:
         if file_type == 'sra':
-            path = "{}.{}".format(run_identifier, file_type)
-            skip, output_files = maybe_skip_or_force(path, output_files, force)
-            if skip: skip_download_and_extraction = True
-        elif file_type == 'fastq':
-            possibilities = ['x.fastq','x_1.fastq','x_2.fastq','x_f1.fastq','x_r2.fastq']
-            for path in possibilities:
-                skip, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
-                if skip: skip_download_and_extraction = True
-        elif file_type == 'fastq.gz':
-            possibilities = ['x.fastq.gz','x_1.fastq.gz','x_2.fastq.gz','x_f1.fastq.gz','x_r2.fastq.gz']
-            for path in possibilities:
-                skip, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
-                if skip: skip_download_and_extraction = True
-        elif file_type == 'fasta':
-            possibilities = ['x.fasta','x_1.fasta','x_2.fasta','x_f1.fasta','x_r2.fasta']
-            for path in possibilities:
-                skip, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
-                if skip: skip_download_and_extraction = True
-        elif file_type == 'fasta.gz':
-            possibilities = ['x.fasta.gz','x_1.fasta.gz','x_2.fasta.gz','x_f1.fasta.gz','x_r2.fasta.gz']
-            for path in possibilities:
-                skip, output_files = maybe_skip_or_force(path.replace('x',run_identifier), output_files, force)
+            continue
+        elif file_type in ('fastq', 'fastq.gz', 'fasta', 'fasta.gz'):
+            directory = output_location_factory.output_directory
+            numbered = find_numbered_read_files(run_identifier, file_type, directory)
+            legacy = [
+                output_location_factory.output_stem('{}.{}'.format(run_identifier, file_type)),
+                output_location_factory.output_stem('{}_f1.{}'.format(run_identifier, file_type)),
+                output_location_factory.output_stem('{}_r2.{}'.format(run_identifier, file_type)),
+            ]
+            for final_path in numbered + legacy:
+                if not os.path.exists(final_path):
+                    continue
+                relative_path = os.path.relpath(final_path, directory)
+                skip, output_files = maybe_skip_or_force(relative_path, output_files, force)
                 if skip: skip_download_and_extraction = True
         else:
             raise Exception("Programming error")
@@ -1082,4 +1180,3 @@ def authorship(**kwargs):
     # Write out table as CSV
     final = pd.DataFrame(final_result)
     final.to_csv(sys.stdout, index=False)
-
