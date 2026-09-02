@@ -65,7 +65,10 @@ Download and extract sequence data from SRA or ENA
 **\--ascp-ssh-key** *ASCP_SSH_KEY*
 
   a path to the openssh key to used for aspera (i.e. the -i flag of
-    ascp) [default: Use the one bundled with Kingfisher]
+    ascp) [default: For ENA, the aspera_bypass_rsa.pem key of a local
+    Aspera SDK installation e.g. one installed with \'ascli conf ascp
+    install\', falling back to the deprecated DSA key bundled with
+    Kingfisher. For NGDC, the key bundled with Kingfisher]
 
 **\--ascp-args** *ASCP_ARGS*
 

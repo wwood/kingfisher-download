@@ -35,7 +35,7 @@ conda activate kingfisher
 kingfisher get -r SRR12118866 -m ena-ftp
 ```
 
-Optionally, to use the `ena-ascp` method, an Aspera connect client is also required. For this, you can run `ascli config ascp install` after installing kingfisher, which will download and install the Aspera connect client for you. Alternatively, you can install the Aspera connect client yourself.
+Optionally, to use the `ena-ascp` method, an Aspera connect client is also required. For this, you can run `ascli config ascp install` after installing kingfisher, which will download and install the Aspera connect client for you. Alternatively, you can install the Aspera connect client yourself. Installing through `ascli` is recommended, because it also installs the RSA ssh key (`aspera_bypass_rsa.pem`) that ENA now requires - see [Failed to authenticate with ascp](#failed-to-authenticate-with-ascp).
 
 ### Installation through DockerHub
 
@@ -163,7 +163,34 @@ Traceback (most recent call last):
     raise Exception("No more specified download methods, cannot continue")
 Exception: No more specified download methods, cannot continue
 ```
-This could be caused by (1) your being on a network that interferes with ascp operation, or (2) a temporary downtime at ENA. You may try moving to a different network or following the instructions at the [Aspera support](https://www.ibm.com/support/pages/error-code-19-failed-authenticate) or checking the [log files](https://www.ibm.com/support/pages/node/747513) to see if that helps diagnose the error. See [this issue](https://github.com/wwood/kingfisher-download/issues/9#issuecomment-952576784) for more information about a specific WLAN that was causing an issue.
+The most common cause is an out of date ssh key. ENA has deprecated the old DSA
+key (`asperaweb_id_dsa.openssh`, which is bundled with Kingfisher) in favour of
+the RSA key `aspera_bypass_rsa.pem` that ships with the Aspera SDK, so `ascp`
+prompts for a password and then fails to authenticate. Kingfisher looks for the
+RSA key automatically (under `~/.aspera`, alongside the `ascp` binary, and by
+asking `ascli`), so usually installing the SDK is enough:
+
+```
+ascli conf ascp install
+```
+
+If the key is installed somewhere Kingfisher does not find it, point at it
+directly. Its path can be found with
+
+```
+ascli conf ascp info --fields=ssh_private_rsa
+```
+
+and then given to Kingfisher e.g.
+
+```
+kingfisher get -r SRR5005053 -m ena-ascp --ascp-ssh-key ~/.aspera/sdk/aspera_bypass_rsa.pem
+```
+
+Failing that, the `ena-ftp` method downloads the same files over FTP, without
+requiring any ssh key.
+
+Otherwise, the error could be caused by (1) your being on a network that interferes with ascp operation, or (2) a temporary downtime at ENA. You may try moving to a different network or following the instructions at the [Aspera support](https://www.ibm.com/support/pages/error-code-19-failed-authenticate) or checking the [log files](https://www.ibm.com/support/pages/node/747513) to see if that helps diagnose the error. See [this issue](https://github.com/wwood/kingfisher-download/issues/9#issuecomment-952576784) for more information about a specific WLAN that was causing an issue.
 
 ### API rate limit exceeded
 Using `kingfisher annotate` repeatedly and in parallel can mean that the default

@@ -18,6 +18,7 @@
 * For FASTA-only output, download the smaller SRA Lite file in the `prefetch` method (`--eliminate-quals`), since base qualities are discarded anyway, falling back to a full download when no SRA Lite file is available
 * Support `.sralite` files in the `prefetch` method by renaming the downloaded `.sralite` file to `.sra`, and clean up any reference sequences prefetch downloads alongside reference-compressed runs
 * Cleaner error reporting: users now see readable error messages instead of Python stack traces; use `--debug` for full tracebacks (fixes [#45](https://github.com/wwood/kingfisher-download/issues/45))
+* Find the RSA ssh key (`aspera_bypass_rsa.pem`) that ENA now requires for `ena-ascp` downloads, searching `~/.aspera`, the directories alongside the `ascp` binary, and `ascli`, rather than always using the deprecated bundled DSA key. `ascp` is also now run with an empty stdin, so it fails immediately instead of hanging on a `Password:` prompt when the key is not accepted (fixes [#54](https://github.com/wwood/kingfisher-download/issues/54))
 * Handle malformed ENA file-report responses gracefully ([#567635e](https://github.com/wwood/kingfisher-download/commit/567635e))
 * Search `~/.aspera` for ascp binary instead of using a hardcoded path ([#7aad273](https://github.com/wwood/kingfisher-download/commit/7aad273))
 * Limit the maximum number of download threads ([#cb76cfb](https://github.com/wwood/kingfisher-download/commit/cb76cfb))
