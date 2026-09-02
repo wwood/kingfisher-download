@@ -158,7 +158,10 @@ def main():
     get_parser_download_args.add_argument(
         '--ascp-ssh-key', '--ascp_ssh_key',
         help=fix('a path to the openssh key to used for aspera (i.e. the \
-            -i flag of ascp) [default: Use the one bundled with Kingfisher]'))
+            -i flag of ascp) [default: For ENA, the aspera_bypass_rsa.pem key \
+            of a local Aspera SDK installation e.g. one installed with \
+            \'ascli conf ascp install\', falling back to the deprecated DSA key \
+            bundled with Kingfisher. For NGDC, the key bundled with Kingfisher]'))
     get_parser_download_args.add_argument(
         '--ascp-args', '--ascp_args',
         help=fix('extra arguments to pass to ascp e.g. \'-k 2\' to resume with a \

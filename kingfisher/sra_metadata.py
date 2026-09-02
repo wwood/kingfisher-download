@@ -70,19 +70,18 @@ class SraMetadata:
         # large bioprojects - instead we page through the results below via
         # efetch using the WebEnv/query_key. retmax=0 here as we do not need the
         # IdList itself.
-        res = requests.get(
-            url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
-            params=self.add_api_key({
-                "db": "sra",
-                "term": query_string,
-                "tool": "kingfisher",
-                "email": "kingfisher@github.com",
-                "retmax": 0,
-                "usehistory": "y",
-                }),
-            )
-        if not res.ok:
-            raise Exception("HTTP Failure when requesting search from bioproject: {}: {}".format(res, res.text))
+        res = self._retry_request(
+            "esearch from bioproject",
+            lambda: requests.get(
+                url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+                params=self.add_api_key({
+                    "db": "sra",
+                    "term": query_string,
+                    "tool": "kingfisher",
+                    "email": "kingfisher@github.com",
+                    "retmax": 0,
+                    "usehistory": "y",
+                    })))
         root = ET.fromstring(res.text)
         count = int(root.find('Count').text)
         webenv = root.find('WebEnv').text

@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 
 import requests
 
-from .ena import _resolve_ascp, _find_ascp_in_aspera
+from .ena import _resolve_ascp, _find_ascp_in_aspera, AUTOMATIC_SSH_KEY_SPECIFICATIONS
 from .md5sum import MD5
 
 DEFAULT_NGDC_ASPERA_SSH_KEY_LOCATION = os.path.join(os.path.dirname(os.path.realpath(__file__)),'data','aspsub_rsa')
@@ -340,7 +340,7 @@ class NgdcDownloader:
             logging.warning("Failed to look up run info for {} on NGDC: {}".format(run_id, e))
             return False
 
-        if ssh_key is None:
+        if ssh_key in AUTOMATIC_SSH_KEY_SPECIFICATIONS:
             if os.path.exists(DEFAULT_NGDC_ASPERA_SSH_KEY_LOCATION):
                 ssh_key_file = DEFAULT_NGDC_ASPERA_SSH_KEY_LOCATION
             else:
