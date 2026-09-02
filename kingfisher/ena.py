@@ -230,7 +230,13 @@ class EnaDownloader:
                 os.remove(path)
 
     def download_with_aspera(self, run_id, output_directory, quiet=False, ascp_args='', ssh_key=None, check_md5sums=False):
-        ssh_key_file = resolve_ena_ssh_key(ssh_key)
+        try:
+            ssh_key_file = resolve_ena_ssh_key(ssh_key)
+        except Exception as e:
+            # Returning False rather than raising so that any further download
+            # methods e.g. ena-ftp are still attempted
+            logging.warning("Cannot download from ENA with ASCP: {}".format(e))
+            return False
         logging.info("Using aspera ssh key file: {}".format(ssh_key_file))
 
         report = self.get_ftp_download_urls(run_id)

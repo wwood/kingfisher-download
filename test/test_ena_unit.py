@@ -33,6 +33,13 @@ class Tests(unittest.TestCase):
         with self.assertRaises(Exception):
             kingfisher.ena.resolve_ena_ssh_key('/not/a/real/aspera/key.pem')
 
+    def test_missing_specified_ssh_key_is_a_method_failure(self):
+        # i.e. False rather than an exception, so that further download methods
+        # e.g. ena-ftp are still attempted
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertFalse(kingfisher.ena.EnaDownloader().download_with_aspera(
+                'ERR123', tmp, ssh_key='/not/a/real/aspera/key.pem'))
+
     def test_rsa_key_found_in_aspera_home(self):
         with tempfile.TemporaryDirectory() as tmp:
             sdk_dir = os.path.join(tmp, '.aspera', 'sdk')
