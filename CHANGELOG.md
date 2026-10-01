@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes and improvements
+
+* Fixed `--check-md5sums` never detecting corrupt files: the MD5 check returned the file's digest before comparing it, so every file passed and "MD5sum OK" was always logged. It now returns true only when the digest matches the expected MD5 (present in v0.5.0, introduced in c7d0cf15)
+
 ## v0.5.0
 
 ### New features
