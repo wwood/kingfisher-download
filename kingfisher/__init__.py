@@ -294,7 +294,13 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                                     if MD5.check_md5sum(downloaded_file, odp_http_location.md5sum()):
                                         logging.info("MD5sum OK for {}".format(downloaded_file))
                                     else:
-                                        logging.warning("MD5sum check failed for {}".format(downloaded_file))
+                                        logging.error("MD5sum failed for {}".format(downloaded_file))
+                                        os.remove(downloaded_file)
+                                        downloaded_files = None
+                                        break
+                            if downloaded_files is not None:
+                                # Keep the first good download rather than fetching the other locations over it.
+                                break
                     else:
                         logging.warning("Method {} failed: No ODP URL could be found".format(method))
 

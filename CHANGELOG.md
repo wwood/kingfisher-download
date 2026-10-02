@@ -5,6 +5,7 @@
 ### Bug fixes and improvements
 
 * Fixed `--check-md5sums` never detecting corrupt files: the MD5 check returned the file's digest before comparing it, so every file passed and "MD5sum OK" was always logged. It now returns true only when the digest matches the expected MD5 (present in v0.5.0, introduced in c7d0cf15)
+* With `--check-md5sums`, the `aws-http` method now logs an error, deletes the file and fails (so the next method is tried, or kingfisher exits non-zero) when a download does not match its expected MD5, instead of only logging a warning and keeping the corrupt file. It also stops at the first location that downloads and verifies correctly, rather than re-downloading from the remaining locations
 
 ## v0.5.0
 
