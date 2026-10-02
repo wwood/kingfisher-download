@@ -412,8 +412,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                     ssh_key=ascp_ssh_key,
                     check_md5sums=check_md5sums)
                 if result is not False:
-                    gzip_test_files(result)
-                    downloaded_files = result
+                    downloaded_files = _gzip_verified_or_removed(result, method)
 
             elif method == 'ena-ftp':
                 result = EnaDownloader().download_with_curl(
@@ -422,8 +421,7 @@ def download_and_extract_one_run(run_identifier, **kwargs):
                     output_directory,
                     check_md5sums=check_md5sums)
                 if result is not False:
-                    gzip_test_files(result)
-                    downloaded_files = result
+                    downloaded_files = _gzip_verified_or_removed(result, method)
 
             elif method == 'ngdc-ascp':
                 result = NgdcDownloader().download_with_aspera(
@@ -781,6 +779,27 @@ def _extract_with_sracat(sra_file_abs, run_identifier, target_format, threads):
         else:
             kept.append(f)
     return kept
+
+def _gzip_verified_or_removed(gzip_files, method):
+    """
+    Return gzip_files if they are all valid gzip files. Otherwise log why,
+    delete them all and return None, so that the download method counts as
+    failed and the next one is tried. Leaving a corrupt file behind would make
+    a later run skip the download as already done.
+    """
+    try:
+        gzip_test_files(gzip_files)
+    except KingfisherException as e:
+        # Exit status 126/127 means pigz could not run at all, which says
+        # nothing about the files, so do not delete them.
+        if e.inner is not None and getattr(e.inner, 'returncode', None) in (126, 127):
+            raise
+        logging.warning("Method {} failed: {}".format(method, e.error_description))
+        for f in gzip_files:
+            if os.path.exists(f):
+                os.remove(f)
+        return None
+    return gzip_files
 
 def gzip_test_files(gzip_files):
     """
