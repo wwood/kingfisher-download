@@ -10,9 +10,4 @@ class MD5:
         with open(file_path, "rb") as f:
             for chunk in iter(lambda: f.read(4096), b""):
                 hash_md5.update(chunk)
-        return hash_md5.hexdigest()
-
-        if hash_md5 == expected_md5sum:
-            return True
-        else:
-            return False
+        return hash_md5.hexdigest() == expected_md5sum.strip().lower()

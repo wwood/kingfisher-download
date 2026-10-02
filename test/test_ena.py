@@ -24,11 +24,13 @@
 import unittest
 import os.path
 import sys
+from unittest import mock
 
 import extern
 import pytest
 
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')]+sys.path
+from kingfisher import ena as kingfisher_ena
 kingfisher = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','bin','kingfisher')
 
 from bird_tool_utils import in_tempdir
@@ -118,7 +120,24 @@ class Tests(unittest.TestCase):
                 stderr = f.read()
                 self.assertTrue('MD5sum OK for SRR12118866_1.fastq.gz' in stderr)
                 self.assertTrue('MD5sum OK for SRR12118866_2.fastq.gz' in stderr)
-        
+                self.assertFalse('MD5sum failed' in stderr)
+
+    def test_aria2_ena_fastq_gz_check_md5sum_mismatch(self):
+        '''Downloads real bytes via aria2c (needs network) against a deliberately wrong MD5, and checks they are rejected and deleted'''
+        downloader = kingfisher_ena.EnaDownloader()
+        real_report = downloader.get_ftp_download_urls('SRR12118866')
+        wrong_report = kingfisher_ena.EnaFileReport(
+            real_report.file_paths, ['0' * 32] * len(real_report.md5sums))
+        with in_tempdir():
+            with mock.patch.object(kingfisher_ena.EnaDownloader, 'get_ftp_download_urls',
+                                   lambda _self, run_id: wrong_report):
+                with self.assertLogs(level='ERROR') as logs:
+                    result = downloader.download_with_curl(
+                        'SRR12118866', 4, os.getcwd(), check_md5sums=True)
+            self.assertFalse(result)
+            self.assertTrue(any('MD5sum failed' in line for line in logs.output))
+            self.assertEqual([], os.listdir('.'))
+
 
 if __name__ == "__main__":
     unittest.main()
