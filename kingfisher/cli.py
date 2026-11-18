@@ -18,6 +18,7 @@ from bird_tool_utils.people import *
 
 import kingfisher
 from kingfisher.exception import KingfisherException
+from kingfisher.read_layouts import SUPPORTED_READ_LAYOUTS
 
 def fix(help_string):
     multispace_re = re.compile('  *')
@@ -27,7 +28,7 @@ def add_extraction_args(parser):
     parser.add_argument(
         '-f', '--output-format-possibilities', '--output_format_possibilities',
         nargs='+',
-        help='Allowable output formats. If more than one is specified, downloaded data will processed as little as possible [default: "{}"]'.format(
+        help='Allowable output formats. If more than one is specified, downloaded data will be processed as little as possible [default: "{}"]'.format(
             ' '.join(kingfisher.DEFAULT_OUTPUT_FORMAT_POSSIBILITIES)
         ),
         choices=['sra', 'fastq', 'fastq.gz','fasta','fasta.gz'],
@@ -42,6 +43,49 @@ def add_extraction_args(parser):
         help=fix('Extract reads in spot (submission) order using fasterq-dump, rather than the \
             default storage order. Slower, but matches the read order of classic fasterq-dump \
             output [default: storage order].'))
+    parser.add_argument(
+        '--include-technical', '--include_technical',
+        action='store_true',
+        help=('Preserve technical reads, including sample indexes and barcodes, using '
+              'fasterq-dump --include-technical --split-files. This requires SRA '
+              'extraction: use prefetch, aws-http, aws-cp, or gcp-cp with get, '
+              'or a local .sra file with extract. ENA and NGDC methods, SRA output, '
+              'and --stdout are incompatible. Reads omitted from the deposited '
+              'archive cannot be recovered [default: exclude technical reads].'))
+    parser.add_argument(
+        '--read-layout', '--read_layout',
+        choices=SUPPORTED_READ_LAYOUTS,
+        default='sra',
+        help=('Assign filenames to extracted streams in SRA read order; this does not '
+              'infer read roles or alter sequences. The default, sra, retains numbered '
+              'names. Other layouts require SRA extraction via prefetch, aws-http, '
+              'aws-cp, or gcp-cp, or a local .sra file; ENA and NGDC methods, SRA '
+              'output, and --stdout are incompatible. Index-containing and flexible '
+              '10x layouts also require --include-technical. The stream count must '
+              'match the selected layout. See the documentation for stream mappings '
+              '[default: sra].'))
+    parser.add_argument(
+        '--read-names', '--read_names',
+        help=('Provide one unique name per extracted stream, in SRA read order, '
+              'when using --read-layout custom; for example, R1,I1,I2,R2. '
+              'Use letters, numbers, periods, underscores, or hyphens; begin each '
+              'name with a letter or number and do not use consecutive periods. '
+              'These names require SRA extraction and cannot be used with other layouts.'))
+    parser.add_argument(
+        '--read-name-style', '--read_name_style',
+        choices=['simple', 'illumina'],
+        default='simple',
+        help=('Choose the filename pattern for a non-default --read-layout: simple '
+              'writes <sample>_<read>.<extension>, while illumina writes '
+              '<sample>_S1_<read>_001.<extension>. No lane number is added '
+              '[default: simple].'))
+    parser.add_argument(
+        '--sample-name', '--sample_name',
+        help=('Replace the run accession in filenames for a non-default --read-layout. '
+              'Use letters, numbers, periods, underscores, or hyphens; begin with '
+              'a letter or number and do not use consecutive periods. Choose distinct '
+              'names for different runs to avoid filename collisions '
+              '[default: run accession].'))
     parser.add_argument(
         '--unsorted',
         action='store_true',
@@ -113,7 +157,7 @@ def main():
     get_parser_common_options.add_argument(
         '-m','--download_methods', '--download-methods',
         nargs='+',
-        help='How to download .sra file. If multiple are specified, each is tried in turn until one works [required].\n\n' +
+        help='Download methods to attempt in order until one succeeds. SRA methods download an archive for extraction; ENA and NGDC methods download FASTQ files directly [required].\n\n' +
         table_roff([
             ["Method",'Description'],
             ['ena-ascp','Download .fastq.gz files from ENA using Aspera, which can then be further converted. This is the fastest method since no sracat-rs is required.'],
@@ -309,6 +353,11 @@ def main():
                 force = args.force,
                 unsorted = args.unsorted,
                 spot_sorted = args.spot_sorted,
+                include_technical = args.include_technical,
+                read_layout = args.read_layout,
+                read_names = args.read_names,
+                read_name_style = args.read_name_style,
+                sample_name = args.sample_name,
                 stdout = args.stdout,
                 gcp_project = args.gcp_project,
                 gcp_user_key_file = args.gcp_user_key_file,
@@ -336,6 +385,11 @@ def main():
                 force = args.force,
                 unsorted = args.unsorted,
                 spot_sorted = args.spot_sorted,
+                include_technical = args.include_technical,
+                read_layout = args.read_layout,
+                read_names = args.read_names,
+                read_name_style = args.read_name_style,
+                sample_name = args.sample_name,
                 stdout = args.stdout,
                 threads = args.threads,
                 output_directory = args.output_directory if args.output_directory is not None else '.',

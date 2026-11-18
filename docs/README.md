@@ -120,6 +120,134 @@ The `ena-ascp` method of this tool was built based on the very helpful bio-stars
 identifiers to be used as input to kingfisher, you might find the [SRA
 explorer](https://ewels.github.io/sra-explorer/) site helpful.
 
+### Read layouts and technical reads
+
+`--include-technical` preserves sample indexes, barcodes, and other
+assay-specific technical reads during SRA extraction. `--read-layout` optionally
+assigns user-selected semantic filenames after extraction and format conversion.
+Kingfisher does not infer biological read roles from stream count.
+
+| Layout | Streams | Output |
+| --- | ---: | --- |
+| `sra` | any | `_1`, `_2`, ... |
+| `illumina-se` | 1 | `R1` |
+| `illumina-pe` | 2 | `R1`, `R2` |
+| `illumina-se-single-index` | 2 | `R1`, `I1` |
+| `illumina-se-dual-index` | 3 | `R1`, `I1`, `I2` |
+| `illumina-pe-single-index` | 3 | `R1`, `I1`, `R2` |
+| `illumina-pe-dual-index` | 4 | `R1`, `I1`, `I2`, `R2` |
+| `10x-gex`, `10x-vdj`, `10x-spatial` | 2/3/4 | See mappings below |
+| `10x-atac` | 4 | `R1`, `I1`, `I2`, `R2` |
+| `10x-atac-bcl` | 4 | `R1`, `I1`, `R2`, `R3` |
+| `parse-wt-single-index` | 3 | `R1`, `I1`, `R2` |
+| `parse-wt-dual-index` | 4 | `R1`, `I1`, `I2`, `R2` |
+| `custom` | any | User-supplied names |
+
+The flexible `10x-gex`, `10x-vdj`, and `10x-spatial` layouts map two streams to
+`R1,R2`, three streams to `R1,I1,R2`, and four streams to `R1,I1,I2,R2`.
+These mappings must match the read order in the deposited archive.
+
+For a paired-end library with two index reads, use:
+
+```bash
+kingfisher get \
+    -r SRRXXXX \
+    -m aws-http prefetch \
+    -f fastq.gz \
+    --include-technical \
+    --read-layout illumina-pe-dual-index
+```
+
+To produce filenames in the Illumina style for a 10x gene-expression library, use:
+
+```bash
+kingfisher get \
+    -r SRRXXXX \
+    -m aws-http prefetch \
+    -f fastq.gz \
+    --include-technical \
+    --read-layout 10x-gex \
+    --read-name-style illumina
+```
+
+Four streams become `SRRXXXX_S1_R1_001.fastq.gz`,
+`SRRXXXX_S1_I1_001.fastq.gz`, `SRRXXXX_S1_I2_001.fastq.gz`, and
+`SRRXXXX_S1_R2_001.fastq.gz`. `10x-atac-bcl` changes filename semantics only:
+its third/fourth streams become `R2`/`R3`; sequence content remains untouched.
+
+For a Parse whole-transcriptome library deposited with two index reads, use:
+
+```bash
+kingfisher get -r SRRXXXX -m prefetch -f fastq.gz \
+    --include-technical --read-layout parse-wt-dual-index
+```
+
+To assign custom names to the streams in a local SRA archive, use:
+
+```bash
+kingfisher extract --sra SRRXXXX.sra -f fastq.gz \
+    --include-technical --read-layout custom \
+    --read-names R1,BC1,BC2,R2
+```
+
+The default, `--read-layout sra`, retains the extractor's filenames in SRA read
+order. `--sample-name` replaces the run accession in semantic filenames. `--read-name-style simple`
+produces `<sample>_<read>`; `illumina` produces
+`<sample>_S1_<read>_001` without adding a lane number.
+
+Layouts containing index reads, plus flexible `10x-gex`, `10x-vdj`, and
+`10x-spatial`, require `--include-technical` for SRA extraction. Stream count is
+validated after extraction; mismatches fail before any rename.
+
+#### Download-method compatibility
+
+Technical-read preservation and non-default read layouts require extraction from
+an SRA archive. For `get`, use only `prefetch`, `aws-http`, `aws-cp`, or `gcp-cp`,
+including every fallback method. ENA and NGDC methods download FASTQ files
+directly and do not guarantee the original SRA stream order or technical reads.
+Kingfisher rejects these combinations before metadata lookup or downloading.
+Alternatively, use `extract` with a local `.sra` file.
+
+Select FASTQ or FASTA output. If `sra` appears anywhere in
+`--output-format-possibilities`, Kingfisher retains the archive without extracting
+it, so technical-read and non-default layout options are rejected. These options
+also cannot be combined with `--stdout`, because they require separate read files.
+`--read-name-style` and `--sample-name` require a non-default `--read-layout`.
+
+Read layouts rename files only. Confirm the deposited read order against the
+library protocol before selecting a layout, especially a custom layout. Technical
+reads that were not deposited in SRA cannot be recovered. Extraction fails if the
+number of streams does not match the selected layout; existing output files are
+not overwritten unless `--force` is supplied.
+
+#### Real-data regression tests
+
+Run the read-layout tests with the development environment:
+
+```bash
+pixi run -e dev pytest test/test_read_layouts.py test/test_technical_reads.py \
+    test/test_read_option_compatibility.py test/test_read_layouts_real_sra.py
+```
+
+These tests extract actual SRA files using `fasterq-dump` and check FASTQ content,
+compression, stream counts, filenames, and repeat extraction. They use the existing
+small run `DRR002803` to verify three technical streams and one biological stream,
+and a bounded fixture derived from the first 100 spots of `SRR10612247`, from
+[GSE141701](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE141701),
+to verify paired 10x gene-expression reads. The latter has two biological streams
+of 26 and 98 bases; its deposited SRA data do not contain separate index streams.
+The complete run is large, so routine tests use a repacked 87 kB SRA fixture and
+require no network access. See `test/data/README.md` for provenance and regeneration
+commands. Synthetic unit tests remain useful for layouts and error conditions
+that these deposited runs do not cover.
+
+To test complete downloads of the 148 kB run through both `aws-http` and
+`prefetch`, run the additional integration tests. These require network access:
+
+```bash
+pixi run -e dev pytest test/test_read_layouts_download.py
+```
+
 ## Near parity with ena-fast-download
 
 Ena-fast-download was the original name for this tool. To imitate that tool's
