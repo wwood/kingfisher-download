@@ -48,4 +48,3 @@ cmd: kingfisher get -r ERR1739691 -m ena-ascp aws-http prefetch
 ```
 
 </details>
-
